@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSD Orchestration Map — Agent Spawning & Conditions</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Mono', 'Fira Code', monospace; background: #0a0a0f; color: #c8c8d0; }
+
+  .header { text-align: center; padding: 30px 20px 10px; }
+  .header h1 { font-size: 20px; color: #e8e8f0; letter-spacing: 2px; }
+  .header p { color: #555; margin-top: 6px; font-size: 12px; }
+
+  .controls { display: flex; justify-content: center; gap: 6px; padding: 16px; flex-wrap: wrap; }
+  .ctrl-btn { padding: 8px 16px; border: 1px solid #222; border-radius: 5px; cursor: pointer; font-size: 11px; color: #777; background: #111; transition: all 0.2s; font-family: inherit; }
+  .ctrl-btn:hover { border-color: #444; color: #aaa; }
+  .ctrl-btn.active { border-color: #7c6bf0; color: #b8a8ff; background: #1a1530; }
+
+  .canvas { padding: 20px; max-width: 1300px; margin: 0 auto; }
+
+  /* ─── Workflow Container ─── */
+  .workflow { display: none; }
+  .workflow.active { display: block; }
+
+  .wf-title { font-size: 16px; color: #e8e8f0; margin-bottom: 6px; }
+  .wf-desc { font-size: 12px; color: #555; margin-bottom: 20px; }
+
+  /* ─── Swim Lanes ─── */
+  .swim-container { position: relative; }
+  .swim-lanes { display: flex; gap: 0; min-height: 600px; }
+  .lane { flex: 1; border-right: 1px solid #1a1a22; padding: 8px; min-width: 180px; position: relative; }
+  .lane:last-child { border-right: none; }
+  .lane-header { text-align: center; padding: 8px; margin-bottom: 12px; border-bottom: 1px solid #1a1a22; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px; position: sticky; top: 0; background: #0a0a0f; z-index: 2; }
+  .lane-header.user { color: #60a5fa; }
+  .lane-header.orch { color: #a78bfa; }
+  .lane-header.agent { color: #4ade80; }
+  .lane-header.file { color: #fb923c; }
+  .lane-header.cli { color: #f472b6; }
+
+  /* ─── Nodes ─── */
+  .node { border-radius: 6px; padding: 10px 12px; margin: 6px 2px; font-size: 11px; line-height: 1.5; cursor: pointer; transition: all 0.2s; position: relative; }
+  .node:hover { transform: translateY(-1px); }
+
+  .node-user { background: #0f1520; border: 1px solid #1e3a5f; color: #93c5fd; }
+  .node-orch { background: #15102a; border: 1px solid #3730a3; color: #c4b5fd; }
+  .node-agent { background: #0f1a15; border: 1px solid #1a3a28; color: #86efac; }
+  .node-file { background: #1a1510; border: 1px solid #3a2810; color: #fdba74; }
+  .node-cli { background: #1a1018; border: 1px solid #3a1830; color: #f9a8d4; }
+  .node-condition { background: #1a1a10; border: 1px dashed #3a3a18; color: #fde68a; font-style: italic; }
+  .node-parallel { border-style: double; border-width: 3px; }
+
+  .node .label { font-weight: bold; margin-bottom: 3px; }
+  .node .desc { color: inherit; opacity: 0.6; font-size: 10px; }
+  .node .prompt-preview { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 10px; line-height: 1.6; max-height: 300px; overflow-y: auto; }
+  .node.expanded .prompt-preview { display: block; }
+
+  /* ─── Connector Arrows ─── */
+  .arrow-down { text-align: center; color: #333; font-size: 14px; padding: 1px 0; }
+  .arrow-right { display: inline-block; color: #333; padding: 0 4px; }
+
+  /* ─── Parallel group ─── */
+  .parallel-group { border: 1px dashed #2a3a28; border-radius: 8px; padding: 8px; margin: 6px 2px; background: rgba(74, 222, 128, 0.03); }
+  .parallel-label { font-size: 9px; color: #4ade80; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; text-align: center; }
+
+  /* ─── Loop indicator ─── */
+  .loop-group { border: 1px dashed #3730a3; border-radius: 8px; padding: 8px; margin: 6px 2px; background: rgba(167, 139, 250, 0.03); }
+  .loop-label { font-size: 9px; color: #a78bfa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; text-align: center; }
+
+  /* ─── Condition diamond ─── */
+  .condition { text-align: center; margin: 8px 0; }
+  .condition-diamond { display: inline-block; padding: 6px 14px; border: 1px dashed #3a3a18; border-radius: 4px; background: #14140a; color: #fde68a; font-size: 10px; font-style: italic; }
+  .condition-branch { display: flex; gap: 8px; margin-top: 4px; justify-content: center; }
+  .condition-branch span { font-size: 9px; padding: 2px 8px; border-radius: 3px; }
+  .branch-yes { background: #0a2018; color: #34d399; }
+  .branch-no { background: #2a1018; color: #f87171; }
+
+  /* ─── Overview Grid ─── */
+  .overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; }
+  .overview-card { border: 1px solid #222; border-radius: 8px; padding: 16px; background: #111118; cursor: pointer; transition: all 0.2s; }
+  .overview-card:hover { border-color: #7c6bf0; transform: translateY(-2px); }
+  .overview-card h3 { font-size: 14px; color: #b8a8ff; margin-bottom: 6px; }
+  .overview-card .agents-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+  .overview-card .stat { font-size: 11px; color: #555; margin-top: 6px; }
+  .agent-pill { padding: 2px 8px; border-radius: 3px; font-size: 10px; background: #0f1a15; color: #4ade80; border: 1px solid #1a3a28; }
+  .agent-pill.parallel { border-style: double; border-width: 2px; }
+  .no-agent { color: #666; font-size: 10px; font-style: italic; }
+
+  /* ─── Legend ─── */
+  .legend { display: flex; gap: 16px; justify-content: center; padding: 12px; flex-wrap: wrap; border-bottom: 1px solid #1a1a22; margin-bottom: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #555; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+  .prompt-tag { display: inline-block; padding: 1px 5px; border-radius: 2px; font-size: 9px; margin: 1px; }
+  .pt-file { background: #1a1a28; color: #818cf8; }
+  .pt-flag { background: #2a1a18; color: #fb923c; }
+  .pt-out { background: #0a2018; color: #34d399; }
+
+  /* ─── Table view ─── */
+  .matrix-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .matrix-table th { text-align: left; padding: 8px; border-bottom: 2px solid #222; color: #888; position: sticky; top: 0; background: #0a0a0f; }
+  .matrix-table td { padding: 6px 8px; border-bottom: 1px solid #141418; }
+  .matrix-table tr:hover td { background: #111118; }
+  .matrix-cell { text-align: center; }
+  .dot-yes { color: #4ade80; }
+  .dot-opt { color: #fbbf24; }
+  .dot-par { color: #60a5fa; }
+  .dot-no { color: #333; }
+
+  @media (max-width: 900px) {
+    .swim-lanes { flex-direction: column; min-height: auto; }
+    .lane { border-right: none; border-bottom: 1px solid #1a1a22; }
+    .overview-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>GSD ORCHESTRATION MAP</h1>
+  <p>How workflows spawn agents, under what conditions, with what context</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#1e3a5f"></div> User input</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3730a3"></div> Orchestrator (workflow.md)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#1a3a28"></div> Agent (subagent)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3a2810"></div> File output</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3a1830"></div> gsd-tools CLI</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3a3a18; border:1px dashed #666"></div> Condition</div>
+  <div class="legend-item"><div class="legend-swatch" style="border: 2px double #4ade80"></div> Parallel</div>
+  <div class="legend-item"><div class="legend-swatch" style="border: 1px dashed #a78bfa"></div> Loop</div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-btn active" onclick="showWorkflow('overview')">Overview</div>
+  <div class="ctrl-btn" onclick="showWorkflow('matrix')">Agent Matrix</div>
+  <div class="ctrl-btn" onclick="showWorkflow('new-project')">new-project</div>
+  <div class="ctrl-btn" onclick="showWorkflow('discuss-phase')">discuss-phase</div>
+  <div class="ctrl-btn" onclick="showWorkflow('plan-phase')">plan-phase</div>
+  <div class="ctrl-btn" onclick="showWorkflow('execute-phase')">execute-phase</div>
+  <div class="ctrl-btn" onclick="showWorkflow('quick')">quick</div>
+  <div class="ctrl-btn" onclick="showWorkflow('autonomous')">autonomous</div>
+  <div class="ctrl-btn" onclick="showWorkflow('consolidation')">Single Orchestrator?</div>
+</div>
+
+<div class="canvas">
+
+<!-- ═══ OVERVIEW ═══ -->
+<div class="workflow active" id="overview">
+  <div class="wf-title">All Workflows & Their Agents</div>
+  <div class="wf-desc">Click any card to see the detailed flow</div>
+
+  <div class="overview-grid">
+    <div class="overview-card" onclick="showWorkflow('new-project')">
+      <h3>/gsd:new-project</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">Idea → PROJECT.md + REQUIREMENTS.md + ROADMAP.md</p>
+      <div class="agents-list">
+        <span class="agent-pill parallel">gsd-project-researcher ×4</span>
+        <span class="agent-pill">gsd-research-synthesizer</span>
+        <span class="agent-pill">gsd-roadmapper</span>
+      </div>
+      <div class="stat">6 agent spawns · 4 parallel · Adaptive questioning (no fixed count)</div>
+    </div>
+
+    <div class="overview-card" onclick="showWorkflow('discuss-phase')">
+      <h3>/gsd:discuss-phase N</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">Clarify HOW to implement → CONTEXT.md</p>
+      <div class="agents-list">
+        <span class="no-agent">No agents spawned — orchestrator only</span>
+      </div>
+      <div class="stat">0 agent spawns · Menu-driven AskUserQuestion · 3-4 areas × 4 questions</div>
+    </div>
+
+    <div class="overview-card" onclick="showWorkflow('plan-phase')">
+      <h3>/gsd:plan-phase N</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">CONTEXT → RESEARCH → PLANs (with verify loop)</p>
+      <div class="agents-list">
+        <span class="agent-pill">gsd-phase-researcher</span>
+        <span class="agent-pill">gsd-planner</span>
+        <span class="agent-pill">gsd-plan-checker</span>
+      </div>
+      <div class="stat">3-7 agent spawns · Sequential · Max 3 revision iterations</div>
+    </div>
+
+    <div class="overview-card" onclick="showWorkflow('execute-phase')">
+      <h3>/gsd:execute-phase N</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">PLANs → code commits → SUMMARYs</p>
+      <div class="agents-list">
+        <span class="agent-pill parallel">gsd-executor ×N</span>
+        <span class="agent-pill">gsd-verifier</span>
+      </div>
+      <div class="stat">2-10+ agent spawns · Wave-parallel · File-locked STATE.md</div>
+    </div>
+
+    <div class="overview-card" onclick="showWorkflow('quick')">
+      <h3>/gsd:quick "task"</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">Fast task: plan → execute (optional research/verify)</p>
+      <div class="agents-list">
+        <span class="agent-pill">gsd-planner</span>
+        <span class="agent-pill">gsd-executor</span>
+        <span class="agent-pill" style="opacity:0.5">+researcher</span>
+        <span class="agent-pill" style="opacity:0.5">+checker</span>
+        <span class="agent-pill" style="opacity:0.5">+verifier</span>
+      </div>
+      <div class="stat">2-5 agent spawns · --research, --full flags · Lightweight tracking</div>
+    </div>
+
+    <div class="overview-card" onclick="showWorkflow('autonomous')">
+      <h3>/gsd:autonomous N</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">Full auto: discuss → plan → execute → next phase</p>
+      <div class="agents-list">
+        <span class="agent-pill">All agents via Skill()</span>
+      </div>
+      <div class="stat">Uses Skill() not Task() · Flat nesting · Auto-advance chain</div>
+    </div>
+
+    <div class="overview-card">
+      <h3>/gsd:map-codebase</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">Brownfield analysis → codebase/*.md</p>
+      <div class="agents-list">
+        <span class="agent-pill parallel">gsd-codebase-mapper ×4</span>
+      </div>
+      <div class="stat">4 agent spawns · All parallel · Tech/Arch/Quality/Concerns</div>
+    </div>
+
+    <div class="overview-card">
+      <h3>/gsd:ui-phase N</h3>
+      <p style="font-size:11px;color:#888;margin-bottom:8px;">UI design contract → UI-SPEC.md</p>
+      <div class="agents-list">
+        <span class="agent-pill">gsd-ui-researcher</span>
+        <span class="agent-pill">gsd-ui-checker</span>
+      </div>
+      <div class="stat">2-4 agent spawns · Max 2 revision iterations</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AGENT MATRIX ═══ -->
+<div class="workflow" id="matrix">
+  <div class="wf-title">Agent × Workflow Matrix</div>
+  <div class="wf-desc"><span class="dot-yes">●</span> Required &nbsp; <span class="dot-opt">◐</span> Optional (flag-dependent) &nbsp; <span class="dot-par">◉</span> Parallel &nbsp; <span class="dot-no">·</span> Not used</div>
+  <br>
+  <table class="matrix-table">
+    <thead>
+      <tr>
+        <th>Agent</th>
+        <th>new-project</th>
+        <th>discuss</th>
+        <th>plan</th>
+        <th>execute</th>
+        <th>quick</th>
+        <th>autonomous</th>
+        <th>map-codebase</th>
+        <th>ui-phase</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="color:#4ade80">gsd-executor</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-par">◉ wave</td><td class="matrix-cell dot-yes">●</td><td class="matrix-cell dot-yes">● via Skill</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-planner</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-yes">● rev loop</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-yes">●</td><td class="matrix-cell dot-yes">● via Skill</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-phase-researcher</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-opt">◐ if enabled</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-opt">◐ --research</td><td class="matrix-cell dot-opt">◐ via Skill</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-plan-checker</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-opt">◐ if enabled</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-opt">◐ --full</td><td class="matrix-cell dot-opt">◐ via Skill</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-verifier</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-yes">●</td><td class="matrix-cell dot-opt">◐ --full</td><td class="matrix-cell dot-yes">● via Skill</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-project-researcher</td><td class="matrix-cell dot-par">◉ ×4</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-research-synthesizer</td><td class="matrix-cell dot-yes">●</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-roadmapper</td><td class="matrix-cell dot-yes">●</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-codebase-mapper</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-par">◉ ×4</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-debugger</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td></tr>
+      <tr><td style="color:#4ade80">gsd-ui-researcher</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-yes">●</td></tr>
+      <tr><td style="color:#4ade80">gsd-ui-checker</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-no">·</td><td class="matrix-cell dot-yes">●</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══ NEW-PROJECT ═══ -->
+<div class="workflow" id="new-project">
+  <div class="wf-title">/gsd:new-project — Full Flow</div>
+  <div class="wf-desc">Orchestrator: workflows/new-project.md · 6 agent spawns</div>
+
+  <div class="swim-lanes">
+    <div class="lane"><div class="lane-header user">User</div>
+      <div class="node node-user"><div class="label">Idea / Vision</div><div class="desc">"I want to build a trading app"</div></div>
+      <div style="height:40px"></div>
+      <div class="node node-user"><div class="label">Answers</div><div class="desc">Adaptive Q&A (questioning.md philosophy)</div></div>
+      <div style="height:320px"></div>
+      <div class="node node-user"><div class="label">Approve roadmap</div></div>
+    </div>
+
+    <div class="lane"><div class="lane-header orch">Orchestrator</div>
+      <div class="node node-cli"><div class="label">gsd-tools init new-project</div><div class="desc">Detects brownfield, existing code</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Dream Extraction</div><div class="desc">Open questioning, follow energy, loop until "ready"</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Write PROJECT.md</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">research enabled?</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Spawn 4 researchers</div><div class="desc">Wait for all to complete</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Spawn synthesizer</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Generate REQUIREMENTS.md</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Spawn roadmapper</div></div>
+    </div>
+
+    <div class="lane"><div class="lane-header agent">Agents</div>
+      <div style="height:180px"></div>
+      <div class="parallel-group">
+        <div class="parallel-label">parallel ×4</div>
+        <div class="node node-agent node-parallel" onclick="toggle(this)"><div class="label">gsd-project-researcher</div><div class="desc">Stack · Features · Architecture · Pitfalls</div>
+          <div class="prompt-preview">
+            <strong>Each gets:</strong><br>
+            <span class="prompt-tag pt-file">PROJECT.md</span><br>
+            <strong>Focus dimension:</strong> one of Stack/Features/Architecture/Pitfalls<br>
+            <strong>Tools:</strong> Read, WebSearch, Bash, Glob, Grep<br>
+            <strong>Writes:</strong> <span class="prompt-tag pt-out">.planning/research/STACK.md</span> etc.
+          </div>
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-agent" onclick="toggle(this)"><div class="label">gsd-research-synthesizer</div>
+        <div class="prompt-preview">
+          <strong>Reads:</strong><br>
+          <span class="prompt-tag pt-file">STACK.md + FEATURES.md + ARCHITECTURE.md + PITFALLS.md</span><br>
+          <strong>Writes:</strong> <span class="prompt-tag pt-out">.planning/research/SUMMARY.md</span>
+        </div>
+      </div>
+      <div style="height:30px"></div>
+      <div class="node node-agent" onclick="toggle(this)"><div class="label">gsd-roadmapper</div>
+        <div class="prompt-preview">
+          <strong>Reads:</strong><br>
+          <span class="prompt-tag pt-file">PROJECT.md + REQUIREMENTS.md + SUMMARY.md + config.json</span><br>
+          <strong>Creates:</strong> <span class="prompt-tag pt-out">ROADMAP.md + STATE.md</span><br>
+          <strong>Key:</strong> Derives phases from requirements, maps every REQ to exactly one phase
+        </div>
+      </div>
+    </div>
+
+    <div class="lane"><div class="lane-header file">Outputs</div>
+      <div style="height:120px"></div>
+      <div class="node node-file"><div class="label">PROJECT.md</div></div>
+      <div style="height:60px"></div>
+      <div class="node node-file"><div class="label">research/*.md</div><div class="desc">STACK, FEATURES, ARCHITECTURE, PITFALLS</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-file"><div class="label">research/SUMMARY.md</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-file"><div class="label">REQUIREMENTS.md</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-file"><div class="label">ROADMAP.md</div><div class="desc">Phases with 1-2 sentence descriptions</div></div>
+      <div class="node node-file"><div class="label">STATE.md + config.json</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DISCUSS-PHASE ═══ -->
+<div class="workflow" id="discuss-phase">
+  <div class="wf-title">/gsd:discuss-phase N — No Agents, Pure Orchestration</div>
+  <div class="wf-desc">This is the critical bottleneck: generic questions → CONTEXT.md that all downstream agents read</div>
+
+  <div class="swim-lanes">
+    <div class="lane" style="flex:1.2"><div class="lane-header user">User</div>
+      <div style="height:250px"></div>
+      <div class="node node-user"><div class="label">Picks gray areas</div><div class="desc">Selects from AI-generated list</div></div>
+      <div style="height:20px"></div>
+      <div class="node node-user"><div class="label">Answers 4× questions</div><div class="desc">Multiple choice per area</div></div>
+      <div class="node node-user"><div class="label">"More or next?"</div></div>
+      <div class="node node-user"><div class="label">Answers 4× more</div><div class="desc">(repeats per area)</div></div>
+    </div>
+
+    <div class="lane" style="flex:2"><div class="lane-header orch">Orchestrator (discuss-phase.md)</div>
+      <div class="node node-cli"><div class="label">gsd-tools init phase-op N</div><div class="desc">Loads config, finds phase dir, checks existing artifacts</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">load_prior_context</div><div class="desc">Read PROJECT.md + REQUIREMENTS.md + STATE.md + all prior CONTEXT.md</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">scout_codebase</div><div class="desc">Grep existing code for related patterns, components, hooks</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch" style="border-color:#f87171;"><div class="label">analyze_phase ⚠</div><div class="desc">Read 1-2 sentence ROADMAP description → generate gray areas</div>
+        <div style="color:#f87171;font-size:10px;margin-top:6px;">Problem: Gray areas derived from AI interpretation of short description + full PROJECT.md context bleed</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch" style="border-color:#f87171;"><div class="label">present_gray_areas ⚠</div><div class="desc">Show 3-4 areas via AskUserQuestion (multiSelect)</div>
+        <div style="color:#f87171;font-size:10px;margin-top:6px;">Problem: Pre-generated list, not from conversation. Rigid structure.</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch" style="border-color:#f87171;"><div class="label">discuss_areas (loop) ⚠</div><div class="desc">Per area: 4× AskUserQuestion with 2-3 options each</div>
+        <div style="color:#f87171;font-size:10px;margin-top:6px;">Problem: Multiple-choice kills conversation. No "follow energy". Fixed 4-question batches.</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">write_context</div><div class="desc">Compile decisions → CONTEXT.md with locked/discretion/deferred sections</div></div>
+    </div>
+
+    <div class="lane" style="flex:0.8"><div class="lane-header file">Outputs</div>
+      <div style="height:480px"></div>
+      <div class="node node-file"><div class="label">NN-CONTEXT.md</div><div class="desc">Decisions, code context, deferred ideas, canonical refs</div></div>
+      <div class="node node-file"><div class="label">NN-DISCUSSION-LOG.md</div><div class="desc">"Audit only" — agents DON'T read this</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PLAN-PHASE ═══ -->
+<div class="workflow" id="plan-phase">
+  <div class="wf-title">/gsd:plan-phase N — Research → Plan → Verify Loop</div>
+  <div class="wf-desc">3-7 agent spawns with up to 3 revision iterations</div>
+
+  <div class="swim-lanes">
+    <div class="lane"><div class="lane-header orch">Orchestrator</div>
+      <div class="node node-cli"><div class="label">gsd-tools init plan-phase N</div><div class="desc">Models, flags, phase info, paths</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">research_enabled && !has_research?</div></div>
+      <div class="arrow-down">↓ yes</div>
+      <div class="node node-orch"><div class="label">Spawn researcher</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Spawn planner</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">plan_checker_enabled?</div></div>
+      <div class="arrow-down">↓ yes</div>
+      <div class="loop-group">
+        <div class="loop-label">revision loop (max 3×)</div>
+        <div class="node node-orch"><div class="label">Spawn checker</div></div>
+        <div class="condition"><div class="condition-diamond">issues found?</div></div>
+        <div class="node node-orch"><div class="label">Spawn planner (revision)</div><div class="desc">With checker feedback</div></div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">--auto flag?</div></div>
+      <div class="node node-orch"><div class="label">Skill(gsd:execute-phase)</div><div class="desc">Flat chain via Skill(), not Task()</div></div>
+    </div>
+
+    <div class="lane" style="flex:1.5"><div class="lane-header agent">Agents & What They Get</div>
+      <div style="height:65px"></div>
+      <div class="node node-agent" onclick="toggle(this)"><div class="label">gsd-phase-researcher</div>
+        <div class="prompt-preview">
+          <strong>Reads:</strong> <span class="prompt-tag pt-file">CONTEXT.md</span> <span class="prompt-tag pt-file">ROADMAP.md</span> <span class="prompt-tag pt-file">REQUIREMENTS.md</span> <span class="prompt-tag pt-file">STATE.md</span><br>
+          <strong>Constrained by:</strong> Locked decisions from CONTEXT.md — researches THOSE, not alternatives<br>
+          <strong>Tools:</strong> Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, Context7<br>
+          <strong>Writes:</strong> <span class="prompt-tag pt-out">RESEARCH.md</span> (standard stack, patterns, pitfalls, code examples)
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-agent" onclick="toggle(this)"><div class="label">gsd-planner</div>
+        <div class="prompt-preview">
+          <strong>Reads:</strong> <span class="prompt-tag pt-file">CONTEXT.md</span> <span class="prompt-tag pt-file">RESEARCH.md</span> <span class="prompt-tag pt-file">PROJECT.md</span> <span class="prompt-tag pt-file">ROADMAP.md</span> <span class="prompt-tag pt-file">STATE.md</span> <span class="prompt-tag pt-file">REQUIREMENTS.md</span> <span class="prompt-tag pt-file">prior SUMMARYs</span> <span class="prompt-tag pt-file">UI-SPEC.md</span><br>
+          <strong>Key rules:</strong><br>
+          - Locked decisions from CONTEXT.md are NON-NEGOTIABLE<br>
+          - 2-3 tasks per plan, ~50% context target<br>
+          - Vertical slices > horizontal layers<br>
+          - Goal-backward methodology<br>
+          <strong>Writes:</strong> <span class="prompt-tag pt-out">NN-01-PLAN.md</span> <span class="prompt-tag pt-out">NN-02-PLAN.md</span> ...
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-agent" onclick="toggle(this)"><div class="label">gsd-plan-checker</div>
+        <div class="prompt-preview">
+          <strong>Reads:</strong> <span class="prompt-tag pt-file">*-PLAN.md</span> <span class="prompt-tag pt-file">ROADMAP.md</span> <span class="prompt-tag pt-file">REQUIREMENTS.md</span> <span class="prompt-tag pt-file">CONTEXT.md</span><br>
+          <strong>Checks:</strong> requirement coverage, task completeness, dependencies, key links, scope sanity, must_haves<br>
+          <strong>Returns:</strong> "VERIFICATION PASSED" or "ISSUES FOUND" with structured feedback
+        </div>
+      </div>
+    </div>
+
+    <div class="lane"><div class="lane-header file">Files Created</div>
+      <div style="height:65px"></div>
+      <div class="node node-file"><div class="label">NN-RESEARCH.md</div></div>
+      <div style="height:40px"></div>
+      <div class="node node-file"><div class="label">NN-01-PLAN.md</div></div>
+      <div class="node node-file"><div class="label">NN-02-PLAN.md</div></div>
+      <div class="node node-file"><div class="label">NN-03-PLAN.md</div></div>
+      <div style="height:20px"></div>
+      <div class="node node-file"><div class="label">ROADMAP.md updated</div><div class="desc">Plan count, objectives</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EXECUTE-PHASE ═══ -->
+<div class="workflow" id="execute-phase">
+  <div class="wf-title">/gsd:execute-phase N — Wave-Based Parallel Execution</div>
+  <div class="wf-desc">Most complex workflow: plan grouping → parallel agents → file-locked state updates</div>
+
+  <div class="swim-lanes">
+    <div class="lane"><div class="lane-header orch">Orchestrator</div>
+      <div class="node node-cli"><div class="label">gsd-tools init execute-phase N</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-cli"><div class="label">gsd-tools phase-plan-index N</div><div class="desc">Groups plans into waves by depends_on</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">--interactive?</div></div>
+      <div class="arrow-down">↓ no (normal)</div>
+      <div class="node node-orch"><div class="label">Wave 1: Spawn executors</div><div class="desc">Parallel if config allows</div></div>
+      <div class="arrow-down">↓ wait</div>
+      <div class="node node-orch"><div class="label">Spot-check results</div><div class="desc">SUMMARY.md exists? Commits found?</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Wave 2: Spawn executors</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">... Wave N</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">verifier_enabled?</div></div>
+      <div class="arrow-down">↓ yes</div>
+      <div class="node node-orch"><div class="label">Spawn verifier</div></div>
+    </div>
+
+    <div class="lane" style="flex:1.5"><div class="lane-header agent">Agents</div>
+      <div style="height:120px"></div>
+      <div class="parallel-group">
+        <div class="parallel-label">wave 1 — parallel</div>
+        <div class="node node-agent node-parallel" onclick="toggle(this)"><div class="label">gsd-executor (Plan 01)</div>
+          <div class="prompt-preview">
+            <strong>Reads:</strong> <span class="prompt-tag pt-file">NN-01-PLAN.md</span> <span class="prompt-tag pt-file">PROJECT.md</span> <span class="prompt-tag pt-file">STATE.md</span> <span class="prompt-tag pt-file">CLAUDE.md</span><br>
+            <strong>Does:</strong> Execute tasks → atomic commits → write SUMMARY.md<br>
+            <strong>Commits with:</strong> --no-verify (parallel safety)<br>
+            <strong>Updates:</strong> STATE.md (file-locked with O_EXCL)
+          </div>
+        </div>
+        <div class="node node-agent node-parallel"><div class="label">gsd-executor (Plan 02)</div><div class="desc">Same pattern, different plan</div></div>
+      </div>
+      <div style="height:80px"></div>
+      <div class="parallel-group">
+        <div class="parallel-label">wave 2 — after wave 1</div>
+        <div class="node node-agent node-parallel"><div class="label">gsd-executor (Plan 03)</div><div class="desc">Depends on Plan 01 or 02</div></div>
+      </div>
+      <div style="height:40px"></div>
+      <div class="node node-agent" onclick="toggle(this)"><div class="label">gsd-verifier</div>
+        <div class="prompt-preview">
+          <strong>Reads:</strong> <span class="prompt-tag pt-file">all SUMMARY.md</span> <span class="prompt-tag pt-file">ROADMAP.md</span> <span class="prompt-tag pt-file">REQUIREMENTS.md</span><br>
+          <strong>Checks:</strong> Phase achieved GOAL (not just tasks done)<br>
+          <strong>Returns:</strong> VERIFICATION.md with pass/fail + gap analysis
+        </div>
+      </div>
+    </div>
+
+    <div class="lane"><div class="lane-header file">State</div>
+      <div style="height:120px"></div>
+      <div class="node node-file"><div class="label">NN-01-SUMMARY.md</div></div>
+      <div class="node node-file"><div class="label">NN-02-SUMMARY.md</div></div>
+      <div class="node node-file"><div class="label">code commits</div></div>
+      <div style="height:60px"></div>
+      <div class="node node-file"><div class="label">NN-03-SUMMARY.md</div></div>
+      <div style="height:80px"></div>
+      <div class="node node-file"><div class="label">VERIFICATION.md</div></div>
+      <div class="node node-file"><div class="label">STATE.md updated</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ QUICK ═══ -->
+<div class="workflow" id="quick">
+  <div class="wf-title">/gsd:quick "task" — Lightweight Pipeline</div>
+  <div class="wf-desc">Same agents as plan+execute but with flags controlling depth</div>
+
+  <div class="swim-lanes">
+    <div class="lane" style="flex:1.3"><div class="lane-header orch">Orchestrator</div>
+      <div class="node node-cli"><div class="label">gsd-tools init quick "desc"</div><div class="desc">Generates quick ID, branch name, paths</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">--research flag?</div><div class="condition-branch"><span class="branch-yes">yes → researcher</span><span class="branch-no">no → skip</span></div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Spawn planner</div><div class="desc">Single plan, 1-3 tasks, ~30% context</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">--full flag?</div><div class="condition-branch"><span class="branch-yes">yes → checker</span><span class="branch-no">no → skip</span></div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Spawn executor</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">--full flag?</div><div class="condition-branch"><span class="branch-yes">yes → verifier</span><span class="branch-no">no → skip</span></div></div>
+    </div>
+
+    <div class="lane"><div class="lane-header agent">Agents (conditional)</div>
+      <div style="height:30px"></div>
+      <div class="node node-agent" style="opacity:0.5"><div class="label">gsd-phase-researcher</div><div class="desc">Only if --research · Focused 1-2 pages</div></div>
+      <div style="height:20px"></div>
+      <div class="node node-agent"><div class="label">gsd-planner</div><div class="desc">Always · Single PLAN, 1-3 tasks</div></div>
+      <div style="height:10px"></div>
+      <div class="node node-agent" style="opacity:0.5"><div class="label">gsd-plan-checker</div><div class="desc">Only if --full · Max 2 revisions</div></div>
+      <div style="height:10px"></div>
+      <div class="node node-agent"><div class="label">gsd-executor</div><div class="desc">Always · Writes SUMMARY to quick/ dir</div></div>
+      <div style="height:10px"></div>
+      <div class="node node-agent" style="opacity:0.5"><div class="label">gsd-verifier</div><div class="desc">Only if --full</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AUTONOMOUS ═══ -->
+<div class="workflow" id="autonomous">
+  <div class="wf-title">/gsd:autonomous N — Full Auto Chain</div>
+  <div class="wf-desc">Key difference: Uses Skill() not Task() to avoid nested agent freezes</div>
+
+  <div class="swim-lanes">
+    <div class="lane" style="flex:1.5"><div class="lane-header orch">Orchestrator (flat chain)</div>
+      <div class="node node-orch"><div class="label">Phase loop</div><div class="desc">For each phase starting from N</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">has CONTEXT.md?</div></div>
+      <div class="arrow-down">↓ no</div>
+      <div class="node node-orch" style="border-color:#60a5fa"><div class="label">Skill("gsd:discuss-phase N --auto")</div><div class="desc">Auto-selects ALL gray areas, picks recommended options</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch" style="border-color:#60a5fa"><div class="label">Skill("gsd:plan-phase N --auto")</div><div class="desc">Research → Plan → Verify (all auto-approved)</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch" style="border-color:#60a5fa"><div class="label">Skill("gsd:execute-phase N --auto")</div><div class="desc">Wave execution, all autonomous</div></div>
+      <div class="arrow-down">↓</div>
+      <div class="condition"><div class="condition-diamond">verification result?</div></div>
+      <div class="condition-branch" style="margin:6px 0;justify-content:flex-start;gap:12px;">
+        <span class="branch-yes">passed → next phase</span>
+        <span class="branch-no" style="background:#1a1a10;color:#fde68a;">gaps → ask user</span>
+        <span class="branch-no">human_needed → stop</span>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="node node-orch"><div class="label">Advance to Phase N+1</div><div class="desc">Loop continues until all phases done or user stops</div></div>
+    </div>
+
+    <div class="lane"><div class="lane-header" style="color:#60a5fa">Skill() vs Task()</div>
+      <div style="padding:16px;font-size:11px;line-height:1.8;color:#888;">
+        <div style="color:#f87171;margin-bottom:12px;"><strong>Why not Task():</strong><br>Nested Task() spawning causes runtime freezes (issue #686). discuss → plan → execute would be 3 levels deep.</div>
+        <div style="color:#4ade80;margin-bottom:12px;"><strong>Skill() solution:</strong><br>Each Skill() runs at the SAME nesting level. The chain stays flat: discuss finishes → plan starts → execute starts. No deep nesting.</div>
+        <div style="color:#fde68a;"><strong>Tradeoff:</strong><br>Skill() runs in the orchestrator's context window, not a fresh one. For autonomous mode this is OK because the orchestrator stays lean (delegates to agents inside each skill).</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CONSOLIDATION ANALYSIS ═══ -->
+<div class="workflow" id="consolidation">
+  <div class="wf-title">Could We Consolidate to a Single Orchestrator?</div>
+  <div class="wf-desc">Analysis of whether all workflows should merge into one orchestrator</div>
+
+  <div style="max-width:900px;">
+    <div style="background:#111118;border:1px solid #222;border-radius:8px;padding:20px;margin:16px 0;">
+      <h3 style="color:#b8a8ff;font-size:14px;margin-bottom:12px;">Current: 8+ Separate Workflow Orchestrators</h3>
+      <div style="font-size:12px;line-height:1.8;color:#888;">
+        Each workflow is a separate markdown file with its own orchestration logic:
+        <br>• new-project.md, discuss-phase.md, plan-phase.md, execute-phase.md, quick.md, autonomous.md, ui-phase.md, map-codebase.md
+        <br>• Each has duplicated patterns: init → validate → spawn agents → collect results → update state → commit
+        <br>• Each loads context slightly differently but from the same files
+        <br>• Autonomous.md already IS a meta-orchestrator (chains discuss → plan → execute)
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;">
+      <div style="background:#0f1a15;border:1px solid #1a3028;border-radius:8px;padding:20px;">
+        <h4 style="color:#34d399;font-size:13px;margin-bottom:10px;">Arguments FOR Single Orchestrator</h4>
+        <ul style="font-size:12px;line-height:1.8;color:#888;list-style:none;">
+          <li>→ Eliminates duplicated init/validate/commit patterns</li>
+          <li>→ Single place to understand the full pipeline</li>
+          <li>→ Could maintain conversation context across discuss → plan (your insight about related phases)</li>
+          <li>→ Autonomous already proves the pattern works</li>
+          <li>→ Easier to add cross-phase parallelism</li>
+          <li>→ One prompt to maintain, not 8</li>
+        </ul>
+      </div>
+      <div style="background:#15101a;border:1px solid #2a1820;border-radius:8px;padding:20px;">
+        <h4 style="color:#f87171;font-size:13px;margin-bottom:10px;">Arguments AGAINST Single Orchestrator</h4>
+        <ul style="font-size:12px;line-height:1.8;color:#888;list-style:none;">
+          <li>→ One massive prompt = slower, more expensive per invocation</li>
+          <li>→ Users often want just ONE step (just discuss, just execute)</li>
+          <li>→ Context budget: single orchestrator for discuss+plan+execute would eat context</li>
+          <li>→ Separation allows independent versioning/testing</li>
+          <li>→ Different workflows need different tools (discuss needs AskUserQuestion, execute needs Task)</li>
+          <li>→ Breaking change for all existing users</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="background:#1a1530;border-left:3px solid #7c6bf0;border-radius:0 6px 6px 0;padding:20px;margin:16px 0;font-size:12px;line-height:1.8;">
+      <strong style="color:#b8a8ff;">Recommendation: Hybrid — Keep Separate Commands, Add Thin Meta-Layer</strong>
+      <br><br>
+      Don't merge the workflows. Instead:
+      <br><br>
+      <strong>1. Keep individual commands</strong> (/gsd:discuss-phase, /gsd:plan-phase, etc.) for when users want one step
+      <br><br>
+      <strong>2. Add a meta-orchestrator</strong> that can chain them intelligently:
+      <br>• <code>/gsd:discuss-phases 2,3,5</code> — discuss related phases in one context
+      <br>• <code>/gsd:run 2</code> — full pipeline: discuss → plan → execute in one command
+      <br>• <code>/gsd:run 2,3 --parallel</code> — parallel phases with dependency awareness
+      <br><br>
+      <strong>3. Share the improvements across workflows</strong> via shared references:
+      <br>• <code>references/conversation-first.md</code> — the questioning philosophy, used by both new-project AND discuss-phase
+      <br>• <code>references/context-loading.md</code> — shared manifest-aware loading
+      <br><br>
+      This gives you consolidation benefits (shared context, cross-phase awareness) without the downsides (massive single prompt, breaking changes).
+    </div>
+
+    <div style="background:#111118;border:1px solid #222;border-radius:8px;padding:20px;margin:16px 0;">
+      <h3 style="color:#fde68a;font-size:14px;margin-bottom:12px;">What the Agents Actually Need (Simplification Opportunity)</h3>
+      <div style="font-size:12px;line-height:1.8;color:#888;">
+        Looking at the agent matrix, many agents are very similar:
+        <br><br>
+        <strong>Could merge:</strong>
+        <br>• gsd-phase-researcher + gsd-ui-researcher → single researcher with focus parameter
+        <br>• gsd-plan-checker + gsd-ui-checker + gsd-integration-checker → single checker with dimension parameter
+        <br>• gsd-verifier + gsd-nyquist-auditor → single verifier with depth parameter
+        <br><br>
+        <strong>This would reduce 15 agents → ~8 agents</strong> while maintaining the same capabilities.
+        <br>The difference between them is mostly the prompt, not the capability.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /canvas -->
+
+<script>
+function showWorkflow(id) {
+  document.querySelectorAll('.workflow').forEach(w => w.classList.remove('active'));
+  document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggle(el) {
+  el.classList.toggle('expanded');
+}
+</script>
+
+</body>
+</html>

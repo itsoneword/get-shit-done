@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSD Architecture — Discussion → Planning → Execution Pipeline</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Mono', 'Fira Code', monospace; background: #0a0a0f; color: #c8c8d0; overflow-x: hidden; }
+
+  .header { text-align: center; padding: 40px 20px 20px; }
+  .header h1 { font-size: 24px; color: #e8e8f0; letter-spacing: 2px; }
+  .header p { color: #666; margin-top: 8px; font-size: 13px; }
+
+  .tabs { display: flex; justify-content: center; gap: 4px; padding: 20px; flex-wrap: wrap; }
+  .tab { padding: 10px 20px; border: 1px solid #222; border-radius: 6px; cursor: pointer; font-size: 13px; color: #888; background: #111; transition: all 0.2s; }
+  .tab:hover { border-color: #444; color: #aaa; }
+  .tab.active { border-color: #7c6bf0; color: #b8a8ff; background: #1a1530; }
+
+  .view { display: none; padding: 20px 40px; max-width: 1400px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* ─── Flow Diagram ─── */
+  .flow { display: flex; flex-direction: column; gap: 0; align-items: center; }
+  .flow-stage { width: 100%; max-width: 900px; position: relative; }
+  .flow-box { border: 1px solid #282830; border-radius: 8px; padding: 20px; margin: 8px 0; background: #111118; transition: all 0.3s; cursor: pointer; }
+  .flow-box:hover { border-color: #7c6bf0; background: #15152a; }
+  .flow-box.expanded { border-color: #7c6bf0; background: #12121f; }
+  .flow-box h3 { font-size: 14px; color: #b8a8ff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .flow-box h3 .num { background: #7c6bf0; color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .flow-box .subtitle { font-size: 12px; color: #666; margin-bottom: 10px; }
+  .flow-box .detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #222; font-size: 12px; line-height: 1.8; }
+  .flow-box.expanded .detail { display: block; }
+  .flow-arrow { text-align: center; color: #333; font-size: 20px; line-height: 1; padding: 2px 0; }
+
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; margin: 2px; }
+  .tag-agent { background: #1a2520; color: #4ade80; border: 1px solid #1a3a28; }
+  .tag-file { background: #1a1a28; color: #818cf8; border: 1px solid #282848; }
+  .tag-tool { background: #2a1a18; color: #fb923c; border: 1px solid #3a2820; }
+  .tag-problem { background: #2a1018; color: #f87171; border: 1px solid #3a1820; }
+  .tag-good { background: #0a2018; color: #34d399; border: 1px solid #1a3028; }
+
+  /* ─── Problem Analysis ─── */
+  .problem-section { max-width: 1000px; margin: 0 auto; }
+  .problem-card { border: 1px solid #2a1820; border-radius: 8px; padding: 24px; margin: 16px 0; background: #15101a; }
+  .problem-card h3 { color: #f87171; font-size: 15px; margin-bottom: 12px; }
+  .problem-card .evidence { background: #0a0a12; border: 1px solid #222; border-radius: 4px; padding: 12px; margin: 10px 0; font-size: 12px; line-height: 1.7; }
+  .problem-card .evidence code { color: #b8a8ff; background: #1a1530; padding: 1px 4px; border-radius: 2px; }
+  .vs-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+  .vs-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #333; color: #888; }
+  .vs-table td { padding: 8px 12px; border-bottom: 1px solid #1a1a22; }
+  .vs-table .current { color: #f87171; }
+  .vs-table .proposed { color: #34d399; }
+
+  /* ─── Agent Map ─── */
+  .agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; max-width: 1200px; margin: 0 auto; }
+  .agent-card { border: 1px solid #1a2520; border-radius: 8px; padding: 16px; background: #0f1512; cursor: pointer; transition: all 0.2s; }
+  .agent-card:hover { border-color: #4ade80; transform: translateY(-1px); }
+  .agent-card h4 { color: #4ade80; font-size: 13px; margin-bottom: 4px; }
+  .agent-card .role { color: #666; font-size: 11px; margin-bottom: 8px; }
+  .agent-card .spawned-by { font-size: 10px; color: #555; }
+
+  /* ─── File Flow ─── */
+  .file-flow { max-width: 1000px; margin: 0 auto; }
+  .file-stage { display: flex; align-items: stretch; margin: 8px 0; border-radius: 6px; overflow: hidden; }
+  .file-stage-label { width: 140px; padding: 12px; font-size: 11px; color: #888; background: #111; display: flex; align-items: center; border: 1px solid #222; border-right: none; border-radius: 6px 0 0 6px; flex-shrink: 0; }
+  .file-stage-files { flex: 1; padding: 12px; background: #0d0d15; border: 1px solid #222; border-radius: 0 6px 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+  /* ─── Improvement Proposals ─── */
+  .proposal { max-width: 1000px; margin: 0 auto; }
+  .proposal-card { border: 1px solid #1a3028; border-radius: 8px; padding: 24px; margin: 16px 0; background: #0f1a15; }
+  .proposal-card h3 { color: #34d399; font-size: 15px; margin-bottom: 8px; }
+  .proposal-card .rationale { color: #888; font-size: 12px; margin-bottom: 16px; }
+  .code-block { background: #0a0a12; border: 1px solid #222; border-radius: 4px; padding: 14px; font-size: 11px; line-height: 1.6; overflow-x: auto; margin: 10px 0; color: #a8a8b8; }
+  .code-block .comment { color: #555; }
+  .code-block .keyword { color: #b8a8ff; }
+  .code-block .string { color: #4ade80; }
+  .code-block .number { color: #fb923c; }
+
+  .legend { display: flex; gap: 16px; justify-content: center; padding: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #666; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .section-title { font-size: 16px; color: #e8e8f0; margin: 30px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #1a1a22; }
+
+  .highlight { background: #1a1530; padding: 16px; border-left: 3px solid #7c6bf0; border-radius: 0 6px 6px 0; margin: 16px 0; font-size: 12px; line-height: 1.7; }
+  .highlight strong { color: #b8a8ff; }
+
+  .comparison-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .comparison-col { border: 1px solid #222; border-radius: 8px; padding: 16px; }
+  .comparison-col.bad { border-color: #2a1820; background: #15101a; }
+  .comparison-col.good { border-color: #1a3028; background: #0f1a15; }
+  .comparison-col h4 { font-size: 12px; margin-bottom: 10px; }
+  .comparison-col.bad h4 { color: #f87171; }
+  .comparison-col.good h4 { color: #34d399; }
+  .comparison-col ul { list-style: none; font-size: 12px; line-height: 1.8; }
+  .comparison-col ul li::before { content: '→ '; color: #555; }
+
+  @media (max-width: 768px) {
+    .view { padding: 10px 16px; }
+    .comparison-row { grid-template-columns: 1fr; }
+    .agent-grid { grid-template-columns: 1fr; }
+    .file-stage { flex-direction: column; }
+    .file-stage-label { width: 100%; border-right: 1px solid #222; border-radius: 6px 6px 0 0; border-bottom: none; }
+    .file-stage-files { border-radius: 0 0 6px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>GSD ARCHITECTURE ANALYSIS</h1>
+  <p>How phases, tasks, and context flow through discuss → plan → execute — and where the bottlenecks are</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showView('pipeline')">Pipeline Flow</div>
+  <div class="tab" onclick="showView('problems')">Problem Analysis</div>
+  <div class="tab" onclick="showView('agents')">Agent Map</div>
+  <div class="tab" onclick="showView('files')">File Flow</div>
+  <div class="tab" onclick="showView('proposals')">Improvement Ideas</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PIPELINE FLOW VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view active" id="pipeline">
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#7c6bf0"></div> Orchestrator (workflow md)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div> Agent (subagent md)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div> CLI tool (gsd-tools.cjs)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div> Problem area</div>
+  </div>
+
+  <div class="flow">
+
+    <!-- NEW PROJECT -->
+    <div class="flow-stage">
+      <div class="flow-box" onclick="toggle(this)">
+        <h3><span class="num">0</span> /gsd:new-project — Dream Extraction</h3>
+        <div class="subtitle">User's idea → PROJECT.md + REQUIREMENTS.md + ROADMAP.md</div>
+        <div class="detail">
+          <p><strong>What happens:</strong> The orchestrator asks open-ended questions following the "dream extraction" philosophy from <code>references/questioning.md</code>. This is the BEST part of GSD — genuinely adaptive, follows energy, challenges vagueness.</p>
+          <br>
+          <p><strong>Flow:</strong></p>
+          <p>1. <span class="tag tag-tool">gsd-tools init new-project</span> → detects brownfield, checks existing state</p>
+          <p>2. Adaptive questioning (no fixed count — loops until "Ready?")</p>
+          <p>3. Writes PROJECT.md from answers</p>
+          <p>4. Spawns 4× <span class="tag tag-agent">gsd-project-researcher</span> in parallel (domain, stack, features, pitfalls)</p>
+          <p>5. <span class="tag tag-agent">gsd-research-synthesizer</span> merges results</p>
+          <p>6. Generates REQUIREMENTS.md (table stakes + features)</p>
+          <p>7. <span class="tag tag-agent">gsd-roadmapper</span> creates ROADMAP.md with phase breakdown</p>
+          <br>
+          <p><strong>Outputs:</strong> <span class="tag tag-file">PROJECT.md</span> <span class="tag tag-file">REQUIREMENTS.md</span> <span class="tag tag-file">ROADMAP.md</span> <span class="tag tag-file">STATE.md</span> <span class="tag tag-file">config.json</span></p>
+          <br>
+          <p><span class="tag tag-good">Good</span> Questioning is genuinely adaptive here — no fixed script, follows the thread</p>
+          <p><span class="tag tag-problem">Problem</span> ROADMAP phases are created from AI's interpretation of the project, not detailed user input per phase. This is where generic assumptions enter the system.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <!-- DISCUSS PHASE -->
+    <div class="flow-stage">
+      <div class="flow-box" onclick="toggle(this)">
+        <h3><span class="num">1</span> /gsd:discuss-phase N — Context Gathering</h3>
+        <div class="subtitle">Clarify HOW to implement phase N → CONTEXT.md</div>
+        <div class="detail">
+          <p><strong>What actually happens (the problem is here):</strong></p>
+          <br>
+          <p>1. <span class="tag tag-tool">gsd-tools init phase-op N</span> → loads config, finds phase dir</p>
+          <p>2. <strong>load_prior_context</strong> — reads PROJECT.md, REQUIREMENTS.md, STATE.md, all prior CONTEXT.md files</p>
+          <p>3. <strong>scout_codebase</strong> — quick grep of existing code for relevant patterns</p>
+          <p>4. <strong>analyze_phase</strong> — reads the ROADMAP.md phase description and identifies "gray areas"</p>
+          <br>
+          <div class="highlight">
+            <strong>⚠ THE CORE ISSUE:</strong> Gray areas are generated from one-line ROADMAP descriptions + generic project context. The workflow says "Generate phase-specific gray areas" but in practice:
+            <br><br>
+            • The ROADMAP description is typically 1-2 sentences (written by gsd-roadmapper in step 0)<br>
+            • The "prior context" includes PROJECT.md which describes the whole project generically<br>
+            • The gray area generator sees "trading app" → generates questions about trade execution, even if this phase is just UI<br>
+            • The workflow pre-generates 3-4 categories, then asks 4 questions per category<br>
+            • <strong>Total: ~12-16 questions, pre-determined in structure, from AI-generated understanding</strong>
+          </div>
+          <br>
+          <p>5. <strong>present_gray_areas</strong> — shows 3-4 areas, user picks which to discuss</p>
+          <p>6. <strong>discuss_areas</strong> — 4 questions per area via AskUserQuestion (or batch mode)</p>
+          <p>7. Writes <span class="tag tag-file">CONTEXT.md</span> with decisions (locked / discretion / deferred)</p>
+          <br>
+          <p><span class="tag tag-problem">Problem 1</span> Questions come from AI's gray area analysis, not from real unknowns the user needs to resolve</p>
+          <p><span class="tag tag-problem">Problem 2</span> Fixed structure: always 3-4 areas × 4 questions. A complex phase gets same depth as a simple one</p>
+          <p><span class="tag tag-problem">Problem 3</span> PROJECT.md (full project scope) bleeds into phase-specific questions — e.g., asking about core trading logic when phase is just "add charts UI"</p>
+          <p><span class="tag tag-problem">Problem 4</span> No back-and-forth — each question is isolated AskUserQuestion, not a conversation thread</p>
+          <p><span class="tag tag-good">Good</span> The prompt DOES say "follow the thread" and "be a thinking partner not interviewer" — but the rigid AskUserQuestion structure fights this</p>
+          <p><span class="tag tag-good">Good</span> Scout codebase step helps ground questions in reality</p>
+          <p><span class="tag tag-good">Good</span> Prior decisions are loaded and not re-asked</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <!-- PLAN PHASE -->
+    <div class="flow-stage">
+      <div class="flow-box" onclick="toggle(this)">
+        <h3><span class="num">2</span> /gsd:plan-phase N — Plan Creation</h3>
+        <div class="subtitle">CONTEXT.md → RESEARCH.md → PLAN.md files</div>
+        <div class="detail">
+          <p><strong>This is a 3-agent pipeline orchestrated by plan-phase.md workflow:</strong></p>
+          <br>
+          <p><strong>Step A: Research</strong> (if enabled)</p>
+          <p>Spawns <span class="tag tag-agent">gsd-phase-researcher</span> in fresh 200K context</p>
+          <p>Reads: CONTEXT.md (locked decisions constrain research scope)</p>
+          <p>Outputs: <span class="tag tag-file">RESEARCH.md</span> — standard stack, patterns, pitfalls, code examples</p>
+          <br>
+          <p><strong>Step B: Plan</strong></p>
+          <p>Spawns <span class="tag tag-agent">gsd-planner</span> in fresh 200K context</p>
+          <p>Reads: CONTEXT.md + RESEARCH.md + PROJECT.md + ROADMAP.md + prior SUMMARYs</p>
+          <p>Creates: PLAN.md files with tasks, waves, dependencies, must-haves</p>
+          <br>
+          <p><strong>Step C: Verify</strong> (loop up to 3×)</p>
+          <p>Spawns <span class="tag tag-agent">gsd-plan-checker</span> → validates structure, coverage, dependencies</p>
+          <p>If issues: spawns gsd-planner again with feedback (revision mode)</p>
+          <br>
+          <p><span class="tag tag-problem">Problem</span> Planner receives CONTEXT.md which was built from generic questions → plans inherit that genericness</p>
+          <p><span class="tag tag-problem">Problem</span> Each agent gets fresh context but only reads what's in the files — no conversational understanding of WHY the user made certain decisions</p>
+          <p><span class="tag tag-good">Good</span> Plan checker loop catches structural issues</p>
+          <p><span class="tag tag-good">Good</span> Goal-backward methodology is solid — derives from outcomes not tasks</p>
+          <p><span class="tag tag-good">Good</span> Vertical slices preferred over horizontal layers</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <!-- EXECUTE PHASE -->
+    <div class="flow-stage">
+      <div class="flow-box" onclick="toggle(this)">
+        <h3><span class="num">3</span> /gsd:execute-phase N — Execution</h3>
+        <div class="subtitle">PLAN.md files → code commits → SUMMARY.md files</div>
+        <div class="detail">
+          <p><strong>Wave-based parallel execution:</strong></p>
+          <br>
+          <p>1. <span class="tag tag-tool">gsd-tools init execute-phase N</span> → loads plans, config, models</p>
+          <p>2. <span class="tag tag-tool">gsd-tools phase-plan-index N</span> → groups plans into waves by dependencies</p>
+          <p>3. For each wave (sequential):</p>
+          <p>&nbsp;&nbsp;&nbsp;Within wave (parallel if enabled):</p>
+          <p>&nbsp;&nbsp;&nbsp;Spawn <span class="tag tag-agent">gsd-executor</span> per plan (fresh 200K each)</p>
+          <p>&nbsp;&nbsp;&nbsp;Each executor: reads PLAN.md → executes tasks → commits → writes SUMMARY.md</p>
+          <p>&nbsp;&nbsp;&nbsp;STATE.md updated with file locking (O_EXCL)</p>
+          <p>4. Post-execution: spawn <span class="tag tag-agent">gsd-verifier</span> → quality gate</p>
+          <br>
+          <p><span class="tag tag-good">Good</span> Wave parallelism is well-designed</p>
+          <p><span class="tag tag-good">Good</span> Each executor gets clean context with just its plan</p>
+          <p><span class="tag tag-problem">Problem</span> If CONTEXT.md had wrong assumptions, executor builds wrong thing — no feedback loop until verification</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow">↓</div>
+
+    <!-- VERIFY -->
+    <div class="flow-stage">
+      <div class="flow-box" onclick="toggle(this)">
+        <h3><span class="num">4</span> /gsd:verify-work N — Verification</h3>
+        <div class="subtitle">Check execution results → VERIFICATION.md → optional gap closure</div>
+        <div class="detail">
+          <p>Runs tests, checks artifacts, validates must-haves from PLAN.md</p>
+          <p>If gaps found → creates gap closure plans → re-execute</p>
+          <br>
+          <p><span class="tag tag-good">Good</span> Multi-layer verification (plan-checker during planning + verifier after execution)</p>
+          <p><span class="tag tag-problem">Problem</span> Verification catches structural issues but can't catch "we built the wrong thing" — that's a CONTEXT.md problem</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-title" style="margin-top: 40px;">The Information Funnel Problem</div>
+  <div class="highlight">
+    <strong>The pipeline narrows context at each stage, but the narrowing happens at the wrong point:</strong>
+    <br><br>
+    <strong>Step 0 (new-project):</strong> Rich adaptive questioning → PROJECT.md (good, captures vision)<br>
+    <strong>ROADMAP creation:</strong> AI interprets PROJECT.md → generates phase descriptions (1-2 sentences each) <span style="color:#f87171">← FIRST LOSSY COMPRESSION</span><br>
+    <strong>Step 1 (discuss-phase):</strong> AI reads 1-2 sentence description → generates gray areas → asks preset questions <span style="color:#f87171">← SECOND LOSSY COMPRESSION</span><br>
+    <strong>Step 2 (plan-phase):</strong> Planner reads CONTEXT.md (answers to generic questions) → creates specific tasks <span style="color:#f87171">← BUILDS ON COMPRESSED FOUNDATION</span><br>
+    <br>
+    <strong>Result:</strong> By the time the executor reads its PLAN.md, it's working from decisions that were answers to questions that were generated from assumptions that were derived from a 1-sentence roadmap entry. Each step adds assumptions, and none of them came from deep discussion with the user about THIS specific phase.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PROBLEM ANALYSIS VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view" id="problems">
+
+  <div class="section-title">Root Cause Analysis</div>
+
+  <div class="problem-section">
+    <div class="problem-card">
+      <h3>Problem 1: Generic Gray Areas from Generic Descriptions</h3>
+      <div class="evidence">
+        <p><strong>In discuss-phase.md, line ~69-106 (gray_area_identification):</strong></p>
+        <br>
+        <p>The workflow says: <code>"Read the phase goal from ROADMAP.md"</code> — but ROADMAP goals are typically one sentence, written by the AI roadmapper during new-project.</p>
+        <br>
+        <p>Then it says: <code>"Generate phase-specific gray areas — Not generic categories"</code> — but gives examples that ARE generic patterns:</p>
+        <p><code>Phase: "User authentication" → Session handling, Error responses, Multi-device policy, Recovery flow</code></p>
+        <br>
+        <p>These ARE the right questions for a greenfield auth phase. But for Phase 8 of a mature project where you just need to add a chart widget? The system still generates fundamental architecture questions because it loaded PROJECT.md which says "trading platform" and it identifies "trade execution" as a gray area.</p>
+      </div>
+      <table class="vs-table">
+        <tr><th>What happens</th><th>What should happen</th></tr>
+        <tr>
+          <td class="current">AI reads "Phase 8: Charts UI" + PROJECT.md("trading platform") → generates gray areas about trading logic, data refresh rates, error handling for market data</td>
+          <td class="proposed">AI should see: prior phases solved trading logic, this phase is ONLY about rendering. Gray areas: chart library choice, responsive layout, interaction patterns</td>
+        </tr>
+        <tr>
+          <td class="current">3-4 gray areas pre-generated, each gets exactly 4 questions</td>
+          <td class="proposed">Start with "What's unclear about this phase?" — let the user drive, follow energy like new-project does</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="problem-card">
+      <h3>Problem 2: AskUserQuestion Kills Conversation Flow</h3>
+      <div class="evidence">
+        <p><strong>In discuss-phase.md, line ~537-542 (discuss_areas):</strong></p>
+        <br>
+        <p><code>Ask 4 questions using AskUserQuestion</code> with <code>header (max 12 chars)</code>, <code>2-3 concrete choices</code></p>
+        <br>
+        <p>Compare with new-project's questioning.md: <code>"Start open. Let them dump their mental model. Don't interrupt with structure."</code>, <code>"Follow energy. Whatever they emphasized, dig into that."</code></p>
+        <br>
+        <p>The questioning philosophy is great. But discuss-phase ignores it and uses rigid AskUserQuestion menus for everything. This forces multiple-choice answers where freeform discussion would reveal more.</p>
+        <br>
+        <p>The workflow does have <code>"If 'Other' → ask as plain text"</code> but the user has to actively fight the structure to get there.</p>
+      </div>
+      <table class="vs-table">
+        <tr><th>Current: Interview mode</th><th>Better: Conversation mode</th></tr>
+        <tr>
+          <td class="current">"How should posts be displayed?" → [Cards] [List] [Timeline] [Other]</td>
+          <td class="proposed">"Tell me about how you envision this phase. What's the most important thing to get right?"</td>
+        </tr>
+        <tr>
+          <td class="current">User picks "Cards" → next question. No exploration of WHY cards, what kind, what inspiration.</td>
+          <td class="proposed">"Cards — interesting. Like Pinterest-style masonry? Or more like Twitter's compact cards? Any apps you'd point to as reference?"</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="problem-card">
+      <h3>Problem 3: Each Phase Discussed in Isolation</h3>
+      <div class="evidence">
+        <p><strong>In discuss-phase.md, the workflow is designed for ONE phase at a time:</strong></p>
+        <br>
+        <p><code>/gsd:discuss-phase 1</code> → new context, asks questions, writes CONTEXT.md<br>
+        <code>/clear</code><br>
+        <code>/gsd:discuss-phase 2</code> → new context, asks questions, writes CONTEXT.md</p>
+        <br>
+        <p>The workflow DOES load prior CONTEXT.md files (<code>load_prior_context</code> step), but:</p>
+        <p>• It only reads <strong>decisions</strong> from prior phases, not the <strong>reasoning</strong> or <strong>discussion</strong></p>
+        <p>• The DISCUSSION-LOG.md is explicitly marked <code>"Audit trail only. Do NOT use as input to planning, research, or execution agents."</code></p>
+        <p>• Related phases (e.g., 5 UI phases) can't share a conversation where one insight informs the next</p>
+        <br>
+        <p><strong>Your example:</strong> If phase 1 discussion reveals "we want a design system with specific tokens," phases 2-5 should inherit that context naturally — not re-discover it from a one-line decision in CONTEXT.md.</p>
+      </div>
+    </div>
+
+    <div class="problem-card">
+      <h3>Problem 4: The "Questioning Philosophy" Only Lives in new-project</h3>
+      <div class="evidence">
+        <p><strong>Two completely different questioning approaches:</strong></p>
+        <br>
+        <p><code>references/questioning.md</code> (used by new-project only):</p>
+        <p>• "Dream extraction, not requirements gathering"</p>
+        <p>• "Follow energy. Whatever they emphasized, dig into that"</p>
+        <p>• "Challenge vagueness. Never accept fuzzy answers"</p>
+        <p>• "Know when to stop" (adaptive length)</p>
+        <p>• Loop: questions → more questions → until user says "ready"</p>
+        <br>
+        <p><code>discuss-phase.md</code> (used for every phase):</p>
+        <p>• AI generates 3-4 gray areas</p>
+        <p>• 4 questions per area via AskUserQuestion</p>
+        <p>• "More questions or next area?" gate</p>
+        <p>• Fixed menu-driven structure</p>
+        <br>
+        <p><strong>The irony:</strong> The MOST leveraged questioning (per-phase, where specifics matter) uses the LEAST adaptive approach. The project-level questioning (where generality is fine) uses the MOST adaptive approach.</p>
+      </div>
+    </div>
+
+    <div class="problem-card">
+      <h3>Problem 5: Research Agent Reinforces AI Assumptions</h3>
+      <div class="evidence">
+        <p><strong>In gsd-phase-researcher.md:</strong></p>
+        <br>
+        <p>The researcher reads CONTEXT.md (which came from generic questions) and researches based on those decisions. If the questions missed the real complexity, the research misses it too.</p>
+        <br>
+        <p><strong>Example scenario — "Phase 8: Charts UI" for trading app:</strong></p>
+        <p>1. discuss-phase asks about chart library, colors, responsive layout (generic UI questions)</p>
+        <p>2. User answers: "use TradingView widget, dark theme, mobile responsive"</p>
+        <p>3. Researcher researches TradingView widget API, dark theme CSS, responsive patterns</p>
+        <p>4. Planner creates tasks: "integrate TradingView", "add dark theme", "make responsive"</p>
+        <br>
+        <p><strong>What was missed:</strong> The REAL complexity was websocket data streaming to the chart, handling reconnections, buffering updates during network gaps, syncing chart state with order book. Nobody asked because the gray areas were about UI appearance, not data flow.</p>
+        <br>
+        <p>A genuine back-and-forth discussion would have surfaced this: "Tell me about the charts — what data feeds them?" → "Oh, it's real-time websocket data" → "That changes everything. Let's talk about the data pipeline first."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- AGENT MAP VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view" id="agents">
+
+  <div class="section-title">Agent Ecosystem — Who Does What</div>
+
+  <div class="highlight" style="margin-bottom: 24px;">
+    <strong>Key insight:</strong> Agents never call each other. Workflows (markdown orchestrators) spawn agents and collect results. Each agent gets a fresh context window and communicates only through files (.planning/*.md).
+  </div>
+
+  <div class="agent-grid">
+
+    <div class="agent-card">
+      <h4>gsd-executor</h4>
+      <div class="role">Executes PLAN.md tasks, creates commits, writes SUMMARY.md</div>
+      <div>Tools: Read, Write, Edit, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: execute-phase (parallel, per plan)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-planner</h4>
+      <div class="role">Creates PLAN.md files with task breakdown, waves, dependencies</div>
+      <div>Tools: Read, Write, Bash, Glob, Grep, WebFetch, Context7</div>
+      <div class="spawned-by">Spawned by: plan-phase (can be called multiple times in revision loop)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-phase-researcher</h4>
+      <div class="role">Researches tech approaches, ecosystem, libraries for a phase</div>
+      <div>Tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, Context7</div>
+      <div class="spawned-by">Spawned by: plan-phase (optional, if research enabled)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-plan-checker</h4>
+      <div class="role">Validates plan structure, coverage, dependencies (max 3 iterations)</div>
+      <div>Tools: Read, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: plan-phase (verification loop)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-verifier</h4>
+      <div class="role">Post-execution quality gate, checks artifacts and tests</div>
+      <div>Tools: Read, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: execute-phase (after all waves complete)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-debugger</h4>
+      <div class="role">Interactive diagnosis and fix for bugs</div>
+      <div>Tools: Read, Write, Edit, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: debug command</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-project-researcher ×4</h4>
+      <div class="role">Parallel research: domain, stack, features, pitfalls</div>
+      <div>Tools: Read, WebSearch, Bash, Glob, Grep</div>
+      <div class="spawned-by">Spawned by: new-project (4 parallel instances)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-research-synthesizer</h4>
+      <div class="role">Merges 4 parallel research outputs into unified summary</div>
+      <div>Tools: Read, Write, Edit</div>
+      <div class="spawned-by">Spawned by: new-project (after researchers complete)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-roadmapper</h4>
+      <div class="role">Creates phase roadmap from project requirements</div>
+      <div>Tools: Read, Write, Edit</div>
+      <div class="spawned-by">Spawned by: new-project</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-codebase-mapper ×4</h4>
+      <div class="role">Maps brownfield: stack, architecture, conventions, concerns</div>
+      <div>Tools: Read, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: map-codebase (4 parallel instances)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-ui-researcher</h4>
+      <div class="role">Researches UI/UX patterns, design systems, libraries</div>
+      <div>Tools: Read, WebSearch, Bash, Glob, Grep</div>
+      <div class="spawned-by">Spawned by: ui-phase</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-ui-checker / gsd-ui-auditor</h4>
+      <div class="role">Validates UI implementation and audits against design spec</div>
+      <div>Tools: Read, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: ui-phase / ui-review</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-integration-checker</h4>
+      <div class="role">Validates cross-phase integration, API boundaries</div>
+      <div>Tools: Read, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: plan-phase verification</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-nyquist-auditor</h4>
+      <div class="role">Validates verification coverage using sampling theory</div>
+      <div>Tools: Read, Bash, Grep, Glob</div>
+      <div class="spawned-by">Spawned by: plan-phase (optional)</div>
+    </div>
+
+    <div class="agent-card">
+      <h4>gsd-user-profiler</h4>
+      <div class="role">Profiles user work style, preferences, constraints</div>
+      <div>Tools: Read, WebSearch</div>
+      <div class="spawned-by">Spawned by: profile-user command</div>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top: 40px">Agent Interaction Pattern</div>
+  <div class="highlight">
+    <strong>No agent-to-agent communication.</strong> All coordination happens through the workflow orchestrator + filesystem:
+    <br><br>
+    <code>Workflow reads state → spawns Agent A → Agent A writes file → Workflow reads result → spawns Agent B → Agent B reads Agent A's file</code>
+    <br><br>
+    This is fundamentally <strong>message passing via filesystem</strong>. The "messages" are markdown files. The "mailboxes" are .planning/phases/ directories. The "router" is the workflow markdown.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- FILE FLOW VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view" id="files">
+
+  <div class="section-title">How Files Flow Through the Pipeline</div>
+  <p style="color:#666; font-size:12px; margin-bottom:20px;">Each row shows what files exist at each stage and who creates/consumes them</p>
+
+  <div class="file-flow">
+
+    <div class="file-stage">
+      <div class="file-stage-label">Step 0: new-project</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">PROJECT.md</span>
+        <span class="tag tag-file">REQUIREMENTS.md</span>
+        <span class="tag tag-file">ROADMAP.md</span>
+        <span class="tag tag-file">STATE.md</span>
+        <span class="tag tag-file">config.json</span>
+        <span style="color:#555; font-size:10px; margin-left:8px;">Created by: orchestrator + roadmapper agent</span>
+      </div>
+    </div>
+
+    <div class="file-stage">
+      <div class="file-stage-label">Step 1: discuss-phase</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">NN-CONTEXT.md</span>
+        <span class="tag tag-file">NN-DISCUSSION-LOG.md</span>
+        <span style="color:#555; font-size:10px; margin-left:8px;">Created by: orchestrator (inline, no subagent)</span>
+      </div>
+    </div>
+
+    <div class="file-stage">
+      <div class="file-stage-label">Step 2a: research</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">NN-RESEARCH.md</span>
+        <span style="color:#555; font-size:10px; margin-left:8px;">Created by: gsd-phase-researcher agent</span>
+      </div>
+    </div>
+
+    <div class="file-stage">
+      <div class="file-stage-label">Step 2b: plan</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">NN-01-PLAN.md</span>
+        <span class="tag tag-file">NN-02-PLAN.md</span>
+        <span class="tag tag-file">NN-03-PLAN.md</span>
+        <span style="color:#555; font-size:10px; margin-left:8px;">Created by: gsd-planner agent</span>
+      </div>
+    </div>
+
+    <div class="file-stage">
+      <div class="file-stage-label">Step 3: execute</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">NN-01-SUMMARY.md</span>
+        <span class="tag tag-file">NN-02-SUMMARY.md</span>
+        <span class="tag tag-file">NN-03-SUMMARY.md</span>
+        <span class="tag tag-file">+ code commits</span>
+        <span style="color:#555; font-size:10px; margin-left:8px;">Created by: gsd-executor agents (parallel)</span>
+      </div>
+    </div>
+
+    <div class="file-stage">
+      <div class="file-stage-label">Step 4: verify</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">NN-VERIFICATION.md</span>
+        <span class="tag tag-file">NN-UAT.md</span>
+        <span style="color:#555; font-size:10px; margin-left:8px;">Created by: gsd-verifier agent</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-title" style="margin-top:30px;">What Each Agent Actually Reads</div>
+  <p style="color:#666; font-size:12px; margin-bottom:20px;">This is where the "information funnel" becomes visible — each agent only sees files, never the conversation that produced them</p>
+
+  <div class="file-flow">
+    <div class="file-stage">
+      <div class="file-stage-label" style="color:#4ade80;">gsd-phase-researcher</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">CONTEXT.md</span>
+        <span class="tag tag-file">ROADMAP.md</span>
+        <span class="tag tag-file">config.json</span>
+        <span style="color:#f87171; font-size:10px; margin-left:8px;">Does NOT see: user's tone, emphasis, hesitation, reasoning behind decisions</span>
+      </div>
+    </div>
+    <div class="file-stage">
+      <div class="file-stage-label" style="color:#4ade80;">gsd-planner</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">CONTEXT.md</span>
+        <span class="tag tag-file">RESEARCH.md</span>
+        <span class="tag tag-file">PROJECT.md</span>
+        <span class="tag tag-file">ROADMAP.md</span>
+        <span class="tag tag-file">STATE.md</span>
+        <span class="tag tag-file">prior SUMMARYs</span>
+        <span style="color:#f87171; font-size:10px; margin-left:8px;">Lots of files but all are AI-filtered summaries of user intent</span>
+      </div>
+    </div>
+    <div class="file-stage">
+      <div class="file-stage-label" style="color:#4ade80;">gsd-executor</div>
+      <div class="file-stage-files">
+        <span class="tag tag-file">PLAN.md (its plan only)</span>
+        <span class="tag tag-file">PROJECT.md</span>
+        <span class="tag tag-file">STATE.md</span>
+        <span class="tag tag-file">CLAUDE.md</span>
+        <span style="color:#f87171; font-size:10px; margin-left:8px;">Narrowest view — only its PLAN.md, which was derived from CONTEXT.md, which was derived from generic questions</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- IMPROVEMENT PROPOSALS VIEW -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="view" id="proposals">
+
+  <div class="section-title">Proposed Improvements</div>
+
+  <div class="proposal-card">
+    <h3>1. Apply questioning.md Philosophy to discuss-phase</h3>
+    <div class="rationale">The questioning approach that works great in new-project should be the DEFAULT for discuss-phase too, not just an afterthought buried in "Other" options.</div>
+
+    <div class="comparison-row">
+      <div class="comparison-col bad">
+        <h4>Current: Menu-Driven Interview</h4>
+        <ul>
+          <li>AI pre-generates 3-4 gray areas from roadmap description</li>
+          <li>User picks which areas to discuss</li>
+          <li>4 × AskUserQuestion per area (multiple choice)</li>
+          <li>"More or next?" gate after each area</li>
+          <li>CONTEXT.md = answers to AI's questions</li>
+        </ul>
+      </div>
+      <div class="comparison-col good">
+        <h4>Proposed: Conversation-First</h4>
+        <ul>
+          <li>Start with: "Tell me about this phase. What matters most?"</li>
+          <li>Follow the user's energy and emphasis</li>
+          <li>Use AskUserQuestion ONLY for specific choice points</li>
+          <li>Probe vague answers: "What does 'simple' mean here?"</li>
+          <li>CONTEXT.md = distilled understanding from real conversation</li>
+          <li>Adaptive depth: complex phases get deep discussion, simple phases get quick confirmation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="proposal-card">
+    <h3>2. Cross-Phase Discussion for Related Phases</h3>
+    <div class="rationale">5 UI phases discussed together share context, avoid redundant questions, and produce coherent decisions. One insight in phase 2 discussion naturally informs phase 5.</div>
+
+    <div class="code-block">
+<span class="comment"># New command: discuss related phases in single context</span>
+<span class="keyword">/gsd:discuss-phases</span> <span class="number">2,3,5,8</span> <span class="comment">  # or: --tag ui</span>
+
+<span class="comment"># Flow:</span>
+<span class="string">1. Load ALL phase descriptions from ROADMAP</span>
+<span class="string">2. Identify shared concerns (all UI → shared design system, routing, etc.)</span>
+<span class="string">3. Start conversation: "These 4 phases are all UI work. Let's talk about</span>
+<span class="string">   the shared decisions first, then get specific per phase."</span>
+<span class="string">4. Shared questions asked ONCE ("design system?", "routing?", "state mgmt?")</span>
+<span class="string">5. Phase-specific questions only where phases diverge</span>
+<span class="string">6. Adaptive depth: Phase 2 (complex dashboard) gets 15 questions,</span>
+<span class="string">   Phase 8 (simple about page) gets 2</span>
+<span class="string">7. Write individual CONTEXT.md files WITH cross-references</span>
+    </div>
+  </div>
+
+  <div class="proposal-card">
+    <h3>3. Codebase-Aware Question Generation</h3>
+    <div class="rationale">The scout_codebase step already exists but its findings don't strongly shape the questions. If existing code solves 80% of the phase, questions should focus on the remaining 20%.</div>
+
+    <div class="comparison-row">
+      <div class="comparison-col bad">
+        <h4>Current: Scout is Cosmetic</h4>
+        <ul>
+          <li>Scout greps for related files</li>
+          <li>Findings added as annotations on pre-generated gray areas</li>
+          <li>"Card component exists" shown as a note, doesn't change the question</li>
+          <li>Still asks "how should posts be displayed?" even if pattern is established</li>
+        </ul>
+      </div>
+      <div class="comparison-col good">
+        <h4>Proposed: Scout Drives Questions</h4>
+        <ul>
+          <li>Scout identifies: what ALREADY EXISTS vs what's NEW</li>
+          <li>Only generate gray areas for NEW decisions</li>
+          <li>"Your app uses Card everywhere — I'll use that. Let me ask about the parts that DON'T have patterns yet."</li>
+          <li>Phase-specific complexity assessment: "This phase touches 3 new files" vs "This phase integrates with 12 existing modules"</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="proposal-card">
+    <h3>4. Richer CONTEXT.md with Reasoning</h3>
+    <div class="rationale">Currently CONTEXT.md captures WHAT was decided but not WHY or the user's emphasis. Downstream agents can't distinguish "user specifically insisted on X" from "user casually picked X from a menu."</div>
+
+    <div class="code-block">
+<span class="comment"># Current CONTEXT.md decisions section:</span>
+<span class="string">### Layout</span>
+<span class="string">- Card-based layout</span>
+<span class="string">- Dark theme</span>
+
+<span class="comment"># Proposed: Add signal strength + reasoning</span>
+<span class="string">### Layout</span>
+<span class="string">- Card-based layout [STRONG — user referenced Pinterest specifically,</span>
+<span class="string">  wants masonry grid with variable heights]</span>
+<span class="string">- Dark theme [WEAK — user said "probably dark" without strong preference,</span>
+<span class="string">  could go either way if implementation is simpler with light]</span>
+
+<span class="comment"># This lets the planner and executor understand:</span>
+<span class="comment"># - Card layout: non-negotiable, user has specific vision</span>
+<span class="comment"># - Dark theme: flexible, don't over-invest</span>
+    </div>
+  </div>
+
+  <div class="proposal-card">
+    <h3>5. Lightweight Manifest for Context Loading</h3>
+    <div class="rationale">Instead of agents loading all files equally, a manifest tells them what's important, what's related, and what to skip. This is the "structured metadata" approach that research showed is the real win.</div>
+
+    <div class="code-block">
+<span class="comment"># .planning/manifest.yml — always loaded first by gsd-tools</span>
+<span class="keyword">phases:</span>
+  <span class="keyword">08-charts-ui:</span>
+    <span class="string">status: in_progress</span>
+    <span class="string">complexity: medium</span>
+    <span class="string">depends_on: [01-core, 03-data-layer]</span>
+    <span class="string">related_to: [05-dashboard, 09-alerts]</span>
+    <span class="string">key_decisions:</span>
+      <span class="string">- "TradingView widget" [STRONG]</span>
+      <span class="string">- "Dark theme" [WEAK]</span>
+    <span class="string">what_exists: "Card component, useInfiniteQuery, websocket service"</span>
+    <span class="string">what_is_new: "Chart rendering, real-time data binding"</span>
+    <span class="string">focus_areas: ["websocket integration", "chart responsiveness"]</span>
+    <span class="string">skip_areas: ["trade execution", "auth", "core data model"]</span>
+
+<span class="comment"># Now gsd-tools init can tell agents:</span>
+<span class="comment"># "Focus on websocket integration and chart responsiveness.</span>
+<span class="comment">#  Don't load or ask about: trade execution, auth, core data model."</span>
+    </div>
+  </div>
+
+  <div class="section-title" style="margin-top: 30px;">Impact Assessment</div>
+  <div class="highlight">
+    <strong>Highest impact, lowest effort:</strong>
+    <br><br>
+    1. <strong>Conversation-first discuss-phase</strong> — Change the workflow prompt. No code changes needed. Just apply questioning.md philosophy.
+    <br><br>
+    2. <strong>Signal strength in CONTEXT.md</strong> — Add [STRONG/WEAK] annotations. Minimal prompt change, big downstream benefit.
+    <br><br>
+    3. <strong>Scout-driven questions</strong> — Make scout_codebase output filter gray areas instead of just annotating them.
+    <br><br>
+    <strong>Medium impact, medium effort:</strong>
+    <br><br>
+    4. <strong>Cross-phase discussion</strong> — New command + workflow. Requires new prompt but no code changes.
+    <br><br>
+    5. <strong>manifest.yml</strong> — Requires gsd-tools changes to generate and consume it.
+  </div>
+</div>
+
+<script>
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggle(el) {
+  el.classList.toggle('expanded');
+}
+
+// Auto-expand first box
+document.querySelector('.flow-box').classList.add('expanded');
+</script>
+
+</body>
+</html>
