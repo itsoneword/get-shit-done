@@ -271,9 +271,10 @@ const banner = '\n' +
   '  ╚██████╔╝███████║██████╔╝\n' +
   '   ╚═════╝ ╚══════╝╚═════╝' + reset + '\n' +
   '\n' +
-  '  Get Shit Done ' + dim + 'v' + pkg.version + reset + '\n' +
-  '  A meta-prompting, context engineering and spec-driven\n' +
-  '  development system for Claude Code, OpenCode, Gemini, Codex, Copilot, Antigravity, and Cursor by TÂCHES.\n';
+  '  GSD2 ' + dim + 'v' + pkg.version + reset + '\n' +
+  '  Experimental fork with conversation-first discussion,\n' +
+  '  signal strength, and cross-phase pollination.\n' +
+  '  Based on get-shit-done by TÂCHES.\n';
 
 // Parse --config-dir argument
 function parseConfigDirArg() {
