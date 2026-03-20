@@ -312,6 +312,7 @@ After roadmap creation, REQUIREMENTS.md gets updated with phase mappings:
 **Goal**: What this phase delivers
 **Depends on**: Nothing (first phase)
 **Requirements**: REQ-01, REQ-02
+**Discussion focus**: Key decisions needing user input for this phase — what's ambiguous that would change implementation? (e.g., "auth strategy, session handling" or "UI layout, data density, empty states")
 **Success Criteria** (what must be TRUE):
   1. Observable behavior from user perspective
   2. Observable behavior from user perspective

@@ -1,5 +1,5 @@
 <purpose>
-Extract implementation decisions that downstream agents need. Analyze the phase to identify gray areas, let the user choose what to discuss, then deep-dive each selected area until satisfied.
+Extract implementation decisions that downstream agents need through genuine conversation, not rigid interviewing. Analyze the phase to understand what's new vs what's established, then have a real back-and-forth discussion where the user's energy and emphasis guide depth.
 
 You are a thinking partner, not an interviewer. The user is the visionary — you are the builder. Your job is to capture decisions that will guide research and planning, not to figure out implementation yourself.
 </purpose>
@@ -15,28 +15,53 @@ You are a thinking partner, not an interviewer. The user is the visionary — yo
    - "Pull-to-refresh on mobile" → planner includes that in task specs
    - "Claude's Discretion: loading skeleton" → planner can decide approach
 
-**Your job:** Capture decisions clearly enough that downstream agents can act on them without asking the user again.
+**Signal strength matters downstream:**
+- [STRONG] decisions are NON-NEGOTIABLE — planner must implement exactly as specified
+- [WEAK] decisions are flexible — planner can adjust if implementation is simpler another way
+- [DISCRETION] areas — planner has full freedom
+
+**Your job:** Capture decisions clearly enough — with signal strength — that downstream agents can act on them without asking the user again.
 
 **Not your job:** Figure out HOW to implement. That's what research and planning do with the decisions you capture.
+
+**Cross-phase pollination:**
+During conversation, you may hear insights relevant to OTHER phases (e.g., while discussing UI phase, user mentions "the backend needs to handle X"). These are captured in `.planning/cross-phase-notes.md` so that when those phases are later discussed, the context is already there. This means earlier discussions pre-answer later questions — reducing total question count across all phases.
 </downstream_awareness>
 
-<philosophy>
-**User = founder/visionary. Claude = builder.**
+<conversation_philosophy>
+**Apply the same philosophy as new-project questioning (from references/questioning.md):**
 
-The user knows:
-- How they imagine it working
-- What it should look/feel like
-- What's essential vs nice-to-have
-- Specific behaviors or references they have in mind
+**Start open.** Let the user dump their mental model. Don't interrupt with structure.
 
-The user doesn't know (and shouldn't be asked):
-- Codebase patterns (researcher reads the code)
-- Technical risks (researcher identifies these)
-- Implementation approach (planner figures this out)
-- Success metrics (inferred from the work)
+**Follow energy.** Whatever they emphasized, dig into that. What excited them? What's the hard part?
 
-Ask about vision and implementation choices. Capture decisions for downstream agents.
-</philosophy>
+**Challenge vagueness.** Never accept fuzzy answers. "Good" means what? "Simple" means how?
+
+**Make the abstract concrete.** "Walk me through using this." "What does that actually look like?"
+
+**Use existing code as conversation anchor.** "Your app already uses Card components everywhere — should this follow the same pattern, or is this different?"
+
+**Know when to stop.** When you understand what they want for THIS phase well enough that a planner could act on it — offer to proceed. Don't pad with extra questions.
+
+**AskUserQuestion is a tool, not the mode.**
+- Use it for SPECIFIC CHOICE POINTS: "Library A or B?" "Grid or list?"
+- Do NOT use it as the primary interaction. Most discussion should be plain text back-and-forth.
+- If the user wants to explain something, let them type freely. Don't force them into multiple-choice.
+- When you do use AskUserQuestion: 2-3 concrete options, header max 12 chars.
+
+**Adaptive depth:**
+- Complex phase with many unknowns → deep discussion, many questions
+- Simple phase where codebase already establishes patterns → quick confirmation, few questions
+- Let the CONTENT drive depth, not a fixed count
+
+**Anti-patterns (don't do these):**
+- Pre-generating a fixed list of gray areas and walking through them
+- Asking the same number of questions for every phase regardless of complexity
+- Using AskUserQuestion for open-ended exploration
+- Asking about areas the codebase already resolves (e.g., "what design system?" when Tailwind is already used everywhere)
+- Asking about core architecture when the phase is just UI polish
+- Firing questions without building on previous answers
+</conversation_philosophy>
 
 <scope_guardrail>
 **CRITICAL: No scope creep.**
@@ -66,44 +91,32 @@ For now, let's focus on [phase domain]."
 Capture the idea in a "Deferred Ideas" section. Don't lose it, don't act on it.
 </scope_guardrail>
 
-<gray_area_identification>
-Gray areas are **implementation decisions the user cares about** — things that could go multiple ways and would change the result.
+<signal_strength_guide>
+**Every decision in CONTEXT.md gets a signal strength annotation:**
 
-**How to identify gray areas:**
+**[STRONG]** — User specifically insisted, gave detailed reasoning, referenced examples, or showed strong preference.
+- "I want it exactly like Pinterest's masonry grid" → [STRONG]
+- User corrected your assumption or pushed back on a suggestion → [STRONG]
 
-1. **Read the phase goal** from ROADMAP.md
-2. **Understand the domain** — What kind of thing is being built?
-   - Something users SEE → visual presentation, interactions, states matter
-   - Something users CALL → interface contracts, responses, errors matter
-   - Something users RUN → invocation, output, behavior modes matter
-   - Something users READ → structure, tone, depth, flow matter
-   - Something being ORGANIZED → criteria, grouping, handling exceptions matter
-3. **Generate phase-specific gray areas** — Not generic categories, but concrete decisions for THIS phase
+**[WEAK]** — User casually agreed, picked from a menu without elaboration, or said "probably" / "I guess" / "sure".
+- "Yeah, cards are fine" → [WEAK]
+- User picked option from AskUserQuestion without comment → [WEAK]
 
-**Don't use generic category labels** (UI, UX, Behavior). Generate specific gray areas:
+**[DISCRETION]** — User explicitly said "you decide" or "whatever works" or showed no preference.
+- "I don't care about the loading state, just make it work" → [DISCRETION]
 
-```
-Phase: "User authentication"
-→ Session handling, Error responses, Multi-device policy, Recovery flow
+**How to assess:** Pay attention to:
+- Length of response (long explanation = strong, one word = weak)
+- Specificity (references examples = strong, generic = weak)
+- Pushback (corrected you = strong about the correction)
+- Enthusiasm ("yes! exactly!" = strong, "sure" = weak)
+- Hedging ("probably", "maybe", "I think" = weak)
 
-Phase: "Organize photo library"
-→ Grouping criteria, Duplicate handling, Naming convention, Folder structure
-
-Phase: "CLI for database backups"
-→ Output format, Flag design, Progress reporting, Error recovery
-
-Phase: "API documentation"
-→ Structure/navigation, Code examples depth, Versioning approach, Interactive elements
-```
-
-**The key question:** What decisions would change the outcome that the user should weigh in on?
-
-**Claude handles these (don't ask):**
-- Technical implementation details
-- Architecture patterns
-- Performance optimization
-- Scope (roadmap defines this)
-</gray_area_identification>
+**Downstream impact:**
+- Planner treats [STRONG] as non-negotiable
+- Planner can adjust [WEAK] if implementation is simpler another way
+- Planner has full freedom on [DISCRETION]
+</signal_strength_guide>
 
 <answer_validation>
 **IMPORTANT: Answer validation** — After every AskUserQuestion call, check if the response is empty or whitespace-only. If so:
@@ -150,8 +163,7 @@ Exit workflow.
 
 **Auto mode** — If `--auto` is present in ARGUMENTS:
 - In `check_existing`: auto-select "Skip" (if context exists) or continue without prompting (if no context/plans)
-- In `present_gray_areas`: auto-select ALL gray areas without asking the user
-- In `discuss_areas`: for each discussion question, choose the recommended option (first option, or the one marked "recommended") without using AskUserQuestion
+- In `conversation`: for each discussion point, choose the recommended approach without using AskUserQuestion
 - Log each auto-selected choice inline so the user can review decisions in the context file
 - After discussion completes, auto-advance to plan-phase (existing behavior)
 </step>
@@ -165,7 +177,7 @@ ls ${phase_dir}/*-CONTEXT.md 2>/dev/null
 
 **If exists:**
 
-**If `--auto`:** Auto-select "Update it" — load existing context and continue to analyze_phase. Log: `[auto] Context exists — updating with auto-selected decisions.`
+**If `--auto`:** Auto-select "Update it" — load existing context and continue to build_understanding. Log: `[auto] Context exists — updating with auto-selected decisions.`
 
 **Otherwise:** Use AskUserQuestion:
 - header: "Context"
@@ -175,7 +187,7 @@ ls ${phase_dir}/*-CONTEXT.md 2>/dev/null
   - "View it" — Show me what's there
   - "Skip" — Use existing context as-is
 
-If "Update": Load existing, continue to analyze_phase
+If "Update": Load existing, continue to build_understanding
 If "View": Display CONTEXT.md, then offer update/skip
 If "Skip": Exit workflow
 
@@ -193,405 +205,173 @@ Check `has_plans` and `plan_count` from init. **If `has_plans` is true:**
   - "View existing plans" — Show plans before deciding
   - "Cancel" — Skip discuss-phase
 
-If "Continue and replan after": Continue to analyze_phase.
+If "Continue and replan after": Continue to build_understanding.
 If "View existing plans": Display plan files, then offer "Continue" / "Cancel".
 If "Cancel": Exit workflow.
 
-**If `has_plans` is false:** Continue to load_prior_context.
+**If `has_plans` is false:** Continue to build_understanding.
 </step>
 
-<step name="load_prior_context">
-Read project-level and prior phase context to avoid re-asking decided questions and maintain consistency.
+<step name="build_understanding">
+Build a grounded understanding of the phase BEFORE talking to the user. This determines what you need to ask about.
 
 **Step 1: Read project-level files**
 ```bash
-# Core project files
 cat .planning/PROJECT.md 2>/dev/null
 cat .planning/REQUIREMENTS.md 2>/dev/null
 cat .planning/STATE.md 2>/dev/null
 ```
 
-Extract from these:
-- **PROJECT.md** — Vision, principles, non-negotiables, user preferences
-- **REQUIREMENTS.md** — Acceptance criteria, constraints, must-haves vs nice-to-haves
-- **STATE.md** — Current progress, any flags or session notes
+Extract: vision, principles, constraints, current progress.
 
 **Step 2: Read all prior CONTEXT.md files**
 ```bash
-# Find all CONTEXT.md files from phases before current
 find .planning/phases -name "*-CONTEXT.md" 2>/dev/null | sort
 ```
 
 For each CONTEXT.md where phase number < current phase:
-- Read the `<decisions>` section — these are locked preferences
+- Read `<decisions>` — these are locked preferences
 - Read `<specifics>` — particular references or "I want it like X" moments
-- Note any patterns (e.g., "user consistently prefers minimal UI", "user rejected single-key shortcuts")
+- Note patterns (e.g., "user consistently prefers minimal UI")
 
-**Step 3: Build internal `<prior_decisions>` context**
+**Step 3: Read ROADMAP.md phase description**
+Understand what this phase is supposed to deliver.
 
-Structure the extracted information:
-```
-<prior_decisions>
-## Project-Level
-- [Key principle or constraint from PROJECT.md]
-- [Requirement that affects this phase from REQUIREMENTS.md]
+**Step 4: Scout the codebase**
+This is CRITICAL — the codebase determines what's already decided and what's genuinely new.
 
-## From Prior Phases
-### Phase N: [Name]
-- [Decision that may be relevant to current phase]
-- [Preference that establishes a pattern]
-
-### Phase M: [Name]
-- [Another relevant decision]
-</prior_decisions>
-```
-
-**Usage in subsequent steps:**
-- `analyze_phase`: Skip gray areas already decided in prior phases
-- `present_gray_areas`: Annotate options with prior decisions ("You chose X in Phase 5")
-- `discuss_areas`: Pre-fill answers or flag conflicts ("This contradicts Phase 3 — same here or different?")
-
-**If no prior context exists:** Continue without — this is expected for early phases.
-</step>
-
-<step name="cross_reference_todos">
-Check if any pending todos are relevant to this phase's scope. Surfaces backlog items that might otherwise be missed.
-
-**Load and match todos:**
-```bash
-TODO_MATCHES=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
-```
-
-Parse JSON for: `todo_count`, `matches[]` (each with `file`, `title`, `area`, `score`, `reasons`).
-
-**If `todo_count` is 0 or `matches` is empty:** Skip silently — no workflow slowdown.
-
-**If matches found:**
-
-Present matched todos to the user. Show each match with its title, area, and why it matched:
-
-```
-📋 Found {N} pending todo(s) that may be relevant to Phase {X}:
-
-{For each match:}
-- **{title}** (area: {area}, relevance: {score}) — matched on {reasons}
-```
-
-Use AskUserQuestion (multiSelect) asking which todos to fold into this phase's scope:
-
-```
-Which of these todos should be folded into Phase {X} scope?
-(Select any that apply, or none to skip)
-```
-
-**For selected (folded) todos:**
-- Store internally as `<folded_todos>` for inclusion in CONTEXT.md `<decisions>` section
-- These become additional scope items that downstream agents (researcher, planner) will see
-
-**For unselected (reviewed but not folded) todos:**
-- Store internally as `<reviewed_todos>` for inclusion in CONTEXT.md `<deferred>` section
-- This prevents future phases from re-surfacing the same todos as "missed"
-
-**Auto mode (`--auto`):** Fold all todos with score >= 0.4 automatically. Log the selection.
-</step>
-
-<step name="scout_codebase">
-Lightweight scan of existing code to inform gray area identification and discussion. Uses ~10% context — acceptable for an interactive session.
-
-**Step 1: Check for existing codebase maps**
+Check for codebase maps first:
 ```bash
 ls .planning/codebase/*.md 2>/dev/null
 ```
 
-**If codebase maps exist:** Read the most relevant ones (CONVENTIONS.md, STRUCTURE.md, STACK.md based on phase type). Extract:
-- Reusable components/hooks/utilities
-- Established patterns (state management, styling, data fetching)
-- Integration points (where new code would connect)
-
-Skip to Step 3 below.
-
-**Step 2: If no codebase maps, do targeted grep**
-
-Extract key terms from the phase goal (e.g., "feed" → "post", "card", "list"; "auth" → "login", "session", "token").
+If maps exist, read the most relevant ones. Otherwise, do targeted exploration:
 
 ```bash
 # Find files related to phase goal terms
 grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10
 
-# Find existing components/hooks
+# Find existing components/hooks/patterns
 ls src/components/ 2>/dev/null
 ls src/hooks/ 2>/dev/null
 ls src/lib/ src/utils/ 2>/dev/null
 ```
 
-Read the 3-5 most relevant files to understand existing patterns.
+Read 3-5 most relevant files.
 
-**Step 3: Build internal codebase_context**
+**Step 5: Classify what's ESTABLISHED vs what's NEW**
 
-From the scan, identify:
-- **Reusable assets** — existing components, hooks, utilities that could be used in this phase
-- **Established patterns** — how the codebase does state management, styling, data fetching
-- **Integration points** — where new code would connect (routes, nav, providers)
-- **Creative options** — approaches the existing architecture enables or constrains
+This is the key insight that drives the conversation:
 
-Store as internal `<codebase_context>` for use in analyze_phase and present_gray_areas. This is NOT written to a file — it's used within this session only.
+```
+ESTABLISHED (don't ask about):
+- Design system: Tailwind with shadcn/ui (used in 40+ components)
+- State management: Zustand (3 existing stores)
+- Data fetching: React Query (used in all API calls)
+- Auth pattern: NextAuth with JWT (Phase 1 decided this)
+
+NEW (need to discuss):
+- Chart rendering: no existing pattern for data visualization
+- Websocket integration: no real-time data patterns exist yet
+- Mobile chart interactions: no touch gesture patterns
+```
+
+**Step 6: Cross-reference todos**
+```bash
+TODO_MATCHES=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
+```
+
+If matches found, store for folding into discussion. If none, skip silently.
+
+**Step 7: Load cross-phase notes**
+```bash
+cat .planning/cross-phase-notes.md 2>/dev/null
+```
+
+If this file exists, look for entries tagged with the current phase number. These are insights gathered during discussions of OTHER phases that are relevant here. They represent pre-gathered context — things the user already told you in a different conversation.
+
+For each relevant note:
+- Treat it as pre-answered context (don't re-ask what the user already said)
+- Validate it during conversation: "From your Phase 2 discussion, you mentioned X. Is that still how you see it?"
+- If the user confirms → becomes a [STRONG] or [WEAK] decision based on their response
+- If the user contradicts → update the cross-phase note and use the new answer
+
+**Step 8: Load discussion focus hints**
+Check the ROADMAP.md phase detail section for a `**Discussion focus**:` line.
+
+If present, this tells you what the roadmapper (or prior workflow) identified as the key areas needing user input for this phase. Use it to prioritize your conversation — but don't treat it as a rigid script. The user's energy still drives depth.
+
+**Step 9: Initialize canonical refs accumulator**
+Start building the `<canonical_refs>` list:
+- Copy `Canonical refs:` from ROADMAP.md for this phase
+- Check REQUIREMENTS.md and PROJECT.md for specs/ADRs referenced for this phase
+- If codebase scout found docs referenced in code comments, add those
 </step>
 
-<step name="analyze_phase">
-Analyze the phase to identify gray areas worth discussing. **Use both `prior_decisions` and `codebase_context` to ground the analysis.**
+<step name="conversation">
+Now have a genuine conversation with the user. This is NOT a structured interview — it's collaborative thinking.
 
-**Read the phase description from ROADMAP.md and determine:**
+**Opening:**
 
-1. **Domain boundary** — What capability is this phase delivering? State it clearly.
+Present what you found and invite the user to talk:
 
-1b. **Initialize canonical refs accumulator** — Start building the `<canonical_refs>` list for CONTEXT.md. This accumulates throughout the entire discussion, not just this step.
-
-   **Source 1 (now):** Copy `Canonical refs:` from ROADMAP.md for this phase. Expand each to a full relative path.
-   **Source 2 (now):** Check REQUIREMENTS.md and PROJECT.md for any specs/ADRs referenced for this phase.
-   **Source 3 (scout_codebase):** If existing code references docs (e.g., comments citing ADRs), add those.
-   **Source 4 (discuss_areas):** When the user says "read X", "check Y", or references any doc/spec/ADR during discussion — add it immediately. These are often the MOST important refs because they represent docs the user specifically wants followed.
-
-   This list is MANDATORY in CONTEXT.md. Every ref must have a full relative path so downstream agents can read it directly. If no external docs exist, note that explicitly.
-
-2. **Check prior decisions** — Before generating gray areas, check if any were already decided:
-   - Scan `<prior_decisions>` for relevant choices (e.g., "Ctrl+C only, no single-key shortcuts")
-   - These are **pre-answered** — don't re-ask unless this phase has conflicting needs
-   - Note applicable prior decisions for use in presentation
-
-3. **Gray areas by category** — For each relevant category (UI, UX, Behavior, Empty States, Content), identify 1-2 specific ambiguities that would change implementation. **Annotate with code context where relevant** (e.g., "You already have a Card component" or "No existing pattern for this").
-
-4. **Skip assessment** — If no meaningful gray areas exist (pure infrastructure, clear-cut implementation, or all already decided in prior phases), the phase may not need discussion.
-
-**Output your analysis internally, then present to user.**
-
-Example analysis for "Post Feed" phase (with code and prior context):
 ```
-Domain: Displaying posts from followed users
-Existing: Card component (src/components/ui/Card.tsx), useInfiniteQuery hook, Tailwind CSS
-Prior decisions: "Minimal UI preferred" (Phase 2), "No pagination — always infinite scroll" (Phase 4)
-Gray areas:
-- UI: Layout style (cards vs timeline vs grid) — Card component exists with shadow/rounded variants
-- UI: Information density (full posts vs previews) — no existing density patterns
-- Behavior: Loading pattern — ALREADY DECIDED: infinite scroll (Phase 4)
-- Empty State: What shows when no posts exist — EmptyState component exists in ui/
-- Content: What metadata displays (time, author, reactions count)
-```
-</step>
+## Phase {X}: {Name}
 
-<step name="present_gray_areas">
-Present the domain boundary, prior decisions, and gray areas to user.
+**What it delivers:** {from ROADMAP}
 
-**First, state the boundary and any prior decisions that apply:**
-```
-Phase [X]: [Name]
-Domain: [What this phase delivers — from your analysis]
+**What I found in the codebase:**
+- {Established pattern 1} — already in use
+- {Established pattern 2} — decided in Phase {N}
+- ...
 
-We'll clarify HOW to implement this.
-(New capabilities belong in other phases.)
+**What's new in this phase** (where I need your input):
+- {New area 1} — no existing pattern
+- {New area 2} — multiple approaches possible
 
-[If prior decisions apply:]
-**Carrying forward from earlier phases:**
-- [Decision from Phase N that applies here]
-- [Decision from Phase M that applies here]
+{If prior decisions apply:}
+**Carrying forward:** {Decision from Phase N}
+
+{If todo matches found:}
+**Related backlog items:** {todo titles} — should any of these fold into this phase?
+
+---
+
+Tell me about how you see this phase. What's the most important thing to get right?
 ```
 
-**If `--auto`:** Auto-select ALL gray areas. Log: `[auto] Selected all gray areas: [list area names].` Skip the AskUserQuestion below and continue directly to discuss_areas with all areas selected.
+**Then: Follow the conversation naturally.**
 
-**Otherwise, use AskUserQuestion (multiSelect: true):**
-- header: "Discuss"
-- question: "Which areas do you want to discuss for [phase name]?"
-- options: Generate 3-4 phase-specific gray areas, each with:
-  - "[Specific area]" (label) — concrete, not generic
-  - [1-2 questions this covers + code context annotation] (description)
-  - **Highlight the recommended choice with brief explanation why**
+Guidelines for the discussion:
+- **Build on their answers.** If they mention "charts", dig into charts. Don't pivot to something unrelated.
+- **Use the codebase as anchor.** "Your app already does X for Y — should this follow the same pattern?"
+- **Use AskUserQuestion ONLY for binary/ternary choices** where concrete options help. E.g., "Library A or B?" not "Tell me about your vision."
+- **Track signal strength as you go.** Notice enthusiasm, hedging, pushback, specificity.
+- **Don't re-ask decided things.** Prior phases decided infinite scroll? Don't ask about pagination.
+- **Probe what matters, skip what doesn't.** If they light up about the chart interactions, go deep. If they shrug at color scheme, mark it [DISCRETION] and move on.
+- **Accumulate canonical refs.** When the user says "check the spec" or "per the ADR", immediately read the doc and add to refs.
 
-**Prior decision annotations:** When a gray area was already decided in a prior phase, annotate it:
-```
-☐ Exit shortcuts — How should users quit?
-  (You decided "Ctrl+C only, no single-key shortcuts" in Phase 5 — revisit or keep?)
-```
+**Adaptive depth rules:**
+- After each exchange, internally check: "Could a planner create tasks from what I know so far?"
+- If YES for all new areas → offer to proceed
+- If NO for some areas → continue discussing those areas
+- Never ask more than needed. 3 questions might be enough. 15 might be needed. Let the content decide.
 
-**Code context annotations:** When the scout found relevant existing code, annotate the gray area description:
-```
-☐ Layout style — Cards vs list vs timeline?
-  (You already have a Card component with shadow/rounded variants. Reusing it keeps the app consistent.)
-```
+**When you have enough context:**
 
-**Combining both:** When both prior decisions and code context apply:
-```
-☐ Loading behavior — Infinite scroll or pagination?
-  (You chose infinite scroll in Phase 4. useInfiniteQuery hook already set up.)
-```
+Use AskUserQuestion:
+- header: "Ready?"
+- question: "I think I have a good picture of what you want for this phase. Ready to capture it, or want to discuss more?"
+- options:
+  - "Capture it" — Write CONTEXT.md
+  - "Keep discussing" — I want to share more
+  - "Let me review first" — Show me what you'd capture
 
-**Do NOT include a "skip" or "you decide" option.** User ran this command to discuss — give them real choices.
+If "Keep discussing" → ask what they want to add, continue conversation
+If "Let me review first" → show draft decisions, then offer capture/discuss
+If "Capture it" → proceed to write_context
 
-**Examples by domain (with code context):**
-
-For "Post Feed" (visual feature):
-```
-☐ Layout style — Cards vs list vs timeline? (Card component exists with variants)
-☐ Loading behavior — Infinite scroll or pagination? (useInfiniteQuery hook available)
-☐ Content ordering — Chronological, algorithmic, or user choice?
-☐ Post metadata — What info per post? Timestamps, reactions, author?
-```
-
-For "Database backup CLI" (command-line tool):
-```
-☐ Output format — JSON, table, or plain text? Verbosity levels?
-☐ Flag design — Short flags, long flags, or both? Required vs optional?
-☐ Progress reporting — Silent, progress bar, or verbose logging?
-☐ Error recovery — Fail fast, retry, or prompt for action?
-```
-
-For "Organize photo library" (organization task):
-```
-☐ Grouping criteria — By date, location, faces, or events?
-☐ Duplicate handling — Keep best, keep all, or prompt each time?
-☐ Naming convention — Original names, dates, or descriptive?
-☐ Folder structure — Flat, nested by year, or by category?
-```
-
-Continue to discuss_areas with selected areas.
-</step>
-
-<step name="discuss_areas">
-For each selected area, conduct a focused discussion loop.
-
-**Research-before-questions mode:** Check if `research_questions` is enabled in config (from init context or `.planning/config.json`). When enabled, before presenting questions for each area:
-1. Do a brief web search for best practices related to the area topic
-2. Summarize the top findings in 2-3 bullet points
-3. Present the research alongside the question so the user can make a more informed decision
-
-Example with research enabled:
-```
-Let's talk about [Authentication Strategy].
-
-📊 Best practices research:
-• OAuth 2.0 + PKCE is the current standard for SPAs (replaces implicit flow)
-• Session tokens with httpOnly cookies preferred over localStorage for XSS protection
-• Consider passkey/WebAuthn support — adoption is accelerating in 2025-2026
-
-With that context: How should users authenticate?
-```
-
-When disabled (default), skip the research and present questions directly as before.
-
-**Text mode support:** Parse optional `--text` from `$ARGUMENTS`.
-- Accept `--text` flag OR read `workflow.text_mode` from config (from init context)
-- When active, replace ALL `AskUserQuestion` calls with plain-text numbered lists
-- User types a number to select, or types free text for "Other"
-- This is required for Claude Code remote sessions (`/rc` mode) where TUI menus
-  don't work through the Claude App
-
-**Batch mode support:** Parse optional `--batch` from `$ARGUMENTS`.
-- Accept `--batch`, `--batch=N`, or `--batch N`
-
-**Analyze mode support:** Parse optional `--analyze` from `$ARGUMENTS`.
-When `--analyze` is active, before presenting each question (or question group in batch mode), provide a brief **trade-off analysis** for the decision:
-- 2-3 options with pros/cons based on codebase context and common patterns
-- A recommended approach with reasoning
-- Known pitfalls or constraints from prior phases
-
-Example with `--analyze`:
-```
-**Trade-off analysis: Authentication strategy**
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| Session cookies | Simple, httpOnly prevents XSS | Requires CSRF protection, sticky sessions |
-| JWT (stateless) | Scalable, no server state | Token size, revocation complexity |
-| OAuth 2.0 + PKCE | Industry standard for SPAs | More setup, redirect flow UX |
-
-💡 Recommended: OAuth 2.0 + PKCE — your app has social login in requirements (REQ-04) and this aligns with the existing NextAuth setup in `src/lib/auth.ts`.
-
-How should users authenticate?
-```
-
-This gives the user context to make informed decisions without extra prompting. When `--analyze` is absent, present questions directly as before.
-- Accept `--batch`, `--batch=N`, or `--batch N`
-- Default to 4 questions per batch when no number is provided
-- Clamp explicit sizes to 2-5 so a batch stays answerable
-- If `--batch` is absent, keep the existing one-question-at-a-time flow
-
-**Philosophy:** stay adaptive, but let the user choose the pacing.
-- Default mode: 4 single-question turns, then check whether to continue
-- `--batch` mode: 1 grouped turn with 2-5 numbered questions, then check whether to continue
-
-Each answer (or answer set, in batch mode) should reveal the next question or next batch.
-
-**Auto mode (`--auto`):** For each area, Claude selects the recommended option (first option, or the one explicitly marked "recommended") for every question without using AskUserQuestion. Log each auto-selected choice:
-```
-[auto] [Area] — Q: "[question text]" → Selected: "[chosen option]" (recommended default)
-```
-After all areas are auto-resolved, skip the "Explore more gray areas" prompt and proceed directly to write_context.
-
-**Interactive mode (no `--auto`):**
-
-**For each area:**
-
-1. **Announce the area:**
-   ```
-   Let's talk about [Area].
-   ```
-
-2. **Ask questions using the selected pacing:**
-
-   **Default (no `--batch`): Ask 4 questions using AskUserQuestion**
-   - header: "[Area]" (max 12 chars — abbreviate if needed)
-   - question: Specific decision for this area
-   - options: 2-3 concrete choices (AskUserQuestion adds "Other" automatically), with the recommended choice highlighted and brief explanation why
-   - **Annotate options with code context** when relevant:
-     ```
-     "How should posts be displayed?"
-     - Cards (reuses existing Card component — consistent with Messages)
-     - List (simpler, would be a new pattern)
-     - Timeline (needs new Timeline component — none exists yet)
-     ```
-   - Include "You decide" as an option when reasonable — captures Claude discretion
-   - **Context7 for library choices:** When a gray area involves library selection (e.g., "magic links" → query next-auth docs) or API approach decisions, use `mcp__context7__*` tools to fetch current documentation and inform the options. Don't use Context7 for every question — only when library-specific knowledge improves the options.
-
-   **Batch mode (`--batch`): Ask 2-5 numbered questions in one plain-text turn**
-   - Group closely related questions for the current area into a single message
-   - Keep each question concrete and answerable in one reply
-   - When options are helpful, include short inline choices per question rather than a separate AskUserQuestion for every item
-   - After the user replies, reflect back the captured decisions, note any unanswered items, and ask only the minimum follow-up needed before moving on
-   - Preserve adaptiveness between batches: use the full set of answers to decide the next batch or whether the area is sufficiently clear
-
-3. **After the current set of questions, check:**
-   - header: "[Area]" (max 12 chars)
-   - question: "More questions about [area], or move to next? (Remaining: [list other unvisited areas])"
-   - options: "More questions" / "Next area"
-
-   When building the question text, list the remaining unvisited areas so the user knows what's ahead. For example: "More questions about Layout, or move to next? (Remaining: Loading behavior, Content ordering)"
-
-   If "More questions" → ask another 4 single questions, or another 2-5 question batch when `--batch` is active, then check again
-   If "Next area" → proceed to next selected area
-   If "Other" (free text) → interpret intent: continuation phrases ("chat more", "keep going", "yes", "more") map to "More questions"; advancement phrases ("done", "move on", "next", "skip") map to "Next area". If ambiguous, ask: "Continue with more questions about [area], or move to the next area?"
-
-4. **After all initially-selected areas complete:**
-   - Summarize what was captured from the discussion so far
-   - AskUserQuestion:
-     - header: "Done"
-     - question: "We've discussed [list areas]. Which gray areas remain unclear?"
-     - options: "Explore more gray areas" / "I'm ready for context"
-   - If "Explore more gray areas":
-     - Identify 2-4 additional gray areas based on what was learned
-     - Return to present_gray_areas logic with these new areas
-     - Loop: discuss new areas, then prompt again
-   - If "I'm ready for context": Proceed to write_context
-
-**Canonical ref accumulation during discussion:**
-When the user references a doc, spec, or ADR during any answer — e.g., "read adr-014", "check the MCP spec", "per browse-spec.md" — immediately:
-1. Read the referenced doc (or confirm it exists)
-2. Add it to the canonical refs accumulator with full relative path
-3. Use what you learned from the doc to inform subsequent questions
-
-These user-referenced docs are often MORE important than ROADMAP.md refs because they represent docs the user specifically wants downstream agents to follow. Never drop them.
-
-**Question design:**
-- Options should be concrete, not abstract ("Cards" not "Option A")
-- Each answer should inform the next question or next batch
-- If user picks "Other" to provide freeform input (e.g., "let me describe it", "something else", or an open-ended reply), ask your follow-up as plain text — NOT another AskUserQuestion. Wait for them to type at the normal prompt, then reflect their input back and confirm before resuming AskUserQuestion or the next numbered batch.
+**Auto mode (`--auto`):** Skip the conversation entirely. Use the ROADMAP description + codebase scout + prior context to generate reasonable defaults for all decisions. Mark everything [WEAK] since no user input was gathered. Log: `[auto] Generated context from project state — all decisions marked [WEAK]`.
 
 **Scope creep handling:**
 If user mentions something outside the phase domain:
@@ -599,18 +379,41 @@ If user mentions something outside the phase domain:
 "[Feature] sounds like a new capability — that belongs in its own phase.
 I'll note it as a deferred idea.
 
-Back to [current area]: [return to current question]"
+Back to [current area]: [return to current thread]"
 ```
 
 Track deferred ideas internally.
 
+**Cross-phase pollination — capture insights for other phases:**
+During the conversation, watch for statements that are relevant to OTHER phases in the roadmap. Examples:
+- Discussing UI phase, user says "the API needs to support pagination for this" → relevant to the API phase
+- Discussing auth phase, user says "we'll need SSO for the enterprise dashboard too" → relevant to the dashboard phase
+- Discussing data model, user mentions "charts will need real-time websocket data" → relevant to the charts phase
+
+When you detect a cross-phase insight:
+1. Don't interrupt the conversation flow — note it internally
+2. After the conversation completes (before write_context), append to `.planning/cross-phase-notes.md`
+
+Format for cross-phase notes:
+```markdown
+### From Phase {current} discussion ({date})
+
+**For Phase {target_phase_number}: {target_phase_name}**
+- {Insight}: "{what the user said, paraphrased}"
+- Signal: [STRONG/WEAK] — {why: "user emphasized this" / "mentioned in passing"}
+- Context: {brief context of how this came up}
+```
+
+Append, don't overwrite — this file accumulates across all discuss-phase sessions.
+
+If no cross-phase insights emerged, don't create or modify the file.
+
 **Track discussion log data internally:**
-For each question asked, accumulate:
-- Area name
-- All options presented (label + description)
-- Which option the user selected (or their free-text response)
-- Any follow-up notes or clarifications the user provided
-This data is used to generate DISCUSSION-LOG.md in the `write_context` step.
+For each significant exchange, accumulate:
+- Topic discussed
+- User's input (paraphrased)
+- Decision captured + signal strength
+- Any follow-up or clarifications
 </step>
 
 <step name="write_context">
@@ -646,21 +449,30 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 
 </domain>
 
+<established>
+## Established Patterns (from codebase)
+
+[What the codebase already decides — planner should follow these without deviation]
+- [Pattern]: [How it's used, where it's established]
+- [Pattern]: [From Phase N decision]
+
+</established>
+
 <decisions>
 ## Implementation Decisions
 
-### [Category 1 that was discussed]
-- [Decision or preference captured]
-- [Another decision if applicable]
+### [Topic 1 from discussion]
+- [Decision] [STRONG — user referenced Pinterest specifically, wants masonry grid]
+- [Decision] [WEAK — user said "probably" without strong preference]
 
-### [Category 2 that was discussed]
-- [Decision or preference captured]
+### [Topic 2 from discussion]
+- [Decision] [STRONG — user pushed back on alternative, insisted on this approach]
 
-### Claude's Discretion
-[Areas where user said "you decide" — note that Claude has flexibility here]
+### [Topic 3 from discussion]
+- [Decision] [DISCRETION — user said "whatever works best"]
 
 ### Folded Todos
-[If any todos were folded into scope from the cross_reference_todos step, list them here.
+[If any todos were folded into scope from backlog, list them here.
 Each entry should include the todo title, original problem, and how it fits this phase's scope.
 If no todos were folded: omit this subsection entirely.]
 
@@ -716,7 +528,7 @@ Every entry needs a full relative path — not just a name.]
 [Ideas that came up but belong in other phases. Don't lose them.]
 
 ### Reviewed Todos (not folded)
-[If any todos were reviewed in cross_reference_todos but not folded into scope,
+[If any todos were reviewed but not folded into scope,
 list them here so future phases know they were considered.
 Each entry: todo title + reason it was deferred (out of scope, belongs in Phase Y, etc.)
 If no reviewed-but-deferred todos: omit this subsection entirely.]
@@ -742,11 +554,13 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 
 ## Decisions Captured
 
-### [Category]
-- [Key decision]
+### [Topic] — [count] decisions
+- [Key decision] [SIGNAL]
 
-### [Category]
-- [Key decision]
+### [Topic] — [count] decisions
+- [Key decision] [SIGNAL]
+
+[Summary: X decisions total — Y strong, Z weak, W discretion]
 
 [If deferred ideas exist:]
 ## Noted for Later
@@ -782,46 +596,60 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 # Phase [X]: [Name] - Discussion Log
 
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
-> Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
+> Decisions are captured in CONTEXT.md — this log preserves the conversation and reasoning.
 
 **Date:** [ISO date]
 **Phase:** [phase number]-[phase name]
-**Areas discussed:** [comma-separated list]
+**Discussion style:** Conversation-first
+**Decisions captured:** [count] ([strong count] strong, [weak count] weak, [discretion count] discretion)
 
 ---
 
-[For each gray area discussed:]
+## Conversation Summary
 
-## [Area Name]
+[For each significant topic discussed:]
 
-| Option | Description | Selected |
-|--------|-------------|----------|
-| [Option 1] | [Description from AskUserQuestion] | |
-| [Option 2] | [Description] | ✓ |
-| [Option 3] | [Description] | |
-
-**User's choice:** [Selected option or free-text response]
-**Notes:** [Any clarifications, follow-up context, or rationale the user provided]
+### [Topic]
+**User's perspective:** [What they said, paraphrased — capture tone and emphasis]
+**Decision:** [What was decided]
+**Signal:** [STRONG/WEAK/DISCRETION] — [Why this signal level: "user gave detailed example" / "casual agreement" / "explicitly deferred"]
 
 ---
 
-[Repeat for each area]
+[Repeat for each topic]
 
-## Claude's Discretion
-
-[List areas where user said "you decide" or deferred to Claude]
+## Established (Not Discussed)
+[Patterns from codebase that were presented but not questioned — user implicitly accepted]
 
 ## Deferred Ideas
-
 [Ideas mentioned during discussion that were noted for future phases]
 ```
 
 Write file.
 
-Commit phase context and discussion log:
+**Write cross-phase notes (if any):**
+If cross-phase insights were gathered during conversation, append them to `.planning/cross-phase-notes.md`.
+If the file doesn't exist, create it with a header:
+```markdown
+# Cross-Phase Notes
+
+> Insights gathered during phase discussions that are relevant to other phases.
+> Each discuss-phase session appends here. Later discussions read this for pre-gathered context.
+
+---
+```
+
+Then append the notes for this session.
+
+Commit phase context, discussion log, and cross-phase notes:
 
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files "${phase_dir}/${padded_phase}-CONTEXT.md" "${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
+# Build file list for commit
+COMMIT_FILES="${phase_dir}/${padded_phase}-CONTEXT.md ${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
+if [ -f .planning/cross-phase-notes.md ]; then
+  COMMIT_FILES="$COMMIT_FILES .planning/cross-phase-notes.md"
+fi
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files $COMMIT_FILES
 ```
 
 Confirm: "Committed: docs(${padded_phase}): capture phase context"
@@ -919,16 +747,22 @@ Route to `confirm_creation` step (existing behavior — show manual next steps).
 <success_criteria>
 - Phase validated against roadmap
 - Prior context loaded (PROJECT.md, REQUIREMENTS.md, STATE.md, prior CONTEXT.md files)
-- Already-decided questions not re-asked (carried forward from prior phases)
-- Codebase scouted for reusable assets, patterns, and integration points
-- Gray areas identified through intelligent analysis with code and prior decision annotations
-- User selected which areas to discuss
-- Each selected area explored until user satisfied (with code-informed and prior-decision-informed options)
+- Codebase scouted and classified into ESTABLISHED vs NEW
+- Already-decided things not re-asked (carried forward from prior phases AND codebase)
+- Genuine conversation had — not a rigid interview
+- User's energy and emphasis followed — deep where it matters, brief where it doesn't
+- Every decision has signal strength annotation [STRONG/WEAK/DISCRETION]
 - Scope creep redirected to deferred ideas
-- CONTEXT.md captures actual decisions, not vague vision
-- CONTEXT.md includes canonical_refs section with full file paths to every spec/ADR/doc downstream agents need (MANDATORY — never omit)
-- CONTEXT.md includes code_context section with reusable assets and patterns
+- CONTEXT.md includes `<established>` section with codebase patterns
+- CONTEXT.md includes `<canonical_refs>` section with full file paths (MANDATORY)
+- CONTEXT.md includes `<code_context>` section with reusable assets and patterns
 - Deferred ideas preserved for future phases
+- DISCUSSION-LOG.md captures conversation reasoning and signal strength rationale
+- Cross-phase notes written if insights relevant to other phases were detected
+- Pre-existing cross-phase notes (from prior phase discussions) were loaded and validated
+- Discussion focus hints from ROADMAP.md were used to prioritize conversation (if present)
 - STATE.md updated with session info
 - User knows next steps
 </success_criteria>
+</content>
+</invoke>

@@ -30,6 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Goal**: [What this phase delivers]
 **Depends on**: Nothing (first phase)
 **Requirements**: [REQ-01, REQ-02, REQ-03]  <!-- brackets optional, parser handles both formats -->
+**Discussion focus**: [What kind of decisions need user input — e.g., "UI layout choices, data display density" or "API contract design, error handling strategy". Helps discuss-phase know what to probe. Omit if obvious from goal.]
 **Success Criteria** (what must be TRUE):
   1. [Observable behavior from user perspective]
   2. [Observable behavior from user perspective]
