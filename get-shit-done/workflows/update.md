@@ -92,8 +92,8 @@ Then exit.
 </step>
 
 <step name="compare_versions">
-- **installed == latest:** Show "You're already on the latest version (X.Y.Z)." Exit.
-- **installed > latest:** Show "You're ahead of the latest release (development version?)." Exit.
+- **installed == latest:** Clear update cache (same as post-install cache clear), then show "You're already on the latest version (X.Y.Z). No update needed." Exit.
+- **installed > latest:** Clear update cache, then show "You're ahead of the latest release (development version?)." Exit.
 - **installed < latest:** Continue to next step.
 </step>
 
