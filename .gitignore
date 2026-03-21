@@ -8,8 +8,8 @@ commands.html
 # Local test installs
 .claude/
 
-# Build artifacts (committed to npm, not git)
-hooks/dist/
+# Build artifacts (committed for GitHub-based distribution)
+# hooks/dist/
 
 # Coverage artifacts
 coverage/
