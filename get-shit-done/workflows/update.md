@@ -80,13 +80,13 @@ Output: line 1 = installed version (`0.0.0` = unknown), line 2 = scope (`LOCAL`/
 
 <step name="check_latest_version">
 ```bash
-npm view get-shit-done-cc version 2>/dev/null
+curl -sfL https://raw.githubusercontent.com/itsoneword/get-shit-done/main/package.json | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).version))"
 ```
 
-If npm check fails, show:
+If version check fails, show:
 ```
-Couldn't check for updates (offline or npm unavailable).
-To update manually: `npx get-shit-done-cc --global`
+Couldn't check for updates (offline or GitHub unavailable).
+To update manually: `npx github:itsoneword/get-shit-done --global`
 ```
 Then exit.
 </step>
@@ -146,11 +146,11 @@ If user cancels: exit.
 ```bash
 RUNTIME_FLAG="--$TARGET_RUNTIME"
 # LOCAL
-npx -y get-shit-done-cc@latest "$RUNTIME_FLAG" --local   # if INSTALL_SCOPE=LOCAL
+npx -y github:itsoneword/get-shit-done "$RUNTIME_FLAG" --local   # if INSTALL_SCOPE=LOCAL
 # GLOBAL
-npx -y get-shit-done-cc@latest "$RUNTIME_FLAG" --global  # if INSTALL_SCOPE=GLOBAL
+npx -y github:itsoneword/get-shit-done "$RUNTIME_FLAG" --global  # if INSTALL_SCOPE=GLOBAL
 # UNKNOWN fallback
-npx -y get-shit-done-cc@latest --claude --global          # if INSTALL_SCOPE=UNKNOWN
+npx -y github:itsoneword/get-shit-done --claude --global          # if INSTALL_SCOPE=UNKNOWN
 ```
 
 If install fails: show error and exit.
@@ -172,7 +172,7 @@ done
 
 ⚠️  Restart your runtime to pick up the new commands.
 
-[View full changelog](https://github.com/glittercowboy/get-shit-done/blob/main/CHANGELOG.md)
+[View full changelog](https://github.com/itsoneword/get-shit-done/blob/main/CHANGELOG.md)
 ```
 </step>
 

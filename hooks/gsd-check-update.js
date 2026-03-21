@@ -105,7 +105,9 @@ const child = spawn(process.execPath, ['-e', `
   let latest = null;
   if (!devMode) {
     try {
-      latest = execSync('npm view get-shit-done-cc version', { encoding: 'utf8', timeout: 10000, windowsHide: true }).trim();
+      // Fetch version from GitHub repo (not npm — gsd2 is distributed via GitHub)
+      const raw = execSync('curl -sfL https://raw.githubusercontent.com/itsoneword/get-shit-done/main/package.json', { encoding: 'utf8', timeout: 10000, windowsHide: true });
+      latest = JSON.parse(raw).version;
     } catch (e) {}
   }
 

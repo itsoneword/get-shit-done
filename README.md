@@ -1,8 +1,8 @@
 # GSD v2 — Experimental Fork
 
-> Fork of [get-shit-done](https://github.com/gsd-build/get-shit-done) by **TÂCHES** — a meta-prompting and spec-driven development system for Claude Code.
+> Fork of [get-shit-done](https://github.com/gsd-build/get-shit-done) by [**TÂCHES**](https://github.com/glittercowboy) — a meta-prompting and spec-driven development system for Claude Code.
 >
-> This fork explores architectural improvements to the discussion and planning pipeline.
+> This fork explores architectural improvements to the discussion and planning pipeline. All credit for the original system goes to the upstream project.
 
 ## What's Different Here
 
@@ -107,7 +107,7 @@ All 49 workflow files optimized for orchestrator token efficiency:
 ## Install
 
 ```bash
-npx gsd2@latest
+npx github:itsoneword/get-shit-done
 ```
 
 Or from source:
@@ -133,7 +133,7 @@ Two interactive HTML reports are included (open in browser):
 
 ## Original Project
 
-Full docs, commands, and configuration: [gsd-build/get-shit-done](https://github.com/gsd-build/get-shit-done)
+This is a fork of [get-shit-done](https://github.com/gsd-build/get-shit-done) by [TÂCHES](https://github.com/glittercowboy). Full docs, commands, and configuration for the original: [gsd-build/get-shit-done](https://github.com/gsd-build/get-shit-done)
 
 ## License
 
