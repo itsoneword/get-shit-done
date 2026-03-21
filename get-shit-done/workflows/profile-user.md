@@ -1,67 +1,55 @@
 <purpose>
-Orchestrate the full developer profiling flow: consent, session analysis (or questionnaire fallback), profile generation, result display, and artifact creation.
-
-This workflow wires Phase 1 (session pipeline) and Phase 2 (profiling engine) into a cohesive user-facing experience. All heavy lifting is done by existing gsd-tools.cjs subcommands and the gsd-user-profiler agent -- this workflow orchestrates the sequence, handles branching, and provides the UX.
+Orchestrate developer profiling: consent, session analysis (or questionnaire fallback), profile generation, display, and artifact creation via gsd-tools.cjs subcommands and gsd-user-profiler agent.
 </purpose>
 
 <required_reading>
-Read all files referenced by the invoking prompt's execution_context before starting.
-
-Key references:
-- @$HOME/.claude/get-shit-done/references/ui-brand.md (display patterns)
-- @$HOME/.claude/get-shit-done/agents/gsd-user-profiler.md (profiler agent definition)
-- @$HOME/.claude/get-shit-done/references/user-profiling.md (profiling reference doc)
+Read execution_context files first. Key refs:
+- @$HOME/.claude/get-shit-done/references/ui-brand.md
+- @$HOME/.claude/get-shit-done/agents/gsd-user-profiler.md
+- @$HOME/.claude/get-shit-done/references/user-profiling.md
 </required_reading>
 
 <process>
 
 ## 1. Initialize
 
-Parse flags from $ARGUMENTS:
-- Detect `--questionnaire` flag (skip session analysis, questionnaire-only)
-- Detect `--refresh` flag (rebuild profile even when one exists)
-
-Check for existing profile:
+Parse $ARGUMENTS for `--questionnaire` (skip sessions) and `--refresh` (rebuild existing).
 
 ```bash
 PROFILE_PATH="$HOME/.claude/get-shit-done/USER-PROFILE.md"
 [ -f "$PROFILE_PATH" ] && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
-**If profile exists AND --refresh NOT set AND --questionnaire NOT set:**
+// if EXISTS && !--refresh && !--questionnaire:
+AskUserQuestion header:"Existing Profile" question:"You already have a profile. What would you like to do?"
+  - "View it" -> read USER-PROFILE.md, display as summary card, exit
+  - "Refresh it" -> set --refresh, continue
+  - "Cancel" -> display "No changes made.", exit
 
-Use AskUserQuestion:
-- header: "Existing Profile"
-- question: "You already have a profile. What would you like to do?"
-- options:
-  - "View it" -- Display summary card from existing profile data, then exit
-  - "Refresh it" -- Continue with --refresh behavior
-  - "Cancel" -- Exit workflow
-
-If "View it": Read USER-PROFILE.md, display its content formatted as a summary card, then exit.
-If "Refresh it": Set --refresh behavior and continue.
-If "Cancel": Display "No changes made." and exit.
-
-**If profile exists AND --refresh IS set:**
-
-Backup existing profile:
+// if EXISTS && --refresh:
 ```bash
 cp "$HOME/.claude/get-shit-done/USER-PROFILE.md" "$HOME/.claude/get-shit-done/USER-PROFILE.backup.md"
 ```
+Display: "Re-analyzing your sessions to update your profile." -> step 2
 
-Display: "Re-analyzing your sessions to update your profile."
-Continue to step 2.
-
-**If no profile exists:** Continue to step 2.
+// if NOT_FOUND: -> step 2
 
 ---
 
 ## 2. Consent Gate (ACTV-06)
 
-**Skip if** `--questionnaire` flag is set (no JSONL reading occurs -- jump directly to step 4b).
+If `--questionnaire`: skip to step 4b (no JSONL reading).
 
-Display consent screen:
+If `--refresh`, show abbreviated consent:
+```
+Re-analyzing your sessions to update your profile.
+Your existing profile has been backed up to USER-PROFILE.backup.md.
+```
+AskUserQuestion header:"Refresh" question:"Continue with profile refresh?"
+  - "Continue" -> step 3
+  - "Cancel" -> exit
 
+If default path, display consent screen:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD > PROFILE YOUR CODING STYLE
@@ -72,8 +60,7 @@ how YOU actually work -- not how you think you work.
 
 ## What We'll Analyze
 
-Your recent Claude Code sessions, looking for patterns in these
-8 behavioral dimensions:
+Your recent Claude Code sessions across 8 behavioral dimensions:
 
 | Dimension            | What It Measures                            |
 |----------------------|---------------------------------------------|
@@ -95,30 +82,10 @@ Your recent Claude Code sessions, looking for patterns in these
 ✗ Sensitive content (API keys, passwords) is automatically excluded
 ```
 
-**If --refresh path:**
-Show abbreviated consent instead:
-
-```
-Re-analyzing your sessions to update your profile.
-Your existing profile has been backed up to USER-PROFILE.backup.md.
-```
-
-Use AskUserQuestion:
-- header: "Refresh"
-- question: "Continue with profile refresh?"
-- options:
-  - "Continue" -- Proceed to step 3
-  - "Cancel" -- Exit workflow
-
-**If default (no --refresh) path:**
-
-Use AskUserQuestion:
-- header: "Ready?"
-- question: "Ready to analyze your sessions?"
-- options:
-  - "Let's go" -- Proceed to step 3 (session analysis)
-  - "Use questionnaire instead" -- Jump to step 4b (questionnaire path)
-  - "Not now" -- Display "No worries. Run /gsd:profile-user when ready." and exit
+AskUserQuestion header:"Ready?" question:"Ready to analyze your sessions?"
+  - "Let's go" -> step 3
+  - "Use questionnaire instead" -> step 4b
+  - "Not now" -> display "No worries. Run /gsd2:profile-user when ready.", exit
 
 ---
 
@@ -126,19 +93,15 @@ Use AskUserQuestion:
 
 Display: "◆ Scanning sessions..."
 
-Run session scan:
 ```bash
 SCAN_RESULT=$(node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs scan-sessions --json 2>/dev/null)
 ```
 
-Parse the JSON output to get session count and project count.
-
+Parse JSON for session count (N) and project count (M).
 Display: "✓ Found N sessions across M projects"
 
-**Determine data sufficiency:**
-- Count total messages available from the scan result (sum sessions across projects)
-- If 0 sessions found: Display "No sessions found. Switching to questionnaire." and jump to step 4b
-- If sessions found: Continue to step 4a
+// if 0 sessions: display "No sessions found. Switching to questionnaire." -> step 4b
+// else: -> step 4a
 
 ---
 
@@ -146,24 +109,15 @@ Display: "✓ Found N sessions across M projects"
 
 Display: "◆ Sampling messages..."
 
-Run profile sampling:
 ```bash
 SAMPLE_RESULT=$(node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs profile-sample --json 2>/dev/null)
 ```
 
-Parse the JSON output to get the temp directory path and message count.
-
+Parse JSON for temp_dir path and message count.
 Display: "✓ Sampled N messages from M projects"
-
 Display: "◆ Analyzing patterns..."
 
-**Spawn gsd-user-profiler agent using Task tool:**
-
-Use the Task tool to spawn the `gsd-user-profiler` agent. Provide it with:
-- The sampled JSONL file path from profile-sample output
-- The user-profiling reference doc at `$HOME/.claude/get-shit-done/references/user-profiling.md`
-
-The agent prompt should follow this structure:
+Spawn `gsd-user-profiler` agent via Task tool with:
 ```
 Read the profiling reference document and the sampled session messages, then analyze the developer's behavioral patterns across all 8 dimensions.
 
@@ -173,23 +127,17 @@ Session data: @{temp_dir}/profile-sample.jsonl
 Analyze these messages and return your analysis in the <analysis> JSON format specified in the reference document.
 ```
 
-**Parse the agent's output:**
-- Extract the `<analysis>` JSON block from the agent's response
-- Save analysis JSON to a temp file (in the same temp directory created by profile-sample)
+Extract `<analysis>` JSON from agent response. Write to `{temp_dir}/analysis.json`.
 
 ```bash
 ANALYSIS_PATH="{temp_dir}/analysis.json"
 ```
 
-Write the analysis JSON to `$ANALYSIS_PATH`.
-
 Display: "✓ Analysis complete (N dimensions scored)"
 
-**Check for thin data:**
-- Read the analysis JSON and check the total message count
-- If < 50 messages were analyzed: Note that a questionnaire supplement could improve accuracy. Display: "Note: Limited session data (N messages). Results may have lower confidence."
+// if < 50 messages analyzed: display "Note: Limited session data (N messages). Results may have lower confidence."
 
-Continue to step 5.
+-> step 5
 
 ---
 
@@ -197,70 +145,46 @@ Continue to step 5.
 
 Display: "Using questionnaire to build your profile."
 
-**Get questions:**
 ```bash
 QUESTIONS=$(node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs profile-questionnaire --json 2>/dev/null)
 ```
 
-Parse the questions JSON. It contains 8 questions, one per dimension.
+For each of 8 questions, AskUserQuestion with header=dimension name, question=text, options=answers.
+Collect answers into JSON mapping dimension keys to selected values.
 
-**Present each question to the user via AskUserQuestion:**
-
-For each question in the questions array:
-- header: The dimension name (e.g., "Communication Style")
-- question: The question text
-- options: The answer options from the question definition
-
-Collect all answers into an answers JSON object mapping dimension keys to selected answer values.
-
-**Save answers to temp file:**
 ```bash
 ANSWERS_PATH=$(mktemp /tmp/gsd-profile-answers-XXXXXX.json)
 ```
+Write answers JSON to $ANSWERS_PATH.
 
-Write the answers JSON to `$ANSWERS_PATH`.
-
-**Convert answers to analysis:**
 ```bash
 ANALYSIS_RESULT=$(node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs profile-questionnaire --answers "$ANSWERS_PATH" --json 2>/dev/null)
 ```
 
-Parse the analysis JSON from the result.
-
-Save analysis JSON to a temp file:
 ```bash
 ANALYSIS_PATH=$(mktemp /tmp/gsd-profile-analysis-XXXXXX.json)
 ```
+Write analysis JSON to $ANALYSIS_PATH.
 
-Write the analysis JSON to `$ANALYSIS_PATH`.
-
-Continue to step 5 (skip split resolution since questionnaire handles ambiguity internally).
+-> step 5 (skip split resolution -- questionnaire handles ambiguity internally)
 
 ---
 
 ## 5. Split Resolution
 
-**Skip if** questionnaire-only path (splits already handled internally).
+Skip if questionnaire path.
 
-Read the analysis JSON from `$ANALYSIS_PATH`.
+Read analysis JSON from $ANALYSIS_PATH. For each dimension with `cross_project_consistent: false`:
 
-Check each dimension for `cross_project_consistent: false`.
-
-**For each split detected:**
-
-Use AskUserQuestion:
-- header: The dimension name (e.g., "Communication Style")
-- question: "Your sessions show different patterns:" followed by the split context (e.g., "CLI/backend projects -> terse-direct, Frontend/UI projects -> detailed-structured")
-- options:
-  - Rating option A (e.g., "terse-direct")
-  - Rating option B (e.g., "detailed-structured")
+AskUserQuestion header:dimension_name question:"Your sessions show different patterns: {split context}"
+  - Rating option A
+  - Rating option B
   - "Context-dependent (keep both)"
 
-**If user picks a specific rating:** Update the dimension's `rating` field in the analysis JSON to the selected value.
+// specific rating: update dimension's `rating` field
+// "Context-dependent": keep dominant rating, add `context_note` describing the split
 
-**If user picks "Context-dependent":** Keep the dominant rating in the `rating` field. Add a `context_note` to the dimension's summary describing the split (e.g., "Context-dependent: terse in CLI projects, detailed in frontend projects").
-
-Write updated analysis JSON back to `$ANALYSIS_PATH`.
+Write updated analysis JSON back to $ANALYSIS_PATH.
 
 ---
 
@@ -278,10 +202,9 @@ Display: "✓ Profile written to $HOME/.claude/get-shit-done/USER-PROFILE.md"
 
 ## 7. Result Display
 
-Read the analysis JSON from `$ANALYSIS_PATH` to build the display.
+Read analysis JSON from $ANALYSIS_PATH.
 
-**Show report card table:**
-
+Show report card (populate from actual analysis values):
 ```
 ## Your Profile
 
@@ -297,12 +220,7 @@ Read the analysis JSON from `$ANALYSIS_PATH` to build the display.
 | Learning Style       | self-directed        | HIGH       |
 ```
 
-(Populate with actual values from the analysis JSON.)
-
-**Show highlight reel:**
-
-Pick 3-4 dimensions with the highest confidence and most evidence signals. Format as:
-
+Show 3-4 highlights from highest-confidence dimensions using `evidence` and `summary` fields:
 ```
 ## Highlights
 
@@ -313,79 +231,48 @@ Pick 3-4 dimensions with the highest confidence and most evidence signals. Forma
 - **Frustrations (MEDIUM):** You correct Claude most often for doing things
   you didn't ask for -- scope creep is your primary trigger
 ```
+Format each as "You tend to..." or "You consistently..." with evidence attribution.
 
-Build highlights from the `evidence` array and `summary` fields in the analysis JSON. Use the most compelling evidence quotes. Format each as "You tend to..." or "You consistently..." with evidence attribution.
-
-**Offer full profile view:**
-
-Use AskUserQuestion:
-- header: "Profile"
-- question: "Want to see the full profile?"
-- options:
-  - "Yes" -- Read and display the full USER-PROFILE.md content, then continue to step 8
-  - "Continue to artifacts" -- Proceed directly to step 8
+AskUserQuestion header:"Profile" question:"Want to see the full profile?"
+  - "Yes" -> read and display USER-PROFILE.md, then step 8
+  - "Continue to artifacts" -> step 8
 
 ---
 
 ## 8. Artifact Selection (ACTV-05)
 
-Use AskUserQuestion with multiSelect:
-- header: "Artifacts"
-- question: "Which artifacts should I generate?"
-- options (ALL pre-selected by default):
-  - "/gsd:dev-preferences command file" -- "Load your preferences in any session"
+AskUserQuestion multiSelect header:"Artifacts" question:"Which artifacts should I generate?" (all pre-selected):
+  - "/gsd2:dev-preferences command file" -- "Load your preferences in any session"
   - "CLAUDE.md profile section" -- "Add profile to this project's CLAUDE.md"
   - "Global CLAUDE.md" -- "Add profile to $HOME/.claude/CLAUDE.md for all projects"
 
-**If no artifacts selected:** Display "No artifacts generated. Your profile is saved at $HOME/.claude/get-shit-done/USER-PROFILE.md" and jump to step 10.
+If none selected: display "No artifacts generated. Your profile is saved at $HOME/.claude/get-shit-done/USER-PROFILE.md" -> step 10
 
 ---
 
 ## 9. Artifact Generation
 
-Generate selected artifacts sequentially (file I/O is fast, no benefit from parallel agents):
-
-**For /gsd:dev-preferences (if selected):**
+Generate selected artifacts sequentially. On failure: AskUserQuestion "Retry" / "Skip this artifact".
 
 ```bash
+# /gsd2:dev-preferences (if selected)
 node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs generate-dev-preferences --analysis "$ANALYSIS_PATH" --json 2>/dev/null
-```
+# -> "✓ Generated /gsd2:dev-preferences at $HOME/.claude/commands/gsd/dev-preferences.md"
 
-Display: "✓ Generated /gsd:dev-preferences at $HOME/.claude/commands/gsd/dev-preferences.md"
-
-**For CLAUDE.md profile section (if selected):**
-
-```bash
+# CLAUDE.md profile section (if selected)
 node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs generate-claude-profile --analysis "$ANALYSIS_PATH" --json 2>/dev/null
-```
+# -> "✓ Added profile section to CLAUDE.md"
 
-Display: "✓ Added profile section to CLAUDE.md"
-
-**For Global CLAUDE.md (if selected):**
-
-```bash
+# Global CLAUDE.md (if selected)
 node $HOME/.claude/get-shit-done/bin/gsd-tools.cjs generate-claude-profile --analysis "$ANALYSIS_PATH" --global --json 2>/dev/null
+# -> "✓ Added profile section to $HOME/.claude/CLAUDE.md"
 ```
-
-Display: "✓ Added profile section to $HOME/.claude/CLAUDE.md"
-
-**Error handling:** If any gsd-tools.cjs call fails, display the error message and use AskUserQuestion to offer "Retry" or "Skip this artifact". On retry, re-run the command. On skip, continue to next artifact.
 
 ---
 
-## 10. Summary & Refresh Diff
+## 10. Summary & Cleanup
 
-**If --refresh path:**
-
-Read both old backup and new analysis to compare dimension ratings/confidence.
-
-Read the backed-up profile:
-```bash
-BACKUP_PATH="$HOME/.claude/get-shit-done/USER-PROFILE.backup.md"
-```
-
-Compare each dimension's rating and confidence between old and new. Display diff table showing only changed dimensions:
-
+If --refresh: read backup at `$HOME/.claude/get-shit-done/USER-PROFILE.backup.md`, compare dimensions. Show diff of changed dimensions only:
 ```
 ## Changes
 
@@ -394,11 +281,9 @@ Compare each dimension's rating and confidence between old and new. Display diff
 | Communication   | terse-direct (LOW)          | detailed-structured (HIGH)  |
 | Debugging       | fix-first (MEDIUM)          | hypothesis-driven (MEDIUM)  |
 ```
+If nothing changed: "No changes detected -- your profile is already up to date."
 
-If nothing changed: Display "No changes detected -- your profile is already up to date."
-
-**Display final summary:**
-
+Display final summary:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD > PROFILE COMPLETE ✓
@@ -407,44 +292,33 @@ If nothing changed: Display "No changes detected -- your profile is already up t
 Your profile:    $HOME/.claude/get-shit-done/USER-PROFILE.md
 ```
 
-Then list paths for each generated artifact:
+List only generated artifacts:
 ```
 Artifacts:
-  ✓ /gsd:dev-preferences   $HOME/.claude/commands/gsd/dev-preferences.md
+  ✓ /gsd2:dev-preferences   $HOME/.claude/commands/gsd/dev-preferences.md
   ✓ CLAUDE.md section       ./CLAUDE.md
   ✓ Global CLAUDE.md        $HOME/.claude/CLAUDE.md
 ```
 
-(Only show artifacts that were actually generated.)
-
-**Clean up temp files:**
-
-Remove the temp directory created by profile-sample (contains sample JSONL and analysis JSON):
+Clean up temp files created during this run:
 ```bash
 rm -rf "$TEMP_DIR"
+rm -f "$ANSWERS_PATH" "$ANALYSIS_PATH" 2>/dev/null
 ```
-
-Also remove any standalone temp files created for questionnaire answers:
-```bash
-rm -f "$ANSWERS_PATH" 2>/dev/null
-rm -f "$ANALYSIS_PATH" 2>/dev/null
-```
-
-(Only clean up temp paths that were actually created during this workflow run.)
 
 </process>
 
 <success_criteria>
-- [ ] Initialization detects existing profile and handles all three responses (view/refresh/cancel)
-- [ ] Consent gate shown for session analysis path, skipped for questionnaire path
-- [ ] Session scan discovers sessions and reports statistics
-- [ ] Session analysis path: samples messages, spawns profiler agent, extracts analysis JSON
-- [ ] Questionnaire path: presents 8 questions, collects answers, converts to analysis JSON
-- [ ] Split resolution presents context-dependent splits with user resolution options
-- [ ] Profile written to USER-PROFILE.md via write-profile subcommand
-- [ ] Result display shows report card table and highlight reel with evidence
-- [ ] Artifact selection uses multiSelect with all options pre-selected
-- [ ] Artifacts generated sequentially via gsd-tools.cjs subcommands
-- [ ] Refresh diff shows changed dimensions when --refresh was used
-- [ ] Temp files cleaned up on completion
+- [ ] Init detects existing profile; handles view/refresh/cancel
+- [ ] Consent gate shown for session path, skipped for questionnaire
+- [ ] Session scan reports statistics; 0 sessions falls back to questionnaire
+- [ ] Session path: samples, spawns profiler agent, extracts analysis JSON
+- [ ] Questionnaire path: 8 questions, answers converted to analysis JSON
+- [ ] Split resolution resolves cross-project inconsistencies
+- [ ] Profile written via write-profile subcommand
+- [ ] Result display: report card table + highlight reel with evidence
+- [ ] Artifact selection uses multiSelect, all pre-selected
+- [ ] Artifacts generated sequentially via gsd-tools.cjs
+- [ ] Refresh diff shows changed dimensions
+- [ ] Temp files cleaned up
 </success_criteria>

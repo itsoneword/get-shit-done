@@ -1,13 +1,7 @@
 <purpose>
-Execute small, ad-hoc tasks with GSD guarantees (atomic commits, STATE.md tracking). Quick mode spawns gsd-planner (quick mode) + gsd-executor(s), tracks tasks in `.planning/quick/`, and updates STATE.md's "Quick Tasks Completed" table.
+Execute small, ad-hoc tasks with GSD guarantees (atomic commits, STATE.md tracking). Spawns gsd-planner (quick mode) + gsd-executor(s), tracks in `.planning/quick/`, updates STATE.md's "Quick Tasks Completed" table.
 
-With `--discuss` flag: lightweight discussion phase before planning. Surfaces assumptions, clarifies gray areas, captures decisions in CONTEXT.md so the planner treats them as locked.
-
-With `--full` flag: enables plan-checking (max 2 iterations) and post-execution verification for quality guarantees without full milestone ceremony.
-
-With `--research` flag: spawns a focused research agent before planning. Investigates implementation approaches, library options, and pitfalls. Use when you're unsure how to approach a task.
-
-Flags are composable: `--discuss --research --full` gives discussion + research + plan-checking + verification.
+Composable flags: `--discuss` (surfaces assumptions via CONTEXT.md), `--research` (spawns researcher before planning), `--full` (plan-checking max 2 iterations + verification).
 </purpose>
 
 <required_reading>
@@ -18,13 +12,10 @@ Read all files referenced by the invoking prompt's execution_context before star
 **Step 1: Parse arguments and get task description**
 
 Parse `$ARGUMENTS` for:
-- `--full` flag → store as `$FULL_MODE` (true/false)
-- `--discuss` flag → store as `$DISCUSS_MODE` (true/false)
-- `--research` flag → store as `$RESEARCH_MODE` (true/false)
-- Remaining text → use as `$DESCRIPTION` if non-empty
+- `--full` → `$FULL_MODE`, `--discuss` → `$DISCUSS_MODE`, `--research` → `$RESEARCH_MODE`
+- Remaining text → `$DESCRIPTION`
 
-If `$DESCRIPTION` is empty after parsing, prompt user interactively:
-
+If `$DESCRIPTION` is empty:
 ```
 AskUserQuestion(
   header: "Quick Task",
@@ -32,74 +23,18 @@ AskUserQuestion(
   followUp: null
 )
 ```
+Store response as `$DESCRIPTION`. If still empty, re-prompt.
 
-Store response as `$DESCRIPTION`.
+Display banner with active flags. Build label from active flags:
+- Combine active flag names: DISCUSS, RESEARCH, FULL
+- If none: just "QUICK TASK"
 
-If still empty, re-prompt: "Please provide a task description."
-
-Display banner based on active flags:
-
-If `$DISCUSS_MODE` and `$RESEARCH_MODE` and `$FULL_MODE`:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (DISCUSS + RESEARCH + FULL)
+ GSD ► QUICK TASK ${flags_label ? '(' + flags_label + ')' : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-◆ Discussion + research + plan checking + verification enabled
-```
-
-If `$DISCUSS_MODE` and `$FULL_MODE` (no research):
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (DISCUSS + FULL)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Discussion + plan checking + verification enabled
-```
-
-If `$DISCUSS_MODE` and `$RESEARCH_MODE` (no full):
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (DISCUSS + RESEARCH)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Discussion + research enabled
-```
-
-If `$RESEARCH_MODE` and `$FULL_MODE` (no discuss):
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (RESEARCH + FULL)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Research + plan checking + verification enabled
-```
-
-If `$DISCUSS_MODE` only:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (DISCUSS)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Discussion phase enabled — surfacing gray areas before planning
-```
-
-If `$RESEARCH_MODE` only:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (RESEARCH)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Research phase enabled — investigating approaches before planning
-```
-
-If `$FULL_MODE` only:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► QUICK TASK (FULL MODE)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Plan checking + verification enabled
+◆ ${summary_of_enabled_features}
 ```
 
 ---
@@ -113,58 +48,38 @@ if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 
 Parse JSON for: `planner_model`, `executor_model`, `checker_model`, `verifier_model`, `commit_docs`, `branch_name`, `quick_id`, `slug`, `date`, `timestamp`, `quick_dir`, `task_dir`, `roadmap_exists`, `planning_exists`.
 
-**If `roadmap_exists` is false:** Error — Quick mode requires an active project with ROADMAP.md. Run `/gsd:new-project` first.
-
-Quick tasks can run mid-phase - validation only checks ROADMAP.md exists, not phase status.
+**If `roadmap_exists` is false:** Error — run `/gsd2:new-project` first. Quick tasks can run mid-phase; only ROADMAP.md is required.
 
 ---
 
 **Step 2.5: Handle quick-task branching**
 
-**If `branch_name` is empty/null:** Skip and continue on the current branch.
-
-**If `branch_name` is set:** Check out the quick-task branch before any planning commits:
+Skip if `branch_name` is empty/null. Otherwise:
 
 ```bash
 git checkout -b "$branch_name" 2>/dev/null || git checkout "$branch_name"
 ```
 
-All quick-task commits for this run stay on that branch. User handles merge/rebase afterward.
+All quick-task commits stay on that branch. User handles merge/rebase afterward.
 
 ---
 
-**Step 3: Create task directory**
+**Step 3: Create task directories**
 
 ```bash
 mkdir -p "${task_dir}"
-```
-
----
-
-**Step 4: Create quick task directory**
-
-Create the directory for this quick task:
-
-```bash
 QUICK_DIR=".planning/quick/${quick_id}-${slug}"
 mkdir -p "$QUICK_DIR"
 ```
 
-Report to user:
-```
-Creating quick task ${quick_id}: ${DESCRIPTION}
-Directory: ${QUICK_DIR}
-```
-
-Store `$QUICK_DIR` for use in orchestration.
+Report: `Creating quick task ${quick_id}: ${DESCRIPTION} — Directory: ${QUICK_DIR}`
 
 ---
 
-**Step 4.5: Discussion phase (only when `$DISCUSS_MODE`)**
+**Step 4: Discussion phase (only when `$DISCUSS_MODE`)**
 
-Skip this step entirely if NOT `$DISCUSS_MODE`.
+Skip if NOT `$DISCUSS_MODE`.
 
-Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► DISCUSSING QUICK TASK
@@ -173,20 +88,14 @@ Display banner:
 ◆ Surfacing gray areas for: ${DESCRIPTION}
 ```
 
-**4.5a. Identify gray areas**
+**4a. Identify 2-4 gray areas** — concrete decision points using domain heuristic:
+- SEE → layout, density, interactions, states
+- CALL → responses, errors, auth, versioning
+- RUN → output format, flags, modes, error handling
+- READ → structure, tone, depth, flow
+- ORGANIZED → criteria, grouping, naming, exceptions
 
-Analyze `$DESCRIPTION` to identify 2-4 gray areas — implementation decisions that would change the outcome and that the user should weigh in on.
-
-Use the domain-aware heuristic to generate phase-specific (not generic) gray areas:
-- Something users **SEE** → layout, density, interactions, states
-- Something users **CALL** → responses, errors, auth, versioning
-- Something users **RUN** → output format, flags, modes, error handling
-- Something users **READ** → structure, tone, depth, flow
-- Something being **ORGANIZED** → criteria, grouping, naming, exceptions
-
-Each gray area should be a concrete decision point, not a vague category. Example: "Loading behavior" not "UX".
-
-**4.5b. Present gray areas**
+**4b. Present gray areas**
 
 ```
 AskUserQuestion(
@@ -202,11 +111,9 @@ AskUserQuestion(
 )
 ```
 
-If user selects "All clear" → skip to Step 5 (no CONTEXT.md written).
+If "All clear" → skip to Step 5 (no CONTEXT.md).
 
-**4.5c. Discuss selected areas**
-
-For each selected area, ask 1-2 focused questions via AskUserQuestion:
+**4c. Discuss selected areas** — for each, ask 1-2 focused questions:
 
 ```
 AskUserQuestion(
@@ -222,18 +129,9 @@ AskUserQuestion(
 )
 ```
 
-Rules:
-- Options must be concrete choices, not abstract categories
-- Highlight recommended choice where you have a clear opinion
-- If user selects "Other" with freeform text, switch to plain text follow-up (per questioning.md freeform rule)
-- If user selects "You decide", capture as Claude's Discretion in CONTEXT.md
-- Max 2 questions per area — this is lightweight, not a deep dive
+Rules: concrete choices (not abstract), highlight recommended, "Other" → plain text follow-up, "You decide" → Claude's Discretion in CONTEXT.md. Max 2 questions per area.
 
-Collect all decisions into `$DECISIONS`.
-
-**4.5d. Write CONTEXT.md**
-
-Write `${QUICK_DIR}/${quick_id}-CONTEXT.md` using the standard context template structure:
+**4d. Write `${QUICK_DIR}/${quick_id}-CONTEXT.md`**
 
 ```markdown
 # Quick Task ${quick_id}: ${DESCRIPTION} - Context
@@ -252,9 +150,6 @@ ${DESCRIPTION}
 ## Implementation Decisions
 
 ### ${area_1_name}
-- ${decision_from_discussion}
-
-### ${area_2_name}
 - ${decision_from_discussion}
 
 ### Claude's Discretion
@@ -281,17 +176,16 @@ ${any_specs_adrs_or_docs_referenced_during_discussion}
 </canonical_refs>
 ```
 
-Note: Quick task CONTEXT.md omits `<code_context>` and `<deferred>` sections (no codebase scouting, no phase scope to defer to). Keep it lean. The `<canonical_refs>` section is included when external docs were referenced — omit it only if no external docs apply.
+Omit `<code_context>` and `<deferred>` sections. Include `<canonical_refs>` only when external docs apply.
 
 Report: `Context captured: ${QUICK_DIR}/${quick_id}-CONTEXT.md`
 
 ---
 
-**Step 4.75: Research phase (only when `$RESEARCH_MODE`)**
+**Step 4.5: Research phase (only when `$RESEARCH_MODE`)**
 
-Skip this step entirely if NOT `$RESEARCH_MODE`.
+Skip if NOT `$RESEARCH_MODE`.
 
-Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► RESEARCHING QUICK TASK
@@ -300,7 +194,7 @@ Display banner:
 ◆ Investigating approaches for: ${DESCRIPTION}
 ```
 
-Spawn a single focused researcher (not 4 parallel researchers like full phases — quick tasks need targeted research, not broad domain surveys):
+Spawn a single focused researcher (not 4 parallel like full phases):
 
 ```
 Task(
@@ -312,29 +206,24 @@ Task(
 **Output:** ${QUICK_DIR}/${quick_id}-RESEARCH.md
 
 <files_to_read>
-- .planning/STATE.md (Project state — what's already built)
+- .planning/STATE.md (Project state)
 - .planning/PROJECT.md (Project context)
-- ./CLAUDE.md (if exists — project-specific guidelines)
-${DISCUSS_MODE ? '- ' + QUICK_DIR + '/' + quick_id + '-CONTEXT.md (User decisions — research should align with these)' : ''}
+- ./CLAUDE.md (if exists)
+${DISCUSS_MODE ? '- ' + QUICK_DIR + '/' + quick_id + '-CONTEXT.md (User decisions — align with these)' : ''}
 </files_to_read>
 
 </research_context>
 
 <focus>
-This is a quick task, not a full phase. Research should be concise and targeted:
-1. Best libraries/patterns for this specific task
-2. Common pitfalls and how to avoid them
+Concise, targeted research for a quick task:
+1. Best libraries/patterns for this task
+2. Common pitfalls and avoidance
 3. Integration points with existing codebase
-4. Any constraints or gotchas worth knowing before planning
+4. Constraints or gotchas before planning
 
-Do NOT produce a full domain survey. Target 1-2 pages of actionable findings.
-</focus>
-
-<output>
-Write research to: ${QUICK_DIR}/${quick_id}-RESEARCH.md
-Use standard research format but keep it lean — skip sections that don't apply.
+Target 1-2 pages of actionable findings. Skip inapplicable sections.
 Return: ## RESEARCH COMPLETE with file path
-</output>
+</focus>
 ",
   subagent_type="gsd-phase-researcher",
   model="{planner_model}",
@@ -342,19 +231,13 @@ Return: ## RESEARCH COMPLETE with file path
 )
 ```
 
-After researcher returns:
-1. Verify research exists at `${QUICK_DIR}/${quick_id}-RESEARCH.md`
-2. Report: "Research complete: ${QUICK_DIR}/${quick_id}-RESEARCH.md"
-
-If research file not found, warn but continue: "Research agent did not produce output — proceeding to planning without research."
+Verify research exists. If not found, warn but continue.
 
 ---
 
-**Step 5: Spawn planner (quick mode)**
+**Step 5: Spawn planner**
 
-**If `$FULL_MODE`:** Use `quick-full` mode with stricter constraints.
-
-**If NOT `$FULL_MODE`:** Use standard `quick` mode.
+Mode: `quick-full` if `$FULL_MODE`, else `quick`.
 
 ```
 Task(
@@ -367,20 +250,19 @@ Task(
 
 <files_to_read>
 - .planning/STATE.md (Project State)
-- ./CLAUDE.md (if exists — follow project-specific guidelines)
-${DISCUSS_MODE ? '- ' + QUICK_DIR + '/' + quick_id + '-CONTEXT.md (User decisions — locked, do not revisit)' : ''}
-${RESEARCH_MODE ? '- ' + QUICK_DIR + '/' + quick_id + '-RESEARCH.md (Research findings — use to inform implementation choices)' : ''}
+- ./CLAUDE.md (if exists)
+${DISCUSS_MODE ? '- ' + QUICK_DIR + '/' + quick_id + '-CONTEXT.md (Locked decisions — do not revisit)' : ''}
+${RESEARCH_MODE ? '- ' + QUICK_DIR + '/' + quick_id + '-RESEARCH.md (Research findings)' : ''}
 </files_to_read>
 
-**Project skills:** Check .claude/skills/ or .agents/skills/ directory (if either exists) — read SKILL.md files, plans should account for project skill rules
+**Project skills:** Check .claude/skills/ or .agents/skills/ (if exists) — read SKILL.md files, plans should account for skill rules
 
 </planning_context>
 
 <constraints>
-- Create a SINGLE plan with 1-3 focused tasks
-- Quick tasks should be atomic and self-contained
-${RESEARCH_MODE ? '- Research findings are available — use them to inform library/pattern choices' : '- No research phase'}
-${FULL_MODE ? '- Target ~40% context usage (structured for verification)' : '- Target ~30% context usage (simple, focused)'}
+- SINGLE plan with 1-3 focused, atomic tasks
+${RESEARCH_MODE ? '- Use research findings for library/pattern choices' : ''}
+${FULL_MODE ? '- Target ~40% context (structured for verification)' : '- Target ~30% context (simple, focused)'}
 ${FULL_MODE ? '- MUST generate `must_haves` in plan frontmatter (truths, artifacts, key_links)' : ''}
 ${FULL_MODE ? '- Each task MUST have `files`, `action`, `verify`, `done` fields' : ''}
 </constraints>
@@ -396,26 +278,18 @@ Return: ## PLANNING COMPLETE with plan path
 )
 ```
 
-After planner returns:
-1. Verify plan exists at `${QUICK_DIR}/${quick_id}-PLAN.md`
-2. Extract plan count (typically 1 for quick tasks)
-3. Report: "Plan created: ${QUICK_DIR}/${quick_id}-PLAN.md"
-
-If plan not found, error: "Planner failed to create ${quick_id}-PLAN.md"
+Verify plan exists. If not found, error: "Planner failed to create ${quick_id}-PLAN.md"
 
 ---
 
 **Step 5.5: Plan-checker loop (only when `$FULL_MODE`)**
 
-Skip this step entirely if NOT `$FULL_MODE`.
+Skip if NOT `$FULL_MODE`.
 
-Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► CHECKING PLAN
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Spawning plan checker...
 ```
 
 Checker prompt:
@@ -429,18 +303,17 @@ Checker prompt:
 - ${QUICK_DIR}/${quick_id}-PLAN.md (Plan to verify)
 </files_to_read>
 
-**Scope:** This is a quick task, not a full phase. Skip checks that require a ROADMAP phase goal.
+**Scope:** Quick task — skip checks requiring ROADMAP phase goal.
 </verification_context>
 
 <check_dimensions>
-- Requirement coverage: Does the plan address the task description?
-- Task completeness: Do tasks have files, action, verify, done fields?
-- Key links: Are referenced files real?
-- Scope sanity: Is this appropriately sized for a quick task (1-3 tasks)?
-- must_haves derivation: Are must_haves traceable to the task description?
-
-Skip: cross-plan deps (single plan), ROADMAP alignment
-${DISCUSS_MODE ? '- Context compliance: Does the plan honor locked decisions from CONTEXT.md?' : '- Skip: context compliance (no CONTEXT.md)'}
+- Requirement coverage: plan addresses task description?
+- Task completeness: tasks have files, action, verify, done?
+- Key links: referenced files real?
+- Scope sanity: 1-3 tasks?
+- must_haves derivation: traceable to task description?
+- Skip: cross-plan deps, ROADMAP alignment
+${DISCUSS_MODE ? '- Context compliance: plan honors locked CONTEXT.md decisions?' : ''}
 </check_dimensions>
 
 <expected_output>
@@ -458,22 +331,17 @@ Task(
 )
 ```
 
-**Handle checker return:**
+Handle return:
+- `## VERIFICATION PASSED` → proceed to Step 6
+- `## ISSUES FOUND` → revision loop (max 2 iterations)
 
-- **`## VERIFICATION PASSED`:** Display confirmation, proceed to step 6.
-- **`## ISSUES FOUND`:** Display issues, check iteration count, enter revision loop.
+**Revision loop:** Track `iteration_count` (starts at 1 after initial check).
 
-**Revision loop (max 2 iterations):**
+If iteration_count < 2, send back to planner with issues:
 
-Track `iteration_count` (starts at 1 after initial plan + check).
-
-**If iteration_count < 2:**
-
-Display: `Sending back to planner for revision... (iteration ${N}/2)`
-
-Revision prompt:
-
-```markdown
+```
+Task(
+  prompt="
 <revision_context>
 **Mode:** quick-full (revision)
 
@@ -483,37 +351,23 @@ Revision prompt:
 
 **Checker issues:** ${structured_issues_from_checker}
 
-</revision_context>
-
-<instructions>
-Make targeted updates to address checker issues.
-Do NOT replan from scratch unless issues are fundamental.
+Make targeted updates — do NOT replan from scratch unless issues are fundamental.
 Return what changed.
-</instructions>
-```
-
-```
-Task(
-  prompt=revision_prompt,
+</revision_context>
+",
   subagent_type="gsd-planner",
   model="{planner_model}",
   description="Revise quick plan: ${DESCRIPTION}"
 )
 ```
 
-After planner returns → spawn checker again, increment iteration_count.
+After planner returns → re-check, increment iteration_count.
 
-**If iteration_count >= 2:**
-
-Display: `Max iterations reached. ${N} issues remain:` + issue list
-
-Offer: 1) Force proceed, 2) Abort
+If iteration_count >= 2: display remaining issues, offer: 1) Force proceed, 2) Abort.
 
 ---
 
 **Step 6: Spawn executor**
-
-Spawn gsd-executor with plan reference:
 
 ```
 Task(
@@ -523,8 +377,8 @@ Execute quick task ${quick_id}.
 <files_to_read>
 - ${QUICK_DIR}/${quick_id}-PLAN.md (Plan)
 - .planning/STATE.md (Project state)
-- ./CLAUDE.md (Project instructions, if exists)
-- .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
+- ./CLAUDE.md (if exists)
+- .claude/skills/ or .agents/skills/ (if exists — read SKILL.md for each, follow relevant rules)
 </files_to_read>
 
 <constraints>
@@ -540,30 +394,22 @@ Execute quick task ${quick_id}.
 )
 ```
 
-After executor returns:
-1. Verify summary exists at `${QUICK_DIR}/${quick_id}-SUMMARY.md`
-2. Extract commit hash from executor output
-3. Report completion status
+Verify summary exists. Extract commit hash.
 
-**Known Claude Code bug (classifyHandoffIfNeeded):** If executor reports "failed" with error `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug — not a real failure. Check if summary file exists and git log shows commits. If so, treat as successful.
+**MUST:** If executor reports failure with `classifyHandoffIfNeeded is not defined`, check if summary file exists and git log shows commits — this is a Claude Code runtime bug, not a real failure.
 
-If summary not found, error: "Executor failed to create ${quick_id}-SUMMARY.md"
-
-Note: For quick tasks producing multiple plans (rare), spawn executors in parallel waves per execute-phase patterns.
+If summary not found, error. For rare multi-plan quick tasks, spawn executors in parallel waves per execute-phase patterns.
 
 ---
 
 **Step 6.5: Verification (only when `$FULL_MODE`)**
 
-Skip this step entirely if NOT `$FULL_MODE`.
+Skip if NOT `$FULL_MODE`.
 
-Display banner:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► VERIFYING RESULTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-◆ Spawning verifier...
 ```
 
 ```
@@ -588,29 +434,21 @@ Read verification status:
 grep "^status:" "${QUICK_DIR}/${quick_id}-VERIFICATION.md" | cut -d: -f2 | tr -d ' '
 ```
 
-Store as `$VERIFICATION_STATUS`.
-
 | Status | Action |
 |--------|--------|
-| `passed` | Store `$VERIFICATION_STATUS = "Verified"`, continue to step 7 |
-| `human_needed` | Display items needing manual check, store `$VERIFICATION_STATUS = "Needs Review"`, continue |
-| `gaps_found` | Display gap summary, offer: 1) Re-run executor to fix gaps, 2) Accept as-is. Store `$VERIFICATION_STATUS = "Gaps"` |
+| `passed` | `$VERIFICATION_STATUS = "Verified"`, continue |
+| `human_needed` | Display items needing manual check, `$VERIFICATION_STATUS = "Needs Review"` |
+| `gaps_found` | Display gaps, offer: 1) Re-run executor, 2) Accept as-is. `$VERIFICATION_STATUS = "Gaps"` |
 
 ---
 
 **Step 7: Update STATE.md**
 
-Update STATE.md with quick task completion record.
+**7a.** Check if `### Quick Tasks Completed` section exists in STATE.md.
 
-**7a. Check if "Quick Tasks Completed" section exists:**
+**7b.** If missing, insert after `### Blockers/Concerns`:
 
-Read STATE.md and check for `### Quick Tasks Completed` section.
-
-**7b. If section doesn't exist, create it:**
-
-Insert after `### Blockers/Concerns` section:
-
-**If `$FULL_MODE`:**
+If `$FULL_MODE`:
 ```markdown
 ### Quick Tasks Completed
 
@@ -618,7 +456,7 @@ Insert after `### Blockers/Concerns` section:
 |---|-------------|------|--------|--------|-----------|
 ```
 
-**If NOT `$FULL_MODE`:**
+If NOT `$FULL_MODE`:
 ```markdown
 ### Quick Tasks Completed
 
@@ -626,106 +464,68 @@ Insert after `### Blockers/Concerns` section:
 |---|-------------|------|--------|-----------|
 ```
 
-**Note:** If the table already exists, match its existing column format. If adding `--full` to a project that already has quick tasks without a Status column, add the Status column to the header and separator rows, and leave Status empty for the new row's predecessors.
+If table exists, match its column format. If adding `--full` to a project without Status column, add the column header but leave predecessors' Status empty.
 
-**7c. Append new row to table:**
-
-Use `date` from init:
-
-**If `$FULL_MODE` (or table has Status column):**
+**7c.** Append row (include Status column if `$FULL_MODE` or table has one):
 ```markdown
 | ${quick_id} | ${DESCRIPTION} | ${date} | ${commit_hash} | ${VERIFICATION_STATUS} | [${quick_id}-${slug}](./quick/${quick_id}-${slug}/) |
 ```
 
-**If NOT `$FULL_MODE` (and table has no Status column):**
-```markdown
-| ${quick_id} | ${DESCRIPTION} | ${date} | ${commit_hash} | [${quick_id}-${slug}](./quick/${quick_id}-${slug}/) |
-```
-
-**7d. Update "Last activity" line:**
-
-Use `date` from init:
+**7d.** Update last activity:
 ```
 Last activity: ${date} - Completed quick task ${quick_id}: ${DESCRIPTION}
 ```
 
-Use Edit tool to make these changes atomically
+Use Edit tool for atomic changes.
 
 ---
 
 **Step 8: Final commit and completion**
 
-Stage and commit quick task artifacts:
-
 Build file list:
-- `${QUICK_DIR}/${quick_id}-PLAN.md`
-- `${QUICK_DIR}/${quick_id}-SUMMARY.md`
-- `.planning/STATE.md`
-- If `$DISCUSS_MODE` and context file exists: `${QUICK_DIR}/${quick_id}-CONTEXT.md`
-- If `$RESEARCH_MODE` and research file exists: `${QUICK_DIR}/${quick_id}-RESEARCH.md`
-- If `$FULL_MODE` and verification file exists: `${QUICK_DIR}/${quick_id}-VERIFICATION.md`
+- `${QUICK_DIR}/${quick_id}-PLAN.md`, `${QUICK_DIR}/${quick_id}-SUMMARY.md`, `.planning/STATE.md`
+- If `$DISCUSS_MODE`: `${QUICK_DIR}/${quick_id}-CONTEXT.md`
+- If `$RESEARCH_MODE`: `${QUICK_DIR}/${quick_id}-RESEARCH.md`
+- If `$FULL_MODE`: `${QUICK_DIR}/${quick_id}-VERIFICATION.md`
 
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(quick-${quick_id}): ${DESCRIPTION}" --files ${file_list}
 ```
 
-Get final commit hash:
 ```bash
 commit_hash=$(git rev-parse --short HEAD)
 ```
 
-Display completion output:
-
-**If `$FULL_MODE`:**
+Display completion:
 ```
 ---
 
-GSD > QUICK TASK COMPLETE (FULL MODE)
+GSD > QUICK TASK COMPLETE${FULL_MODE ? ' (FULL MODE)' : ''}
 
 Quick Task ${quick_id}: ${DESCRIPTION}
 
 ${RESEARCH_MODE ? 'Research: ' + QUICK_DIR + '/' + quick_id + '-RESEARCH.md' : ''}
 Summary: ${QUICK_DIR}/${quick_id}-SUMMARY.md
-Verification: ${QUICK_DIR}/${quick_id}-VERIFICATION.md (${VERIFICATION_STATUS})
+${FULL_MODE ? 'Verification: ' + QUICK_DIR + '/' + quick_id + '-VERIFICATION.md (' + VERIFICATION_STATUS + ')' : ''}
 Commit: ${commit_hash}
 
 ---
 
-Ready for next task: /gsd:quick
-```
-
-**If NOT `$FULL_MODE`:**
-```
----
-
-GSD > QUICK TASK COMPLETE
-
-Quick Task ${quick_id}: ${DESCRIPTION}
-
-${RESEARCH_MODE ? 'Research: ' + QUICK_DIR + '/' + quick_id + '-RESEARCH.md' : ''}
-Summary: ${QUICK_DIR}/${quick_id}-SUMMARY.md
-Commit: ${commit_hash}
-
----
-
-Ready for next task: /gsd:quick
+Ready for next task: /gsd2:quick
 ```
 
 </process>
 
 <success_criteria>
 - [ ] ROADMAP.md validation passes
-- [ ] User provides task description
-- [ ] `--full`, `--discuss`, and `--research` flags parsed from arguments when present
-- [ ] Slug generated (lowercase, hyphens, max 40 chars)
-- [ ] Quick ID generated (YYMMDD-xxx format, 2s Base36 precision)
-- [ ] Directory created at `.planning/quick/YYMMDD-xxx-slug/`
-- [ ] (--discuss) Gray areas identified and presented, decisions captured in `${quick_id}-CONTEXT.md`
-- [ ] (--research) Research agent spawned, `${quick_id}-RESEARCH.md` created
-- [ ] `${quick_id}-PLAN.md` created by planner (honors CONTEXT.md decisions when --discuss, uses RESEARCH.md findings when --research)
-- [ ] (--full) Plan checker validates plan, revision loop capped at 2
+- [ ] Task description obtained; flags (`--full`, `--discuss`, `--research`) parsed
+- [ ] Quick ID (YYMMDD-xxx) and slug generated; directory created at `.planning/quick/YYMMDD-xxx-slug/`
+- [ ] (--discuss) Gray areas surfaced, decisions in `${quick_id}-CONTEXT.md`
+- [ ] (--research) `${quick_id}-RESEARCH.md` created
+- [ ] `${quick_id}-PLAN.md` created (honors CONTEXT.md and RESEARCH.md when applicable)
+- [ ] (--full) Plan checker validates, revision loop capped at 2
 - [ ] `${quick_id}-SUMMARY.md` created by executor
-- [ ] (--full) `${quick_id}-VERIFICATION.md` created by verifier
+- [ ] (--full) `${quick_id}-VERIFICATION.md` created
 - [ ] STATE.md updated with quick task row (Status column when --full)
 - [ ] Artifacts committed
 </success_criteria>

@@ -3,24 +3,16 @@ Execute all plans in a phase using wave-based parallel execution. Orchestrator s
 </purpose>
 
 <core_principle>
-Orchestrator coordinates, not executes. Each subagent loads the full execute-plan context. Orchestrator: discover plans → analyze deps → group waves → spawn agents → handle checkpoints → collect results.
+Orchestrator coordinates, not executes. Each subagent loads the full execute-plan context. Orchestrator: discover plans, analyze deps, group waves, spawn agents, handle checkpoints, collect results.
 </core_principle>
 
 <runtime_compatibility>
-**Subagent spawning is runtime-specific:**
-- **Claude Code:** Uses `Task(subagent_type="gsd-executor", ...)` — blocks until complete, returns result
-- **Copilot:** Subagent spawning does not reliably return completion signals. **Default to
-  sequential inline execution**: read and follow execute-plan.md directly for each plan
-  instead of spawning parallel agents. Only attempt parallel spawning if the user
-  explicitly requests it — and in that case, rely on the spot-check fallback in step 3
-  to detect completion.
-- **Other runtimes (Gemini, Codex, OpenCode):** If Task/subagent API is unavailable, use sequential
-  inline execution as the fallback.
+Subagent spawning is runtime-specific:
+- **Claude Code:** Uses `Task(subagent_type="gsd-executor", ...)` — blocks until complete, returns result.
+- **Copilot:** Subagent completion signals are unreliable. Default to sequential inline execution: read and follow execute-plan.md directly for each plan. Only attempt parallel spawning if the user explicitly requests it.
+- **Other runtimes (Gemini, Codex, OpenCode):** If Task/subagent API is unavailable, fall back to sequential inline execution.
 
-**Fallback rule:** If a spawned agent completes its work (commits visible, SUMMARY.md exists) but
-the orchestrator never receives the completion signal, treat it as successful based on spot-checks
-and continue to the next wave/plan. Never block indefinitely waiting for a signal — always verify
-via filesystem and git state.
+**Completion verification fallback:** If a spawned agent finishes its work (commits visible, SUMMARY.md exists) but the orchestrator never receives the completion signal, treat it as successful based on filesystem/git state. Never block indefinitely waiting for a signal.
 </runtime_compatibility>
 
 <required_reading>
@@ -28,8 +20,7 @@ Read STATE.md before any operation to load project context.
 </required_reading>
 
 <available_agent_types>
-These are the valid GSD subagent types registered in .claude/agents/ (or equivalent for your runtime).
-Always use the exact name from this list — do not fall back to 'general-purpose' or other built-in types:
+Valid GSD subagent types registered in .claude/agents/ (or equivalent). Always use exact names:
 
 - gsd-executor — Executes plan tasks, commits, creates SUMMARY.md
 - gsd-verifier — Verifies phase completion, checks quality gates
@@ -57,23 +48,20 @@ if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 
 Parse JSON for: `executor_model`, `verifier_model`, `commit_docs`, `parallelization`, `branching_strategy`, `branch_name`, `phase_found`, `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `plans`, `incomplete_plans`, `plan_count`, `incomplete_count`, `state_exists`, `roadmap_exists`, `phase_req_ids`.
 
-**If `phase_found` is false:** Error — phase directory not found.
-**If `plan_count` is 0:** Error — no plans found in phase.
-**If `state_exists` is false but `.planning/` exists:** Offer reconstruct or continue.
+**Error conditions:**
+- `phase_found` is false: phase directory not found.
+- `plan_count` is 0: no plans found in phase.
+- `state_exists` is false but `.planning/` exists: offer reconstruct or continue.
 
 When `parallelization` is false, plans within a wave execute sequentially.
 
-**Runtime detection for Copilot:**
-Check if the current runtime is Copilot by testing for the `@gsd-executor` agent pattern
-or absence of the `Task()` subagent API. If running under Copilot, force sequential inline
-execution regardless of the `parallelization` setting — Copilot's subagent completion
-signals are unreliable (see `<runtime_compatibility>`). Set `COPILOT_SEQUENTIAL=true`
-internally and skip the `execute_waves` step in favor of `check_interactive_mode`'s
-inline path for each plan.
+**Copilot runtime detection:**
+Check if the current runtime is Copilot (test for `@gsd-executor` agent pattern or absence of `Task()` API). If Copilot, force sequential inline execution regardless of `parallelization` setting. Set `COPILOT_SEQUENTIAL=true` internally and use `check_interactive_mode`'s inline path for each plan.
 
-**REQUIRED — Sync chain flag with intent.** If user invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This prevents stale `_auto_chain_active: true` from causing unwanted auto-advance. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference). You MUST execute this bash block before any config reads:
+**Sync chain flag with intent.** When invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This prevents stale `_auto_chain_active: true` from causing unwanted auto-advance. This does not touch `workflow.auto_advance` (the user's persistent preference).
+
 ```bash
-# REQUIRED: prevents stale auto-chain from previous --auto runs
+# Prevents stale auto-chain from previous --auto runs
 if [[ ! "$ARGUMENTS" =~ --auto ]]; then
   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
 fi
@@ -81,19 +69,16 @@ fi
 </step>
 
 <step name="check_interactive_mode">
-**Parse `--interactive` flag from $ARGUMENTS.**
+Parse `--interactive` flag from $ARGUMENTS.
 
-**If `--interactive` flag present:** Switch to interactive execution mode.
-
-Interactive mode executes plans sequentially **inline** (no subagent spawning) with user
-checkpoints between tasks. The user can review, modify, or redirect work at any point.
+If present, switch to interactive execution mode — plans execute sequentially inline (no subagent spawning) with user checkpoints between tasks.
 
 **Interactive execution flow:**
 
-1. Load plan inventory as normal (discover_and_group_plans)
-2. For each plan (sequentially, ignoring wave grouping):
+1. Load plan inventory as normal (discover_and_group_plans).
+2. For each plan sequentially (ignoring wave grouping):
 
-   a. **Present the plan to the user:**
+   a. Present the plan:
       ```
       ## Plan {plan_id}: {plan_name}
 
@@ -107,33 +92,26 @@ checkpoints between tasks. The user can review, modify, or redirect work at any 
       - Stop (end execution, save progress)
       ```
 
-   b. **If "Review first":** Read and display the full plan file. Ask again: Execute, Modify, Skip.
+   b. If "Review first": display the full plan file, then ask: Execute, Modify, or Skip.
 
-   c. **If "Execute":** Read and follow `~/.claude/get-shit-done/workflows/execute-plan.md` **inline**
-      (do NOT spawn a subagent). Execute tasks one at a time.
+   c. If "Execute": read and follow `~/.claude/get-shit-done/workflows/execute-plan.md` inline (no subagent). Execute tasks one at a time.
 
-   d. **After each task:** Pause briefly. If the user intervenes (types anything), stop and address
-      their feedback before continuing. Otherwise proceed to next task.
+   d. After each task: pause briefly. If the user intervenes, address their feedback before continuing.
 
-   e. **After plan complete:** Show results, commit, create SUMMARY.md, then present next plan.
+   e. After plan complete: show results, commit, create SUMMARY.md, then present next plan.
 
 3. After all plans: proceed to verification (same as normal mode).
 
-**Benefits of interactive mode:**
-- No subagent overhead — dramatically lower token usage
-- User catches mistakes early — saves costly verification cycles
-- Maintains GSD's planning/tracking structure
-- Best for: small phases, bug fixes, verification gaps, learning GSD
+Interactive mode is best for small phases, bug fixes, verification gaps, and learning GSD — it avoids subagent overhead and lets the user catch mistakes early.
 
-**Skip to handle_branching step** (interactive plans execute inline after grouping).
+Skip to handle_branching step (interactive plans execute inline after grouping).
 </step>
 
 <step name="handle_branching">
 Check `branching_strategy` from init:
 
-**"none":** Skip, continue on current branch.
-
-**"phase" or "milestone":** Use pre-computed `branch_name` from init:
+- **"none":** Skip, continue on current branch.
+- **"phase" or "milestone":** Use pre-computed `branch_name`:
 ```bash
 git checkout -b "$BRANCH_NAME" 2>/dev/null || git checkout "$BRANCH_NAME"
 ```
@@ -146,23 +124,23 @@ From init JSON: `phase_dir`, `plan_count`, `incomplete_count`.
 
 Report: "Found {plan_count} plans in {phase_dir} ({incomplete_count} incomplete)"
 
-**Update STATE.md for phase start:**
+Update STATE.md for phase start:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state begin-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
 ```
-This updates Status, Last Activity, Current focus, Current Position, and plan counts in STATE.md so frontmatter and body text reflect the active phase immediately.
+This updates Status, Last Activity, Current focus, Current Position, and plan counts so STATE.md reflects the active phase immediately.
 </step>
 
 <step name="discover_and_group_plans">
-Load plan inventory with wave grouping in one call:
+Load plan inventory with wave grouping:
 
 ```bash
 PLAN_INDEX=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase-plan-index "${PHASE_NUMBER}")
 ```
 
-Parse JSON for: `phase`, `plans[]` (each with `id`, `wave`, `autonomous`, `objective`, `files_modified`, `task_count`, `has_summary`), `waves` (map of wave number → plan IDs), `incomplete`, `has_checkpoints`.
+Parse JSON for: `phase`, `plans[]` (each with `id`, `wave`, `autonomous`, `objective`, `files_modified`, `task_count`, `has_summary`), `waves` (map of wave number to plan IDs), `incomplete`, `has_checkpoints`.
 
-**Filtering:** Skip plans where `has_summary: true`. If `--gaps-only`: also skip non-gap_closure plans. If all filtered: "No matching incomplete plans" → exit.
+**Filtering:** Skip plans where `has_summary: true`. If `--gaps-only`: also skip non-gap_closure plans. If all filtered: "No matching incomplete plans" and exit.
 
 Report:
 ```
@@ -182,9 +160,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
 **For each wave:**
 
-1. **Describe what's being built (BEFORE spawning):**
-
-   Read each plan's `<objective>`. Extract what's being built and why.
+1. **Describe what's being built before spawning.** Read each plan's `<objective>`, extract what's being built and why.
 
    ```
    ---
@@ -197,14 +173,11 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
    ---
    ```
 
-   - Bad: "Executing terrain generation plan"
-   - Good: "Procedural terrain generator using Perlin noise — creates height maps, biome zones, and collision meshes. Required before vehicle physics can interact with ground."
+   Example of what to aim for:
+   - Weak: "Executing terrain generation plan"
+   - Strong: "Procedural terrain generator using Perlin noise — creates height maps, biome zones, and collision meshes. Required before vehicle physics can interact with ground."
 
-2. **Spawn executor agents:**
-
-   Pass paths only — executors read files themselves with their fresh context window.
-   For 200k models, this keeps orchestrator context lean (~10-15%).
-   For 1M+ models (Opus 4.6, Sonnet 4.6), richer context can be passed directly.
+2. **Spawn executor agents.** Pass paths only — executors read files themselves with their fresh context window. This keeps orchestrator context lean (~10-15% for 200k models). For 1M+ models (Opus 4.6, Sonnet 4.6), richer context can be passed directly.
 
    ```
    Task(
@@ -237,15 +210,15 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
        - .planning/PROJECT.md (Project context — core value, requirements, evolution rules)
        - .planning/STATE.md (State)
        - .planning/config.json (Config, if exists)
-       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines and coding conventions)
-       - .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each, follow relevant rules during implementation)
+       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines)
+       - .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each)
        </files_to_read>
 
        <mcp_tools>
-       If CLAUDE.md or project instructions reference MCP tools (e.g. jCodeMunch, context7,
-       or other MCP servers), prefer those tools over Grep/Glob for code navigation when available.
-       MCP tools often save significant tokens by providing structured code indexes.
-       Check tool availability first — if MCP tools are not accessible, fall back to Grep/Glob.
+       If CLAUDE.md or project instructions reference MCP tools (e.g. jCodeMunch, context7),
+       prefer those over Grep/Glob for code navigation when available — they save tokens
+       by providing structured code indexes. Check tool availability first; fall back to
+       Grep/Glob if MCP tools are not accessible.
        </mcp_tools>
 
        <success_criteria>
@@ -261,48 +234,37 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
 3. **Wait for all agents in wave to complete.**
 
-   **Completion signal fallback (Copilot and runtimes where Task() may not return):**
+   **Completion signal fallback** (applies to all runtimes for resilience):
 
-   If a spawned agent does not return a completion signal but appears to have finished
-   its work, do NOT block indefinitely. Instead, verify completion via spot-checks:
+   If a spawned agent does not return a completion signal, verify via spot-checks:
 
    ```bash
-   # For each plan in this wave, check if the executor finished:
    SUMMARY_EXISTS=$(test -f "{phase_dir}/{plan_number}-{plan_padded}-SUMMARY.md" && echo "true" || echo "false")
    COMMITS_FOUND=$(git log --oneline --all --grep="{phase_number}-{plan_padded}" --since="1 hour ago" | head -1)
    ```
 
-   **If SUMMARY.md exists AND commits are found:** The agent completed successfully —
-   treat as done and proceed to step 4. Log: `"✓ {Plan ID} completed (verified via spot-check — completion signal not received)"`
-
-   **If SUMMARY.md does NOT exist after a reasonable wait:** The agent may still be
-   running or may have failed silently. Check `git log --oneline -5` for recent
-   activity. If commits are still appearing, wait longer. If no activity, report
-   the plan as failed and route to the failure handler in step 5.
-
-   **This fallback applies automatically to all runtimes.** Claude Code's Task() normally
-   returns synchronously, but the fallback ensures resilience if it doesn't.
+   - SUMMARY.md exists AND commits found: agent completed successfully. Log: `"Plan {ID} completed (verified via spot-check)"` and proceed.
+   - SUMMARY.md missing after reasonable wait: check `git log --oneline -5` for recent activity. If commits still appearing, wait longer. If no activity, report as failed and route to failure handler.
 
 4. **Post-wave hook validation (parallel mode only):**
 
    When agents committed with `--no-verify`, run pre-commit hooks once after the wave:
    ```bash
-   # Run project's pre-commit hooks on the current state
-   git diff --cached --quiet || git stash  # stash any unstaged changes
-   git hook run pre-commit 2>&1 || echo "⚠ Pre-commit hooks failed — review before continuing"
+   git diff --cached --quiet || git stash
+   git hook run pre-commit 2>&1 || echo "Pre-commit hooks failed — review before continuing"
    ```
    If hooks fail: report the failure and ask "Fix hook issues now?" or "Continue to next wave?"
 
-5. **Report completion — spot-check claims first:**
+5. **Spot-check SUMMARY.md claims:**
 
    For each SUMMARY.md:
    - Verify first 2 files from `key-files.created` exist on disk
-   - Check `git log --oneline --all --grep="{phase}-{plan}"` returns ≥1 commit
+   - Check `git log --oneline --all --grep="{phase}-{plan}"` returns at least 1 commit
    - Check for `## Self-Check: FAILED` marker
 
-   If ANY spot-check fails: report which plan failed, route to failure handler — ask "Retry plan?" or "Continue with remaining waves?"
+   If any spot-check fails: report which plan failed, ask "Retry plan?" or "Continue with remaining waves?"
 
-   If pass:
+   If all pass, report what was built:
    ```
    ---
    ## Wave {N} Complete
@@ -315,24 +277,26 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
    ---
    ```
 
-   - Bad: "Wave 2 complete. Proceeding to Wave 3."
-   - Good: "Terrain system complete — 3 biome types, height-based texturing, physics collision meshes. Vehicle physics (Wave 3) can now reference ground surfaces."
+   Example:
+   - Weak: "Wave 2 complete. Proceeding to Wave 3."
+   - Strong: "Terrain system complete — 3 biome types, height-based texturing, physics collision meshes. Vehicle physics (Wave 3) can now reference ground surfaces."
 
-5. **Handle failures:**
+6. **Handle failures:**
 
-   **Known Claude Code bug (classifyHandoffIfNeeded):** If an agent reports "failed" with error containing `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug — not a GSD or agent issue. The error fires in the completion handler AFTER all tool calls finish. In this case: run the same spot-checks as step 4 (SUMMARY.md exists, git commits present, no Self-Check: FAILED). If spot-checks PASS → treat as **successful**. If spot-checks FAIL → treat as real failure below.
+   **classifyHandoffIfNeeded bug:** If an agent reports "failed" with error containing `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug, not a GSD issue. The error fires in the completion handler after all tool calls finish. Run the same spot-checks — if they pass, treat as successful. If they fail, treat as real failure.
 
-   For real failures: report which plan failed → ask "Continue?" or "Stop?" → if continue, dependent plans may also fail. If stop, partial completion report.
+   For real failures: report which plan failed, ask "Continue?" or "Stop?" If continue, note that dependent plans may also fail. If stop, create partial completion report.
 
-5b. **Pre-wave dependency check (waves 2+ only):**
+7. **Pre-wave dependency check (waves 2+ only):**
 
-    Before spawning wave N+1, for each plan in the upcoming wave:
+    Before spawning wave N+1, verify cross-plan wiring:
     ```bash
     node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links {phase_dir}/{plan}-PLAN.md
     ```
 
-    If any key-link from a PRIOR wave's artifact fails verification:
+    If any key-link from a prior wave's artifact fails verification:
 
+    ```
     ## Cross-Plan Wiring Gap
 
     | Plan | Link | From | Expected Pattern | Status |
@@ -342,36 +306,37 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
     Wave {N} artifacts may not be properly wired. Options:
     1. Investigate and fix before continuing
     2. Continue (may cause cascading failures in wave {N+1})
+    ```
 
-    Key-links referencing files in the CURRENT (upcoming) wave are skipped.
+    Key-links referencing files in the current (upcoming) wave are skipped.
 
-6. **Execute checkpoint plans between waves** — see `<checkpoint_handling>`.
+8. **Execute checkpoint plans between waves** — see `<checkpoint_handling>`.
 
-7. **Proceed to next wave.**
+9. **Proceed to next wave.**
 </step>
 
-<step name="checkpoint_handling">
+<checkpoint_handling>
 Plans with `autonomous: false` require user interaction.
 
 **Auto-mode checkpoint handling:**
 
-Read auto-advance config (chain flag + user preference):
+Read auto-advance config:
 ```bash
 AUTO_CHAIN=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
 AUTO_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
 ```
 
-When executor returns a checkpoint AND (`AUTO_CHAIN` is `"true"` OR `AUTO_CFG` is `"true"`):
-- **human-verify** → Auto-spawn continuation agent with `{user_response}` = `"approved"`. Log `⚡ Auto-approved checkpoint`.
-- **decision** → Auto-spawn continuation agent with `{user_response}` = first option from checkpoint details. Log `⚡ Auto-selected: [option]`.
-- **human-action** → Present to user (existing behavior below). Auth gates cannot be automated.
+When executor returns a checkpoint AND (`AUTO_CHAIN` or `AUTO_CFG` is `"true"`):
+- **human-verify** — Auto-approve and spawn continuation. Log `Auto-approved checkpoint`.
+- **decision** — Auto-select first option and spawn continuation. Log `Auto-selected: [option]`.
+- **human-action** — Present to user. Auth gates cannot be automated.
 
 **Standard flow (not auto-mode, or human-action type):**
 
-1. Spawn agent for checkpoint plan
-2. Agent runs until checkpoint task or auth gate → returns structured state
-3. Agent return includes: completed tasks table, current task + blocker, checkpoint type/details, what's awaited
-4. **Present to user:**
+1. Spawn agent for checkpoint plan.
+2. Agent runs until checkpoint task or auth gate, returns structured state.
+3. Agent return includes: completed tasks table, current task + blocker, checkpoint type/details, what's awaited.
+4. Present to user:
    ```
    ## Checkpoint: [Type]
 
@@ -381,19 +346,17 @@ When executor returns a checkpoint AND (`AUTO_CHAIN` is `"true"` OR `AUTO_CFG` i
    [Checkpoint Details from agent return]
    [Awaiting section from agent return]
    ```
-5. User responds: "approved"/"done" | issue description | decision selection
-6. **Spawn continuation agent (NOT resume)** using continuation-prompt.md template:
+5. User responds: "approved"/"done" | issue description | decision selection.
+6. Spawn continuation agent (not resume — resume relies on internal serialization that breaks with parallel tool calls; fresh agents with explicit state are more reliable) using continuation-prompt.md template:
    - `{completed_tasks_table}`: From checkpoint return
    - `{resume_task_number}` + `{resume_task_name}`: Current task
    - `{user_response}`: What user provided
    - `{resume_instructions}`: Based on checkpoint type
-7. Continuation agent verifies previous commits, continues from resume point
-8. Repeat until plan completes or user stops
-
-**Why fresh agent, not resume:** Resume relies on internal serialization that breaks with parallel tool calls. Fresh agents with explicit state are more reliable.
+7. Continuation agent verifies previous commits, continues from resume point.
+8. Repeat until plan completes or user stops.
 
 **Checkpoints in parallel waves:** Agent pauses and returns while other parallel agents may complete. Present checkpoint, spawn continuation, wait for all before next wave.
-</step>
+</checkpoint_handling>
 
 <step name="aggregate_results">
 After all waves:
@@ -405,9 +368,9 @@ After all waves:
 
 | Wave | Plans | Status |
 |------|-------|--------|
-| 1 | plan-01, plan-02 | ✓ Complete |
-| CP | plan-03 | ✓ Verified |
-| 2 | plan-04 | ✓ Complete |
+| 1 | plan-01, plan-02 | Complete |
+| CP | plan-03 | Verified |
+| 2 | plan-04 | Complete |
 
 ### Plan Details
 1. **03-01**: [one-liner from SUMMARY.md]
@@ -419,81 +382,61 @@ After all waves:
 </step>
 
 <step name="close_parent_artifacts">
-**For decimal/polish phases only (X.Y pattern):** Close the feedback loop by resolving parent UAT and debug artifacts.
+For decimal/polish phases only (X.Y pattern): close the feedback loop by resolving parent UAT and debug artifacts.
 
-**Skip if** phase number has no decimal (e.g., `3`, `04`) — only applies to gap-closure phases like `4.1`, `03.1`.
+Skip if phase number has no decimal (e.g., `3`, `04`) — only applies to gap-closure phases like `4.1`, `03.1`.
 
-**1. Detect decimal phase and derive parent:**
+1. **Detect decimal phase and derive parent:**
 ```bash
-# Check if phase_number contains a decimal
 if [[ "$PHASE_NUMBER" == *.* ]]; then
   PARENT_PHASE="${PHASE_NUMBER%%.*}"
 fi
 ```
 
-**2. Find parent UAT file:**
+2. **Find parent UAT file:**
 ```bash
 PARENT_INFO=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PARENT_PHASE}" --raw)
-# Extract directory from PARENT_INFO JSON, then find UAT file in that directory
+# Extract directory from PARENT_INFO JSON, then find UAT file
 ```
 
-**If no parent UAT found:** Skip this step (gap-closure may have been triggered by VERIFICATION.md instead).
+If no parent UAT found, skip this step (gap-closure may have been triggered by VERIFICATION.md instead).
 
-**3. Update UAT gap statuses:**
+3. **Update UAT gap statuses:** Read the parent UAT file's `## Gaps` section. For each gap with `status: failed`, update to `status: resolved`.
 
-Read the parent UAT file's `## Gaps` section. For each gap entry with `status: failed`:
-- Update to `status: resolved`
+4. **Update UAT frontmatter:** If all gaps now resolved, update `status: diagnosed` to `status: resolved` and update `updated:` timestamp.
 
-**4. Update UAT frontmatter:**
-
-If all gaps now have `status: resolved`:
-- Update frontmatter `status: diagnosed` → `status: resolved`
-- Update frontmatter `updated:` timestamp
-
-**5. Resolve referenced debug sessions:**
-
-For each gap that has a `debug_session:` field:
-- Read the debug session file
-- Update frontmatter `status:` → `resolved`
-- Update frontmatter `updated:` timestamp
-- Move to resolved directory:
+5. **Resolve referenced debug sessions:** For each gap with a `debug_session:` field, update the debug session's `status:` to `resolved`, update its timestamp, and move to resolved directory:
 ```bash
 mkdir -p .planning/debug/resolved
 mv .planning/debug/{slug}.md .planning/debug/resolved/
 ```
 
-**6. Commit updated artifacts:**
+6. **Commit updated artifacts:**
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
 ```
 </step>
 
 <step name="regression_gate">
-Run prior phases' test suites to catch cross-phase regressions BEFORE verification.
+Run prior phases' test suites to catch cross-phase regressions before verification.
 
-**Skip if:** This is the first phase (no prior phases), or no prior VERIFICATION.md files exist.
+Skip if this is the first phase (no prior phases) or no prior VERIFICATION.md files exist.
 
-**Step 1: Discover prior phases' test files**
+1. **Discover prior phases' test files:**
 ```bash
-# Find all VERIFICATION.md files from prior phases in current milestone
 PRIOR_VERIFICATIONS=$(find .planning/phases/ -name "*-VERIFICATION.md" ! -path "*${PHASE_NUMBER}*" 2>/dev/null)
 ```
 
-**Step 2: Extract test file lists from prior verifications**
+2. **Extract test file lists from prior verifications.** Look for:
+   - Lines containing `test`, `spec`, or `__tests__` paths
+   - "Test Suite" or "Automated Checks" sections
+   - File patterns from `key-files.created` in SUMMARY.md files matching `*.test.*` or `*.spec.*`
 
-For each VERIFICATION.md found, look for test file references:
-- Lines containing `test`, `spec`, or `__tests__` paths
-- The "Test Suite" or "Automated Checks" section
-- File patterns from `key-files.created` in corresponding SUMMARY.md files that match `*.test.*` or `*.spec.*`
+   Collect all unique test file paths into `REGRESSION_FILES`.
 
-Collect all unique test file paths into `REGRESSION_FILES`.
-
-**Step 3: Run regression tests (if any found)**
-
+3. **Run regression tests (if any found):**
 ```bash
-# Detect test runner and run prior phase tests
 if [ -f "package.json" ]; then
-  # Node.js — use project's test runner
   npx jest ${REGRESSION_FILES} --passWithNoTests --no-coverage -q 2>&1 || npx vitest run ${REGRESSION_FILES} 2>&1
 elif [ -f "Cargo.toml" ]; then
   cargo test 2>&1
@@ -502,35 +445,33 @@ elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
 fi
 ```
 
-**Step 4: Report results**
+4. **Report results:**
 
-If all tests pass:
-```
-✓ Regression gate: {N} prior-phase test files passed — no regressions detected
-```
-→ Proceed to verify_phase_goal
+   All pass:
+   ```
+   Regression gate: {N} prior-phase test files passed — no regressions detected
+   ```
+   Proceed to verify_phase_goal.
 
-If any tests fail:
-```
-## ⚠ Cross-Phase Regression Detected
+   Any fail:
+   ```
+   ## Cross-Phase Regression Detected
 
-Phase {X} execution may have broken functionality from prior phases.
+   Phase {X} execution may have broken functionality from prior phases.
 
-| Test File | Phase | Status | Detail |
-|-----------|-------|--------|--------|
-| {file} | {origin_phase} | FAILED | {first_failure_line} |
+   | Test File | Phase | Status | Detail |
+   |-----------|-------|--------|--------|
+   | {file} | {origin_phase} | FAILED | {first_failure_line} |
 
-Options:
-1. Fix regressions before verification (recommended)
-2. Continue to verification anyway (regressions will compound)
-3. Abort phase — roll back and re-plan
-```
-
-Use AskUserQuestion to present the options.
+   Options:
+   1. Fix regressions before verification (recommended)
+   2. Continue to verification anyway (regressions will compound)
+   3. Abort phase — roll back and re-plan
+   ```
 </step>
 
 <step name="verify_phase_goal">
-Verify phase achieved its GOAL, not just completed tasks.
+Verify the phase achieved its goal, not just completed tasks.
 
 ```
 Task(
@@ -539,7 +480,7 @@ Phase directory: {phase_dir}
 Phase goal: {goal from ROADMAP.md}
 Phase requirement IDs: {phase_req_ids}
 Check must_haves against actual codebase.
-Cross-reference requirement IDs from PLAN frontmatter against REQUIREMENTS.md — every ID MUST be accounted for.
+Cross-reference requirement IDs from PLAN frontmatter against REQUIREMENTS.md — every ID should be accounted for.
 Create VERIFICATION.md.",
   subagent_type="gsd-verifier",
   model="{verifier_model}"
@@ -553,15 +494,13 @@ grep "^status:" "$PHASE_DIR"/*-VERIFICATION.md | cut -d: -f2 | tr -d ' '
 
 | Status | Action |
 |--------|--------|
-| `passed` | → update_roadmap |
+| `passed` | Proceed to update_roadmap |
 | `human_needed` | Present items for human testing, get approval or feedback |
-| `gaps_found` | Present gap summary, offer `/gsd:plan-phase {phase} --gaps` |
+| `gaps_found` | Present gap summary, offer `/gsd2:plan-phase {phase} --gaps` |
 
 **If human_needed:**
 
-**Step A: Persist human verification items as UAT file.**
-
-Create `{phase_dir}/{phase_num}-HUMAN-UAT.md` using UAT template format:
+Step A: Persist human verification items as UAT file. Create `{phase_dir}/{phase_num}-HUMAN-UAT.md`:
 
 ```markdown
 ---
@@ -596,32 +535,31 @@ blocked: 0
 ## Gaps
 ```
 
-Commit the file:
+Commit:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): persist human verification items as UAT" --files "{phase_dir}/{phase_num}-HUMAN-UAT.md"
 ```
 
-**Step B: Present to user:**
-
+Step B: Present to user:
 ```
-## ✓ Phase {X}: {Name} — Human Verification Required
+## Phase {X}: {Name} — Human Verification Required
 
 All automated checks passed. {N} items need human testing:
 
 {From VERIFICATION.md human_verification section}
 
-Items saved to `{phase_num}-HUMAN-UAT.md` — they will appear in `/gsd:progress` and `/gsd:audit-uat`.
+Items saved to `{phase_num}-HUMAN-UAT.md` — they will appear in `/gsd2:progress` and `/gsd2:audit-uat`.
 
 "approved" → continue | Report issues → gap closure
 ```
 
-**If user says "approved":** Proceed to `update_roadmap`. The HUMAN-UAT.md file persists with `status: partial` and will surface in future progress checks until the user runs `/gsd:verify-work` on it.
+If user says "approved": proceed to `update_roadmap`. The HUMAN-UAT.md file persists with `status: partial` and surfaces in future progress checks until the user runs `/gsd2:verify-work`.
 
-**If user reports issues:** Proceed to gap closure as currently implemented.
+If user reports issues: proceed to gap closure.
 
 **If gaps_found:**
 ```
-## ⚠ Phase {X}: {Name} — Gaps Found
+## Phase {X}: {Name} — Gaps Found
 
 **Score:** {N}/{M} must-haves verified
 **Report:** {phase_dir}/{phase_num}-VERIFICATION.md
@@ -630,43 +568,37 @@ Items saved to `{phase_num}-HUMAN-UAT.md` — they will appear in `/gsd:progress
 {Gap summaries from VERIFICATION.md}
 
 ---
-## ▶ Next Up
+## Next Up
 
-`/gsd:plan-phase {X} --gaps`
+`/gsd2:plan-phase {X} --gaps`
 
-<sub>`/clear` first → fresh context window</sub>
+<sub>`/clear` first for a fresh context window</sub>
 
 Also: `cat {phase_dir}/{phase_num}-VERIFICATION.md` — full report
-Also: `/gsd:verify-work {X}` — manual testing first
+Also: `/gsd2:verify-work {X}` — manual testing first
 ```
 
-Gap closure cycle: `/gsd:plan-phase {X} --gaps` reads VERIFICATION.md → creates gap plans with `gap_closure: true` → user runs `/gsd:execute-phase {X} --gaps-only` → verifier re-runs.
+Gap closure cycle: `/gsd2:plan-phase {X} --gaps` reads VERIFICATION.md, creates gap plans with `gap_closure: true`, user runs `/gsd2:execute-phase {X} --gaps-only`, verifier re-runs.
 </step>
 
 <step name="update_roadmap">
-**Mark phase complete and update all tracking files:**
+Mark phase complete and update all tracking files:
 
 ```bash
 COMPLETION=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase complete "${PHASE_NUMBER}")
 ```
 
-The CLI handles:
-- Marking phase checkbox `[x]` with completion date
-- Updating Progress table (Status → Complete, date)
-- Updating plan count to final
-- Advancing STATE.md to next phase
-- Updating REQUIREMENTS.md traceability
-- Scanning for verification debt (returns `warnings` array)
+The CLI handles: marking phase checkbox `[x]` with date, updating Progress table, advancing STATE.md to next phase, updating REQUIREMENTS.md traceability, scanning for verification debt (returns `warnings` array).
 
 Extract from result: `next_phase`, `next_phase_name`, `is_last_phase`, `warnings`, `has_warnings`.
 
-**If has_warnings is true:**
+If `has_warnings`:
 ```
 ## Phase {X} marked complete with {N} warnings:
 
 {list each warning}
 
-These items are tracked and will appear in `/gsd:progress` and `/gsd:audit-uat`.
+These items are tracked and will appear in `/gsd2:progress` and `/gsd2:audit-uat`.
 ```
 
 ```bash
@@ -675,39 +607,30 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): co
 </step>
 
 <step name="update_project_md">
-**Evolve PROJECT.md to reflect phase completion (prevents planning document drift — #956):**
-
-PROJECT.md tracks validated requirements, decisions, and current state. Without this step,
-PROJECT.md falls behind silently over multiple phases.
+Evolve PROJECT.md to reflect phase completion. Without this step, PROJECT.md drifts silently over multiple phases.
 
 1. Read `.planning/PROJECT.md`
-2. If the file exists and has a `## Validated Requirements` or `## Requirements` section:
-   - Move any requirements validated by this phase from Active → Validated
-   - Add a brief note: `Validated in Phase {X}: {Name}`
-3. If the file has a `## Current State` or similar section:
-   - Update it to reflect this phase's completion (e.g., "Phase {X} complete — {one-liner}")
+2. If the file has a `## Validated Requirements` or `## Requirements` section:
+   - Move requirements validated by this phase from Active to Validated
+   - Add: `Validated in Phase {X}: {Name}`
+3. If the file has a `## Current State` section:
+   - Update to reflect phase completion (e.g., "Phase {X} complete — {one-liner}")
 4. Update the `Last updated:` footer to today's date
-5. Commit the change:
-
+5. Commit:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): evolve PROJECT.md after phase completion" --files .planning/PROJECT.md
 ```
 
-**Skip this step if** `.planning/PROJECT.md` does not exist.
+Skip this step if `.planning/PROJECT.md` does not exist.
 </step>
 
 <step name="offer_next">
 
-**Exception:** If `gaps_found`, the `verify_phase_goal` step already presents the gap-closure path (`/gsd:plan-phase {X} --gaps`). No additional routing needed — skip auto-advance.
-
-**No-transition check (spawned by auto-advance chain):**
-
-Parse `--no-transition` flag from $ARGUMENTS.
+**Exception:** If `gaps_found`, the `verify_phase_goal` step already presents the gap-closure path. Skip auto-advance.
 
 **If `--no-transition` flag present:**
 
-Execute-phase was spawned by plan-phase's auto-advance. Do NOT run transition.md.
-After verification passes and roadmap is updated, return completion status to parent:
+Execute-phase was spawned by plan-phase's auto-advance. After verification passes and roadmap is updated, return completion status and stop:
 
 ```
 ## PHASE COMPLETE
@@ -719,48 +642,38 @@ Verification: {Passed | Gaps Found}
 [Include aggregate_results output]
 ```
 
-STOP. Do not proceed to auto-advance or transition.
+**If `--no-transition` flag is not present:**
 
-**If `--no-transition` flag is NOT present:**
-
-**Auto-advance detection:**
+Check auto-advance:
 
 1. Parse `--auto` flag from $ARGUMENTS
-2. Read both the chain flag and user preference (chain flag already synced in init step):
+2. Read config:
    ```bash
    AUTO_CHAIN=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
    AUTO_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
-**If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true (AND verification passed with no gaps):**
+**If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true (and verification passed):**
 
 ```
-╔══════════════════════════════════════════╗
-║  AUTO-ADVANCING → TRANSITION             ║
-║  Phase {X} verified, continuing chain    ║
-╚══════════════════════════════════════════╝
+AUTO-ADVANCING → TRANSITION
+Phase {X} verified, continuing chain
 ```
 
-Execute the transition workflow inline (do NOT use Task — orchestrator context is ~10-15%, transition needs phase completion data already in context):
+Execute the transition workflow inline (orchestrator context is ~10-15%, transition needs phase completion data already in context): read and follow `~/.claude/get-shit-done/workflows/transition.md`, passing through the `--auto` flag so it propagates to the next phase.
 
-Read and follow `~/.claude/get-shit-done/workflows/transition.md`, passing through the `--auto` flag so it propagates to the next phase invocation.
+**Otherwise, present options and wait:**
 
-**If none of `--auto`, `AUTO_CHAIN`, or `AUTO_CFG` is true:**
-
-**STOP. Do not auto-advance. Do not execute transition. Do not plan next phase. Present options to the user and wait.**
-
-**IMPORTANT: There is NO `/gsd:transition` command. Never suggest it. The transition workflow is internal only.**
+There is no `/gsd2:transition` command — transition is internal only.
 
 ```
-## ✓ Phase {X}: {Name} Complete
+## Phase {X}: {Name} Complete
 
-/gsd:progress — see updated roadmap
-/gsd:discuss-phase {next} — discuss next phase before planning
-/gsd:plan-phase {next} — plan next phase
-/gsd:execute-phase {next} — execute next phase
+/gsd2:progress — see updated roadmap
+/gsd2:discuss-phase {next} — discuss next phase before planning
+/gsd2:plan-phase {next} — plan next phase
+/gsd2:execute-phase {next} — execute next phase
 ```
-
-Only suggest the commands listed above. Do not invent or hallucinate command names.
 </step>
 
 </process>
@@ -769,22 +682,22 @@ Only suggest the commands listed above. Do not invent or hallucinate command nam
 Orchestrator: ~10-15% context for 200k windows, can use more for 1M+ windows.
 Subagents: fresh context each (200k-1M depending on model). No polling (Task blocks). No context bleed.
 
-For 1M+ context models, consider:
-- Passing richer context (code snippets, dependency outputs) directly to executors instead of just file paths
-- Running small phases (≤3 plans, no dependencies) inline without subagent spawning overhead
-- Relaxing /clear recommendations — context rot onset is much further out with 5x window
+For 1M+ context models:
+- Pass richer context (code snippets, dependency outputs) directly to executors instead of just file paths
+- Run small phases (3 plans or fewer, no dependencies) inline without subagent overhead
+- Relax /clear recommendations — context rot onset is much further out with 5x window
 </context_efficiency>
 
 <failure_handling>
-- **classifyHandoffIfNeeded false failure:** Agent reports "failed" but error is `classifyHandoffIfNeeded is not defined` → Claude Code bug, not GSD. Spot-check (SUMMARY exists, commits present) → if pass, treat as success
-- **Agent fails mid-plan:** Missing SUMMARY.md → report, ask user how to proceed
-- **Dependency chain breaks:** Wave 1 fails → Wave 2 dependents likely fail → user chooses attempt or skip
-- **All agents in wave fail:** Systemic issue → stop, report for investigation
-- **Checkpoint unresolvable:** "Skip this plan?" or "Abort phase execution?" → record partial progress in STATE.md
+- **classifyHandoffIfNeeded false failure:** Agent reports "failed" but error is `classifyHandoffIfNeeded is not defined` — Claude Code bug, not GSD. Spot-check SUMMARY + commits; if pass, treat as success.
+- **Agent fails mid-plan:** Missing SUMMARY.md — report, ask user how to proceed.
+- **Dependency chain breaks:** Wave 1 fails, Wave 2 dependents likely fail — user chooses attempt or skip.
+- **All agents in wave fail:** Systemic issue — stop, report for investigation.
+- **Checkpoint unresolvable:** "Skip this plan?" or "Abort phase execution?" — record partial progress in STATE.md.
 </failure_handling>
 
 <resumption>
-Re-run `/gsd:execute-phase {phase}` → discover_plans finds completed SUMMARYs → skips them → resumes from first incomplete plan → continues wave execution.
+Re-run `/gsd2:execute-phase {phase}` — discover_plans finds completed SUMMARYs, skips them, resumes from first incomplete plan, continues wave execution.
 
 STATE.md tracks: last completed plan, current wave, pending checkpoints.
 </resumption>

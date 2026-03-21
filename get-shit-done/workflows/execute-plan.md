@@ -12,8 +12,6 @@ Read config.json for planning behavior settings.
 <process>
 
 <step name="init_context" priority="first">
-Load execution context (paths only to minimize orchestrator context):
-
 ```bash
 INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init execute-phase "${PHASE}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
@@ -26,7 +24,6 @@ If `.planning/` missing: error.
 
 <step name="identify_plan">
 ```bash
-# Use plans/summaries from INIT JSON, or list files
 ls .planning/phases/XX-name/*-PLAN.md 2>/dev/null | sort
 ls .planning/phases/XX-name/*-SUMMARY.md 2>/dev/null | sort
 ```
@@ -35,7 +32,6 @@ Find first PLAN without matching SUMMARY. Decimal phases supported (`01.1-hotfix
 
 ```bash
 PHASE=$(echo "$PLAN_PATH" | grep -oE '[0-9]+(\.[0-9]+)?-[0-9]+')
-# config settings can be fetched via gsd-tools config-get if needed
 ```
 
 <if mode="yolo">
@@ -59,7 +55,7 @@ PLAN_START_EPOCH=$(date +%s)
 grep -n "type=\"checkpoint" .planning/phases/XX-name/{phase}-{plan}-PLAN.md
 ```
 
-**Routing by checkpoint type:**
+Routing by checkpoint type:
 
 | Checkpoints | Pattern | Execution |
 |-------------|---------|-----------|
@@ -67,13 +63,11 @@ grep -n "type=\"checkpoint" .planning/phases/XX-name/{phase}-{plan}-PLAN.md
 | Verify-only | B (segmented) | Segments between checkpoints. After none/human-verify → SUBAGENT. After decision/human-action → MAIN |
 | Decision | C (main) | Execute entirely in main context |
 
-**Pattern A:** init_agent_tracking → spawn Task(subagent_type="gsd-executor", model=executor_model) with prompt: execute plan at [path], autonomous, all tasks + SUMMARY + commit, follow deviation/auth rules, report: plan name, tasks, SUMMARY path, commit hash → track agent_id → wait → update tracking → report.
+**Pattern A:** init_agent_tracking → spawn Task(subagent_type="gsd-executor", model=executor_model): execute plan at [path], autonomous, all tasks + SUMMARY + commit, follow deviation/auth rules, report: plan name, tasks, SUMMARY path, commit hash → track agent_id → wait → update tracking → report.
 
-**Pattern B:** Execute segment-by-segment. Autonomous segments: spawn subagent for assigned tasks only (no SUMMARY/commit). Checkpoints: main context. After all segments: aggregate, create SUMMARY, commit. See segment_execution.
+**Pattern B:** Segment-by-segment. Autonomous segments → spawn subagent for assigned tasks only (no SUMMARY/commit). Checkpoints → main context. After all segments: aggregate → SUMMARY → commit → self-check. See segment_execution.
 
 **Pattern C:** Execute in main using standard flow (step name="execute").
-
-Fresh context per subagent preserves peak quality. Main context stays lean.
 </step>
 
 <step name="init_agent_tracking">
@@ -90,28 +84,24 @@ fi
 
 If interrupted: ask user to resume (Task `resume` parameter) or start fresh.
 
-**Tracking protocol:** On spawn: write agent_id to `current-agent-id.txt`, append to agent-history.json: `{"agent_id":"[id]","task_description":"[desc]","phase":"[phase]","plan":"[plan]","segment":[num|null],"timestamp":"[ISO]","status":"spawned","completion_timestamp":null}`. On completion: status → "completed", set completion_timestamp, delete current-agent-id.txt. Prune: if entries > max_entries, remove oldest "completed" (never "spawned").
+**Tracking protocol:** On spawn: write agent_id to `current-agent-id.txt`, append to agent-history.json with `{"agent_id","task_description","phase","plan","segment","timestamp","status":"spawned","completion_timestamp":null}`. On completion: status → "completed", set completion_timestamp, delete current-agent-id.txt. Prune: if entries > max_entries, remove oldest "completed" (never "spawned").
 
 Run for Pattern A/B before spawning. Pattern C: skip.
 </step>
 
 <step name="segment_execution">
-Pattern B only (verify-only checkpoints). Skip for A/C.
+Pattern B only. Skip for A/C.
 
 1. Parse segment map: checkpoint locations and types
 2. Per segment:
-   - Subagent route: spawn gsd-executor for assigned tasks only. Prompt: task range, plan path, read full plan for context, execute assigned tasks, track deviations, NO SUMMARY/commit. Track via agent protocol.
-   - Main route: execute tasks using standard flow (step name="execute")
-3. After ALL segments: aggregate files/deviations/decisions → create SUMMARY.md → commit → self-check:
+   - Subagent route: spawn gsd-executor for assigned tasks only. Prompt includes task range, plan path, read full plan for context, track deviations, NO SUMMARY/commit. Track via agent protocol.
+   - Main route: execute tasks via step name="execute"
+3. After ALL segments: aggregate files/deviations/decisions → SUMMARY.md → commit → self-check:
    - Verify key-files.created exist on disk with `[ -f ]`
    - Check `git log --oneline --all --grep="{phase}-{plan}"` returns ≥1 commit
    - Append `## Self-Check: PASSED` or `## Self-Check: FAILED` to SUMMARY
 
-   **Known Claude Code bug (classifyHandoffIfNeeded):** If any segment agent reports "failed" with `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug — not a real failure. Run spot-checks; if they pass, treat as successful.
-
-
-
-
+   **MUST handle:** If any segment agent reports "failed" with `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug — not a real failure. WHY: this error originates from the runtime, not your code. Run spot-checks; if they pass, treat as successful.
 </step>
 
 <step name="load_prompt">
@@ -120,67 +110,50 @@ cat .planning/phases/XX-name/{phase}-{plan}-PLAN.md
 ```
 This IS the execution instructions. Follow exactly. If plan references CONTEXT.md: honor user's vision throughout.
 
-**If plan contains `<interfaces>` block:** These are pre-extracted type definitions and contracts. Use them directly — do NOT re-read the source files to discover types. The planner already extracted what you need.
+If plan contains `<interfaces>` block: use pre-extracted type definitions directly — do NOT re-read source files. The planner already extracted what you need.
 </step>
 
 <step name="previous_phase_check">
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phases list --type summaries --raw
-# Extract the second-to-last summary from the JSON result
 ```
 If previous SUMMARY has unresolved "Issues Encountered" or "Next Phase Readiness" blockers: AskUserQuestion(header="Previous Issues", options: "Proceed anyway" | "Address first" | "Review previous").
 </step>
 
 <step name="execute">
-Deviations are normal — handle via rules below.
-
 1. Read @context files from prompt
-2. **MCP tools:** If CLAUDE.md or project instructions reference MCP tools (e.g. jCodeMunch for code navigation), prefer them over Grep/Glob when available. Fall back to Grep/Glob if MCP tools are not accessible.
+2. If CLAUDE.md references MCP tools (e.g. jCodeMunch), prefer them over Grep/Glob. Fall back if unavailable.
 3. Per task:
-   - **MANDATORY read_first gate:** If the task has a `<read_first>` field, you MUST read every listed file BEFORE making any edits. This is not optional. Do not skip files because you "already know" what's in them — read them. The read_first files establish ground truth for the task.
-   - `type="auto"`: if `tdd="true"` → TDD execution. Implement with deviation rules + auth gates. Verify done criteria. Commit (see task_commit). Track hash for Summary.
-   - `type="checkpoint:*"`: STOP → checkpoint_protocol → wait for user → continue only after confirmation.
-   - **MANDATORY acceptance_criteria check:** After completing each task, if it has `<acceptance_criteria>`, verify EVERY criterion before moving to the next task. Use grep, file reads, or CLI commands to confirm each criterion. If any criterion fails, fix the implementation before proceeding. Do not skip criteria or mark them as "will verify later".
-3. Run `<verification>` checks
-4. Confirm `<success_criteria>` met
-5. Document deviations in Summary
+   - **MUST read_first gate:** If the task has `<read_first>`, read every listed file BEFORE any edits. WHY: these files establish ground truth — skipping causes drift from actual state.
+   - `type="auto"`: if `tdd="true"` → TDD execution. Implement with deviation rules + auth gates. Verify done criteria. Commit (see task_commit). Track hash.
+   - `type="checkpoint:*"`: STOP → checkpoint_protocol → wait → continue after confirmation.
+   - **MUST acceptance_criteria check:** After each task with `<acceptance_criteria>`, verify EVERY criterion using grep/reads/CLI before proceeding. WHY: unverified criteria cascade into downstream failures. Fix before moving on.
+4. Run `<verification>` checks
+5. Confirm `<success_criteria>` met
+6. Document deviations in Summary
 </step>
 
 <authentication_gates>
-
-## Authentication Gates
-
-Auth errors during execution are NOT failures — they're expected interaction points.
+Auth errors during execution are expected interaction points, not failures.
 
 **Indicators:** "Not authenticated", "Unauthorized", 401/403, "Please run {tool} login", "Set {ENV_VAR}"
 
-**Protocol:**
-1. Recognize auth gate (not a bug)
-2. STOP task execution
-3. Create dynamic checkpoint:human-action with exact auth steps
-4. Wait for user to authenticate
-5. Verify credentials work
-6. Retry original task
-7. Continue normally
+**Protocol:** Recognize auth gate → STOP task → create dynamic checkpoint:human-action with exact auth steps → wait for user → verify credentials → retry original task → continue.
 
-**Example:** `vercel --yes` → "Not authenticated" → checkpoint asking user to `vercel login` → verify with `vercel whoami` → retry deploy → continue
+**Example:** `vercel --yes` → "Not authenticated" → checkpoint for `vercel login` → verify with `vercel whoami` → retry → continue.
 
-**In Summary:** Document as normal flow under "## Authentication Gates", not as deviations.
-
+In Summary: document under "## Authentication Gates", not as deviations.
 </authentication_gates>
 
 <deviation_rules>
-
-## Deviation Rules
-
 You WILL discover unplanned work. Apply automatically, track all for Summary.
 
 | Rule | Trigger | Action | Permission |
 |------|---------|--------|------------|
-| **1: Bug** | Broken behavior, errors, wrong queries, type errors, security vulns, race conditions, leaks | Fix → test → verify → track `[Rule 1 - Bug]` | Auto |
-| **2: Missing Critical** | Missing essentials: error handling, validation, auth, CSRF/CORS, rate limiting, indexes, logging | Add → test → verify → track `[Rule 2 - Missing Critical]` | Auto |
-| **3: Blocking** | Prevents completion: missing deps, wrong types, broken imports, missing env/config/files, circular deps | Fix blocker → verify proceeds → track `[Rule 3 - Blocking]` | Auto |
-| **4: Architectural** | Structural change: new DB table, schema change, new service, switching libs, breaking API, new infra | STOP → present decision (below) → track `[Rule 4 - Architectural]` | Ask user |
+| **1: Bug** | Broken behavior, errors, type errors, security vulns, race conditions, leaks | Fix → test → verify → track `[Rule 1 - Bug]` | Auto |
+| **2: Missing Critical** | Missing: error handling, validation, auth, CSRF/CORS, rate limiting, indexes, logging | Add → test → verify → track `[Rule 2 - Missing Critical]` | Auto |
+| **3: Blocking** | Prevents completion: missing deps, wrong types, broken imports, missing env/config/files, circular deps | Fix → verify proceeds → track `[Rule 3 - Blocking]` | Auto |
+| **4: Architectural** | Structural: new DB table, schema change, new service, switching libs, breaking API, new infra | STOP → present decision → track `[Rule 4 - Architectural]` | Ask user |
 
 **Rule 4 format:**
 ```
@@ -198,25 +171,17 @@ Proceed with proposed change? (yes / different approach / defer)
 
 **Priority:** Rule 4 (STOP) > Rules 1-3 (auto) > unsure → Rule 4
 **Edge cases:** missing validation → R2 | null crash → R1 | new table → R4 | new column → R1/2
-**Heuristic:** Affects correctness/security/completion? → R1-3. Maybe? → R4.
-
 </deviation_rules>
 
 <deviation_documentation>
-
-## Documenting Deviations
-
 Summary MUST include deviations section. None? → `## Deviations from Plan\n\nNone - plan executed exactly as written.`
 
 Per deviation: **[Rule N - Category] Title** — Found during: Task X | Issue | Fix | Files modified | Verification | Commit hash
 
 End with: **Total deviations:** N auto-fixed (breakdown). **Impact:** assessment.
-
 </deviation_documentation>
 
 <tdd_plan_execution>
-## TDD Execution
-
 For `type: tdd` plans — RED-GREEN-REFACTOR:
 
 1. **Infrastructure** (first TDD plan only): detect project, install framework, config, verify empty suite
@@ -230,32 +195,21 @@ See `~/.claude/get-shit-done/references/tdd.md` for structure.
 </tdd_plan_execution>
 
 <precommit_failure_handling>
-## Pre-commit Hook Failure Handling
+**MUST use --no-verify as parallel executor agent (spawned by execute-phase).** WHY: pre-commit hooks cause build lock contention when multiple agents commit simultaneously. The orchestrator validates once after all agents complete.
 
-Your commits may trigger pre-commit hooks. Auto-fix hooks handle themselves transparently — files get fixed and re-staged automatically.
-
-**If running as a parallel executor agent (spawned by execute-phase):**
-Use `--no-verify` on all commits. Pre-commit hooks cause build lock contention when multiple agents commit simultaneously (e.g., cargo lock fights in Rust projects). The orchestrator validates once after all agents complete.
-
-**If running as the sole executor (sequential mode):**
-If a commit is BLOCKED by a hook:
-
-1. The `git commit` command fails with hook error output
-2. Read the error — it tells you exactly which hook and what failed
-3. Fix the issue (type error, lint violation, secret leak, etc.)
-4. `git add` the fixed files
-5. Retry the commit
-6. Budget 1-2 retry cycles per commit
+**As sole executor (sequential mode),** if a commit is blocked by a hook:
+1. Read the error — it tells you which hook and what failed
+2. Fix the issue (type error, lint violation, secret leak, etc.)
+3. `git add` fixed files → retry commit
+4. Budget 1-2 retry cycles per commit
 </precommit_failure_handling>
 
 <task_commit>
-## Task Commit Protocol
-
 After each task (verification passed, done criteria met), commit immediately.
 
 **1. Check:** `git status --short`
 
-**2. Stage individually** (NEVER `git add .` or `git add -A`):
+**2. NEVER use `git add .` or `git add -A`.** WHY: prevents accidentally staging secrets, build artifacts, or unrelated files. Stage individually:
 ```bash
 git add src/api/auth.ts
 git add src/types/user.ts
@@ -268,7 +222,7 @@ git add src/types/user.ts
 | `feat` | New functionality | feat(08-02): create user registration endpoint |
 | `fix` | Bug fix | fix(08-02): correct email validation regex |
 | `test` | Test-only (TDD RED) | test(08-02): add failing test for password hashing |
-| `refactor` | No behavior change (TDD REFACTOR) | refactor(08-02): extract validation to helper |
+| `refactor` | No behavior change | refactor(08-02): extract validation to helper |
 | `perf` | Performance | perf(08-02): add database index |
 | `docs` | Documentation | docs(08-02): add API docs |
 | `style` | Formatting | style(08-02): format auth module |
@@ -282,15 +236,11 @@ TASK_COMMIT=$(git rev-parse --short HEAD)
 TASK_COMMITS+=("Task ${TASK_NUM}: ${TASK_COMMIT}")
 ```
 
-**6. Check for untracked generated files:**
+**6. Check untracked generated files:**
 ```bash
 git status --short | grep '^??'
 ```
-If new untracked files appeared after running scripts or tools, decide for each:
-- **Commit it** — if it's a source file, config, or intentional artifact
-- **Add to .gitignore** — if it's a generated/runtime output (build artifacts, `.env` files, cache files, compiled output)
-- Do NOT leave generated files untracked
-
+Per file: commit if source/config/intentional artifact. Add to .gitignore if generated/runtime output. Do NOT leave generated files untracked.
 </task_commit>
 
 <step name="checkpoint_protocol">
@@ -304,7 +254,7 @@ Display: `CHECKPOINT: [Type]` box → Progress {X}/{Y} → Task name → type-sp
 | decision (9%) | Decision needed + context + options with pros/cons | "Select: option-id" |
 | human-action (1%) | What was automated + ONE manual step + verification plan | "done" |
 
-After response: verify if specified. Pass → continue. Fail → inform, wait. WAIT for user — do NOT hallucinate completion.
+After response: verify if specified. Pass → continue. Fail → inform, wait. NEVER hallucinate completion — wait for user.
 
 See ~/.claude/get-shit-done/references/checkpoints.md for details.
 </step>
@@ -314,26 +264,21 @@ When spawned via Task and hitting checkpoint: return structured state (cannot in
 
 **Required return:** 1) Completed Tasks table (hashes + files) 2) Current Task (what's blocking) 3) Checkpoint Details (user-facing content) 4) Awaiting (what's needed from user)
 
-Orchestrator parses → presents to user → spawns fresh continuation with your completed tasks state. You will NOT be resumed. In main context: use checkpoint_protocol above.
+Orchestrator parses → presents to user → spawns fresh continuation with completed tasks state. You will NOT be resumed. In main context: use checkpoint_protocol.
 </step>
 
 <step name="verification_failure_gate">
 If verification fails:
 
-**Check if node repair is enabled** (default: on):
 ```bash
 NODE_REPAIR=$(node "./.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.node_repair 2>/dev/null || echo "true")
 ```
 
-If `NODE_REPAIR` is `true`: invoke `@./.claude/get-shit-done/workflows/node-repair.md` with:
-- FAILED_TASK: task number, name, done-criteria
-- ERROR: expected vs actual result
-- PLAN_CONTEXT: adjacent task names + phase goal
-- REPAIR_BUDGET: `workflow.node_repair_budget` from config (default: 2)
+If `true`: invoke `@./.claude/get-shit-done/workflows/node-repair.md` with FAILED_TASK (number, name, done-criteria), ERROR (expected vs actual), PLAN_CONTEXT (adjacent tasks + phase goal), REPAIR_BUDGET (`workflow.node_repair_budget`, default: 2).
 
-Node repair will attempt RETRY, DECOMPOSE, or PRUNE autonomously. Only reaches this gate again if repair budget is exhausted (ESCALATE).
+Node repair attempts RETRY, DECOMPOSE, or PRUNE autonomously. Only reaches this gate again if budget exhausted (ESCALATE).
 
-If `NODE_REPAIR` is `false` OR repair returns ESCALATE: STOP. Present: "Verification failed for Task [X]: [name]. Expected: [criteria]. Actual: [result]. Repair attempted: [summary of what was tried]." Options: Retry | Skip (mark incomplete) | Stop (investigate). If skipped → SUMMARY "Issues Encountered".
+If `false` OR ESCALATE: STOP. Present failure details + repair summary. Options: Retry | Skip (mark incomplete) | Stop (investigate). If skipped → SUMMARY "Issues Encountered".
 </step>
 
 <step name="record_completion_time">
@@ -365,7 +310,7 @@ If user_setup exists: create `{phase}-USER-SETUP.md` using template `~/.claude/g
 <step name="create_summary">
 Create `{phase}-{plan}-SUMMARY.md` at `.planning/phases/XX-name/`. Use `~/.claude/get-shit-done/templates/summary.md`.
 
-**Frontmatter:** phase, plan, subsystem, tags | requires/provides/affects | tech-stack.added/patterns | key-files.created/modified | key-decisions | requirements-completed (**MUST** copy `requirements` array from PLAN.md frontmatter verbatim) | duration ($DURATION), completed ($PLAN_END_TIME date).
+**Frontmatter:** phase, plan, subsystem, tags | requires/provides/affects | tech-stack.added/patterns | key-files.created/modified | key-decisions | requirements-completed (MUST copy `requirements` array from PLAN.md frontmatter verbatim) | duration ($DURATION), completed ($PLAN_END_TIME date).
 
 Title: `# Phase [X] Plan [Y]: [Name] Summary`
 
@@ -377,16 +322,9 @@ Next: more plans → "Ready for {next-plan}" | last → "Phase complete, ready f
 </step>
 
 <step name="update_current_position">
-Update STATE.md using gsd-tools:
-
 ```bash
-# Advance plan counter (handles last-plan edge case)
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state advance-plan
-
-# Recalculate progress bar from disk state
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state update-progress
-
-# Record execution metrics
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state record-metric \
   --phase "${PHASE}" --plan "${PLAN}" --duration "${DURATION}" \
   --tasks "${TASK_COUNT}" --files "${FILE_COUNT}"
@@ -394,22 +332,17 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state record-metric \
 </step>
 
 <step name="extract_decisions_and_issues">
-From SUMMARY: Extract decisions and add to STATE.md:
+From SUMMARY, extract decisions and add to STATE.md:
 
 ```bash
-# Add each decision from SUMMARY key-decisions
-# Prefer file inputs for shell-safe text (preserves `$`, `*`, etc. exactly)
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state add-decision \
   --phase "${PHASE}" --summary-file "${DECISION_TEXT_FILE}" --rationale-file "${RATIONALE_FILE}"
 
-# Add blockers if any found
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state add-blocker --text-file "${BLOCKER_TEXT_FILE}"
 ```
 </step>
 
 <step name="update_session_continuity">
-Update session info using gsd-tools:
-
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
   --stopped-at "Completed ${PHASE}-${PLAN}-PLAN.md" \
@@ -427,17 +360,14 @@ If SUMMARY "Issues Encountered" ≠ "None": yolo → log and continue. Interacti
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap update-plan-progress "${PHASE}"
 ```
-Counts PLAN vs SUMMARY files on disk. Updates progress table row with correct count and status (`In Progress` or `Complete` with date).
+Counts PLAN vs SUMMARY files on disk. Updates progress row with correct count and status.
 </step>
 
 <step name="update_requirements">
-Mark completed requirements from the PLAN.md frontmatter `requirements:` field:
-
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" requirements mark-complete ${REQ_IDS}
 ```
-
-Extract requirement IDs from the plan's frontmatter (e.g., `requirements: [AUTH-01, AUTH-02]`). If no requirements field, skip.
+Extract requirement IDs from plan frontmatter (e.g., `requirements: [AUTH-01, AUTH-02]`). If none, skip.
 </step>
 
 <step name="git_commit_metadata">
@@ -473,9 +403,9 @@ ls -1 .planning/phases/[current-phase-dir]/*-SUMMARY.md 2>/dev/null | wc -l
 
 | Condition | Route | Action |
 |-----------|-------|--------|
-| summaries < plans | **A: More plans** | Find next PLAN without SUMMARY. Yolo: auto-continue. Interactive: show next plan, suggest `/gsd:execute-phase {phase}` + `/gsd:verify-work`. STOP here. |
-| summaries = plans, current < highest phase | **B: Phase done** | Show completion, suggest `/gsd:plan-phase {Z+1}` + `/gsd:verify-work {Z}` + `/gsd:discuss-phase {Z+1}` |
-| summaries = plans, current = highest phase | **C: Milestone done** | Show banner, suggest `/gsd:complete-milestone` + `/gsd:verify-work` + `/gsd:add-phase` |
+| summaries < plans | **A: More plans** | Find next PLAN without SUMMARY. Yolo: auto-continue. Interactive: show next plan, suggest `/gsd2:execute-phase {phase}` + `/gsd2:verify-work`. STOP. |
+| summaries = plans, current < highest | **B: Phase done** | Show completion, suggest `/gsd2:plan-phase {Z+1}` + `/gsd2:verify-work {Z}` + `/gsd2:discuss-phase {Z+1}` |
+| summaries = plans, current = highest | **C: Milestone done** | Show banner, suggest `/gsd2:complete-milestone` + `/gsd2:verify-work` + `/gsd2:add-phase` |
 
 All routes: `/clear` first for fresh context.
 </step>
@@ -483,13 +413,10 @@ All routes: `/clear` first for fresh context.
 </process>
 
 <success_criteria>
-
-- All tasks from PLAN.md completed
-- All verifications pass
-- USER-SETUP.md generated if user_setup in frontmatter
+- All tasks from PLAN.md completed and verifications pass
+- USER-SETUP.md generated if user_setup in frontmatter (and prominently surfaced in output)
 - SUMMARY.md created with substantive content
 - STATE.md updated (position, decisions, issues, session)
 - ROADMAP.md updated
-- If codebase map exists: map updated with execution changes (or skipped if no significant changes)
-- If USER-SETUP.md created: prominently surfaced in completion output
+- If codebase map exists: updated with structural changes (or skipped if none)
 </success_criteria>

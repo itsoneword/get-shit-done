@@ -1,17 +1,13 @@
 <purpose>
-Validate built features through conversational testing with persistent state. Creates UAT.md that tracks test progress, survives /clear, and feeds gaps into /gsd:plan-phase --gaps.
+Validate built features via conversational UAT. Creates UAT.md tracking test progress (survives /clear), feeds gaps into /gsd2:plan-phase --gaps.
 
 User tests, Claude records. One test at a time. Plain text responses.
 </purpose>
 
 <philosophy>
-**Show expected, ask if reality matches.**
-
-Claude presents what SHOULD happen. User confirms or describes what's different.
-- "yes" / "y" / "next" / empty → pass
+Show expected, ask if reality matches.
+- "yes"/"y"/"next"/empty → pass
 - Anything else → logged as issue, severity inferred
-
-No Pass/Fail buttons. No severity questions. Just: "Here's what should happen. Does it?"
 </philosophy>
 
 <template>
@@ -21,7 +17,7 @@ No Pass/Fail buttons. No severity questions. Just: "Here's what should happen. D
 <process>
 
 <step name="initialize" priority="first">
-If $ARGUMENTS contains a phase number, load context:
+If $ARGUMENTS contains a phase number:
 
 ```bash
 INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init verify-work "${PHASE_ARG}")
@@ -32,17 +28,12 @@ Parse JSON for: `planner_model`, `checker_model`, `commit_docs`, `phase_found`, 
 </step>
 
 <step name="check_active_session">
-**First: Check for active UAT sessions**
-
 ```bash
 find .planning/phases -name "*-UAT.md" -type f 2>/dev/null | head -5
 ```
 
-**If active sessions exist AND no $ARGUMENTS provided:**
-
-Read each file's frontmatter (status, phase) and Current Test section.
-
-Display inline:
+**Active sessions exist, no $ARGUMENTS:**
+Read each file's frontmatter and Current Test. Display:
 
 ```
 ## Active UAT Sessions
@@ -50,38 +41,28 @@ Display inline:
 | # | Phase | Status | Current Test | Progress |
 |---|-------|--------|--------------|----------|
 | 1 | 04-comments | testing | 3. Reply to Comment | 2/6 |
-| 2 | 05-auth | testing | 1. Login Form | 0/4 |
 
 Reply with a number to resume, or provide a phase number to start new.
 ```
 
-Wait for user response.
+- Number reply → load that file, go to `resume_from_file`
+- Phase number → new session, go to `create_uat_file`
 
-- If user replies with number (1, 2) → Load that file, go to `resume_from_file`
-- If user replies with phase number → Treat as new session, go to `create_uat_file`
+**Active sessions exist, $ARGUMENTS provided:**
+If session exists for that phase → offer resume or restart. Otherwise → `create_uat_file`.
 
-**If active sessions exist AND $ARGUMENTS provided:**
-
-Check if session exists for that phase. If yes, offer to resume or restart.
-If no, continue to `create_uat_file`.
-
-**If no active sessions AND no $ARGUMENTS:**
-
+**No active sessions, no $ARGUMENTS:**
 ```
 No active UAT sessions.
 
-Provide a phase number to start testing (e.g., /gsd:verify-work 4)
+Provide a phase number to start testing (e.g., /gsd2:verify-work 4)
 ```
 
-**If no active sessions AND $ARGUMENTS provided:**
-
-Continue to `create_uat_file`.
+**No active sessions, $ARGUMENTS provided:** → `create_uat_file`
 </step>
 
 <step name="find_summaries">
-**Find what to test:**
-
-Use `phase_dir` from init (or run init if not already done).
+Use `phase_dir` from init (run init if needed).
 
 ```bash
 ls "$phase_dir"/*-SUMMARY.md 2>/dev/null
@@ -91,49 +72,29 @@ Read each SUMMARY.md to extract testable deliverables.
 </step>
 
 <step name="extract_tests">
-**Extract testable deliverables from SUMMARY.md:**
+Parse SUMMARYs for Accomplishments and User-facing changes. Focus on USER-OBSERVABLE outcomes only (skip refactors, type changes).
 
-Parse for:
-1. **Accomplishments** - Features/functionality added
-2. **User-facing changes** - UI, workflows, interactions
+For each deliverable, create: name + expected (specific, observable).
 
-Focus on USER-OBSERVABLE outcomes, not implementation details.
-
-For each deliverable, create a test:
-- name: Brief test name
-- expected: What the user should see/experience (specific, observable)
-
-Examples:
+Example:
 - Accomplishment: "Added comment threading with infinite nesting"
   → Test: "Reply to a Comment"
   → Expected: "Clicking Reply opens inline composer below comment. Submitting shows reply nested under parent with visual indentation."
 
-Skip internal/non-observable items (refactors, type changes, etc.).
-
-**Cold-start smoke test injection:**
-
-After extracting tests from SUMMARYs, scan the SUMMARY files for modified/created file paths. If ANY path matches these patterns:
-
-`server.ts`, `server.js`, `app.ts`, `app.js`, `index.ts`, `index.js`, `main.ts`, `main.js`, `database/*`, `db/*`, `seed/*`, `seeds/*`, `migrations/*`, `startup*`, `docker-compose*`, `Dockerfile*`
-
-Then **prepend** this test to the test list:
+**Cold-start smoke test:** Scan SUMMARY file paths. If ANY match: `server.{ts,js}`, `app.{ts,js}`, `index.{ts,js}`, `main.{ts,js}`, `database/*`, `db/*`, `seed/*`, `seeds/*`, `migrations/*`, `startup*`, `docker-compose*`, `Dockerfile*` — **prepend** this test:
 
 - name: "Cold Start Smoke Test"
-- expected: "Kill any running server/service. Clear ephemeral state (temp DBs, caches, lock files). Start the application from scratch. Server boots without errors, any seed/migration completes, and a primary query (health check, homepage load, or basic API call) returns live data."
+- expected: "Kill running server. Clear ephemeral state. Start from scratch. Server boots without errors, seed/migration completes, primary query returns live data."
 
-This catches bugs that only manifest on fresh start — race conditions in startup sequences, silent seed failures, missing environment setup — which pass against warm state but break in production.
+WHY: Catches race conditions and silent seed failures that pass against warm state but break in production.
 </step>
 
 <step name="create_uat_file">
-**Create UAT file with all tests:**
-
 ```bash
 mkdir -p "$PHASE_DIR"
 ```
 
-Build test list from extracted deliverables.
-
-Create file:
+Build test list from extracted deliverables. Write to `.planning/phases/XX-name/{phase_num}-UAT.md`:
 
 ```markdown
 ---
@@ -163,8 +124,6 @@ result: [pending]
 expected: [observable behavior]
 result: [pending]
 
-...
-
 ## Summary
 
 total: [N]
@@ -178,17 +137,11 @@ skipped: 0
 [none yet]
 ```
 
-Write to `.planning/phases/XX-name/{phase_num}-UAT.md`
-
 Proceed to `present_test`.
 </step>
 
 <step name="present_test">
-**Present current test to user:**
-
-Read Current Test section from UAT file.
-
-Display using checkpoint box format:
+Read Current Test from UAT file. Display:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -208,99 +161,71 @@ Wait for user response (plain text, no AskUserQuestion).
 </step>
 
 <step name="process_response">
-**Process user response and update file:**
-
-**If response indicates pass:**
-- Empty response, "yes", "y", "ok", "pass", "next", "approved", "✓"
-
-Update Tests section:
+**Pass** (empty, "yes", "y", "ok", "pass", "next", "approved", "✓"):
 ```
-### {N}. {name}
-expected: {expected}
 result: pass
 ```
 
-**If response indicates skip:**
-- "skip", "can't test", "n/a"
-
-Update Tests section:
+**Skip** ("skip", "can't test", "n/a"):
 ```
-### {N}. {name}
-expected: {expected}
 result: skipped
 reason: [user's reason if provided]
 ```
 
-**If response indicates blocked:**
-- "blocked", "can't test - server not running", "need physical device", "need release build"
-- Or any response containing: "server", "blocked", "not running", "physical device", "release build"
+**Blocked** (response contains: server, blocked, not running, physical device, release build):
+Infer `blocked_by` tag:
+- server/not running/gateway/API → `server`
+- physical/device/hardware/real phone → `physical-device`
+- release/preview/build/EAS → `release-build`
+- stripe/twilio/third-party/configure → `third-party`
+- depends on/prior phase/prerequisite → `prior-phase`
+- default → `other`
 
-Infer blocked_by tag from response:
-- Contains: server, not running, gateway, API → `server`
-- Contains: physical, device, hardware, real phone → `physical-device`
-- Contains: release, preview, build, EAS → `release-build`
-- Contains: stripe, twilio, third-party, configure → `third-party`
-- Contains: depends on, prior phase, prerequisite → `prior-phase`
-- Default: `other`
-
-Update Tests section:
 ```
-### {N}. {name}
-expected: {expected}
 result: blocked
-blocked_by: {inferred tag}
-reason: "{verbatim user response}"
+blocked_by: {tag}
+reason: "{verbatim}"
 ```
 
-Note: Blocked tests do NOT go into the Gaps section (they aren't code issues — they're prerequisite gates).
+MUST NOT add blocked tests to Gaps section — they're prerequisite gates, not code issues.
 
-**If response is anything else:**
-- Treat as issue description
+**Anything else** → issue. Infer severity:
 
-Infer severity from description:
-- Contains: crash, error, exception, fails, broken, unusable → blocker
-- Contains: doesn't work, wrong, missing, can't → major
-- Contains: slow, weird, off, minor, small → minor
-- Contains: color, font, spacing, alignment, visual → cosmetic
-- Default if unclear: major
+| User says | Severity |
+|-----------|----------|
+| crash, error, exception, fails, broken, unusable | blocker |
+| doesn't work, wrong, missing, can't | major |
+| slow, weird, off, minor, small | minor |
+| color, font, spacing, alignment, visual | cosmetic |
+| unclear | major (default) |
 
-Update Tests section:
+MUST NOT ask "how severe is this?" — infer and move on.
+
 ```
-### {N}. {name}
-expected: {expected}
 result: issue
-reported: "{verbatim user response}"
+reported: "{verbatim}"
 severity: {inferred}
 ```
 
-Append to Gaps section (structured YAML for plan-phase --gaps):
+Append to Gaps:
 ```yaml
-- truth: "{expected behavior from test}"
+- truth: "{expected}"
   status: failed
-  reason: "User reported: {verbatim user response}"
+  reason: "User reported: {verbatim}"
   severity: {inferred}
   test: {N}
-  artifacts: []  # Filled by diagnosis
-  missing: []    # Filled by diagnosis
+  artifacts: []
+  missing: []
 ```
 
-**After any response:**
-
-Update Summary counts.
-Update frontmatter.updated timestamp.
-
-If more tests remain → Update Current Test, go to `present_test`
-If no more tests → Go to `complete_session`
+**After any response:** Update Summary counts and frontmatter.updated.
+- More tests remain → update Current Test, go to `present_test`
+- No more → go to `complete_session`
 </step>
 
 <step name="resume_from_file">
-**Resume testing from UAT file:**
+Read UAT file. Find first `result: [pending]` test.
 
-Read the full UAT file.
-
-Find first test with `result: [pending]`.
-
-Announce:
 ```
 Resuming: Phase {phase} UAT
 Progress: {passed + issues + skipped}/{total}
@@ -309,46 +234,24 @@ Issues found so far: {issues count}
 Continuing from Test {N}...
 ```
 
-Update Current Test section with the pending test.
-Proceed to `present_test`.
+Update Current Test, proceed to `present_test`.
 </step>
 
 <step name="complete_session">
-**Complete testing and commit:**
-
-**Determine final status:**
-
-Count results:
-- `pending_count`: tests with `result: [pending]`
-- `blocked_count`: tests with `result: blocked`
-- `skipped_no_reason`: tests with `result: skipped` and no `reason` field
-
+Determine status:
 ```
-if pending_count > 0 OR blocked_count > 0 OR skipped_no_reason > 0:
+if pending > 0 OR blocked > 0 OR (skipped without reason) > 0:
   status: partial
-  # Session ended but not all tests resolved
 else:
   status: complete
-  # All tests have a definitive result (pass, issue, or skipped-with-reason)
 ```
 
-Update frontmatter:
-- status: {computed status}
-- updated: [now]
+Update frontmatter status/updated. Clear Current Test to `[testing complete]`.
 
-Clear Current Test section:
-```
-## Current Test
-
-[testing complete]
-```
-
-Commit the UAT file:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): complete UAT - {passed} passed, {issues} issues" --files ".planning/phases/XX-name/{phase_num}-UAT.md"
 ```
 
-Present summary:
 ```
 ## UAT Complete: Phase {phase}
 
@@ -358,49 +261,35 @@ Present summary:
 | Issues | {N}   |
 | Skipped| {N}   |
 
-[If issues > 0:]
-### Issues Found
-
-[List from Issues section]
+[If issues > 0: list from Issues section]
 ```
 
-**If issues > 0:** Proceed to `diagnose_issues`
-
-**If issues == 0:**
+- Issues > 0 → `diagnose_issues`
+- Issues == 0 →
 ```
 All tests passed. Ready to continue.
 
-- `/gsd:plan-phase {next}` — Plan next phase
-- `/gsd:execute-phase {next}` — Execute next phase
-- `/gsd:ui-review {phase}` — visual quality audit (if frontend files were modified)
+- `/gsd2:plan-phase {next}` — Plan next phase
+- `/gsd2:execute-phase {next}` — Execute next phase
+- `/gsd2:ui-review {phase}` — visual quality audit (if frontend files modified)
 ```
 </step>
 
 <step name="diagnose_issues">
-**Diagnose root causes before planning fixes:**
-
 ```
----
-
 {N} issues found. Diagnosing root causes...
-
 Spawning parallel debug agents to investigate each issue.
 ```
 
-- Load diagnose-issues workflow
-- Follow @~/.claude/get-shit-done/workflows/diagnose-issues.md
+- Load and follow @~/.claude/get-shit-done/workflows/diagnose-issues.md
 - Spawn parallel debug agents for each issue
-- Collect root causes
-- Update UAT.md with root causes
+- Collect root causes, update UAT.md
 - Proceed to `plan_gap_closure`
 
-Diagnosis runs automatically - no user prompt. Parallel agents investigate simultaneously, so overhead is minimal and fixes are more accurate.
+Diagnosis runs automatically — parallel agents minimize overhead, improve fix accuracy.
 </step>
 
 <step name="plan_gap_closure">
-**Auto-plan fixes from diagnosed gaps:**
-
-Display:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► PLANNING FIXES
@@ -408,8 +297,6 @@ Display:
 
 ◆ Spawning planner for gap closure...
 ```
-
-Spawn gsd-planner in --gaps mode:
 
 ```
 Task(
@@ -428,7 +315,7 @@ Task(
 </planning_context>
 
 <downstream_consumer>
-Output consumed by /gsd:execute-phase
+Output consumed by /gsd2:execute-phase
 Plans must be executable prompts.
 </downstream_consumer>
 """,
@@ -438,15 +325,11 @@ Plans must be executable prompts.
 )
 ```
 
-On return:
-- **PLANNING COMPLETE:** Proceed to `verify_gap_plans`
-- **PLANNING INCONCLUSIVE:** Report and offer manual intervention
+- PLANNING COMPLETE → `verify_gap_plans`
+- PLANNING INCONCLUSIVE → report, offer manual intervention
 </step>
 
 <step name="verify_gap_plans">
-**Verify fix plans with checker:**
-
-Display:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► VERIFYING FIX PLANS
@@ -456,8 +339,6 @@ Display:
 ```
 
 Initialize: `iteration_count = 1`
-
-Spawn gsd-plan-checker:
 
 ```
 Task(
@@ -485,19 +366,16 @@ Return one of:
 )
 ```
 
-On return:
-- **VERIFICATION PASSED:** Proceed to `present_ready`
-- **ISSUES FOUND:** Proceed to `revision_loop`
+- VERIFICATION PASSED → `present_ready`
+- ISSUES FOUND → `revision_loop`
 </step>
 
 <step name="revision_loop">
-**Iterate planner ↔ checker until plans pass (max 3):**
+Planner ↔ checker iteration (max 3).
 
-**If iteration_count < 3:**
+**iteration_count < 3:**
 
 Display: `Sending back to planner for revision... (iteration {N}/3)`
-
-Spawn gsd-planner with revision context:
 
 ```
 Task(
@@ -517,7 +395,7 @@ Task(
 </revision_context>
 
 <instructions>
-Read existing PLAN.md files. Make targeted updates to address checker issues.
+Read existing PLAN.md files. Make targeted updates for checker issues.
 Do NOT replan from scratch unless issues are fundamental.
 </instructions>
 """,
@@ -527,24 +405,19 @@ Do NOT replan from scratch unless issues are fundamental.
 )
 ```
 
-After planner returns → spawn checker again (verify_gap_plans logic)
-Increment iteration_count
+After planner returns → re-run `verify_gap_plans` logic, increment iteration_count.
 
-**If iteration_count >= 3:**
+**iteration_count >= 3:**
 
-Display: `Max iterations reached. {N} issues remain.`
+`Max iterations reached. {N} issues remain.`
 
-Offer options:
+Offer:
 1. Force proceed (execute despite issues)
 2. Provide guidance (user gives direction, retry)
-3. Abandon (exit, user runs /gsd:plan-phase manually)
-
-Wait for user response.
+3. Abandon (exit, user runs /gsd2:plan-phase manually)
 </step>
 
 <step name="present_ready">
-**Present completion and next steps:**
-
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► FIXES READY ✓
@@ -555,7 +428,6 @@ Wait for user response.
 | Gap | Root Cause | Fix Plan |
 |-----|------------|----------|
 | {truth 1} | {root_cause} | {phase}-04 |
-| {truth 2} | {root_cause} | {phase}-04 |
 
 Plans verified and ready for execution.
 
@@ -565,7 +437,7 @@ Plans verified and ready for execution.
 
 **Execute fixes** — run fix plans
 
-`/clear` then `/gsd:execute-phase {phase} --gaps-only`
+`/clear` then `/gsd2:execute-phase {phase} --gaps-only`
 
 ───────────────────────────────────────────────────────────────
 ```
@@ -574,50 +446,27 @@ Plans verified and ready for execution.
 </process>
 
 <update_rules>
-**Batched writes for efficiency:**
+Batched writes — keep results in memory, write to file only:
+1. **Issue found** — preserve immediately
+2. **Session complete** — final write before commit
+3. **Checkpoint** — every 5 passed tests (safety net for /clear)
 
-Keep results in memory. Write to file only when:
-1. **Issue found** — Preserve the problem immediately
-2. **Session complete** — Final write before commit
-3. **Checkpoint** — Every 5 passed tests (safety net)
-
-| Section | Rule | When Written |
-|---------|------|--------------|
-| Frontmatter.status | OVERWRITE | Start, complete |
-| Frontmatter.updated | OVERWRITE | On any file write |
-| Current Test | OVERWRITE | On any file write |
-| Tests.{N}.result | OVERWRITE | On any file write |
-| Summary | OVERWRITE | On any file write |
-| Gaps | APPEND | When issue found |
-
-On context reset: File shows last checkpoint. Resume from there.
+| Section | Rule | Trigger |
+|---------|------|---------|
+| Frontmatter.status | OVERWRITE | start, complete |
+| Frontmatter.updated | OVERWRITE | any write |
+| Current Test | OVERWRITE | any write |
+| Tests.{N}.result | OVERWRITE | any write |
+| Summary | OVERWRITE | any write |
+| Gaps | APPEND | issue found |
 </update_rules>
 
-<severity_inference>
-**Infer severity from user's natural language:**
-
-| User says | Infer |
-|-----------|-------|
-| "crashes", "error", "exception", "fails completely" | blocker |
-| "doesn't work", "nothing happens", "wrong behavior" | major |
-| "works but...", "slow", "weird", "minor issue" | minor |
-| "color", "spacing", "alignment", "looks off" | cosmetic |
-
-Default to **major** if unclear. User can correct if needed.
-
-**Never ask "how severe is this?"** - just infer and move on.
-</severity_inference>
-
 <success_criteria>
-- [ ] UAT file created with all tests from SUMMARY.md
-- [ ] Tests presented one at a time with expected behavior
-- [ ] User responses processed as pass/issue/skip
-- [ ] Severity inferred from description (never asked)
-- [ ] Batched writes: on issue, every 5 passes, or completion
-- [ ] Committed on completion
-- [ ] If issues: parallel debug agents diagnose root causes
-- [ ] If issues: gsd-planner creates fix plans (gap_closure mode)
-- [ ] If issues: gsd-plan-checker verifies fix plans
-- [ ] If issues: revision loop until plans pass (max 3 iterations)
-- [ ] Ready for `/gsd:execute-phase --gaps-only` when complete
+- UAT file created with all tests from SUMMARY.md
+- Tests presented one at a time with expected behavior
+- User responses processed as pass/issue/skip/blocked
+- Severity inferred from description (MUST NOT ask user)
+- Batched writes: on issue, every 5 passes, or completion
+- Committed on completion
+- If issues: parallel debug agents → planner (gap_closure) → checker → revision loop (max 3) → ready for `/gsd2:execute-phase --gaps-only`
 </success_criteria>

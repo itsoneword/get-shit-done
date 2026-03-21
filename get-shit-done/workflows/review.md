@@ -1,68 +1,51 @@
 <purpose>
-Cross-AI peer review — invoke external AI CLIs to independently review phase plans.
-Each CLI gets the same prompt (PROJECT.md context, phase plans, requirements) and
-produces structured feedback. Results are combined into REVIEWS.md for the planner
-to incorporate via --reviews flag.
-
-This implements adversarial review: different AI models catch different blind spots.
-A plan that survives review from 2-3 independent AI systems is more robust.
+Cross-AI peer review — invoke external AI CLIs to independently review phase plans and combine results into REVIEWS.md. Different models catch different blind spots; a plan surviving 2-3 independent reviews is more robust.
 </purpose>
 
 <process>
 
 <step name="detect_clis">
-Check which AI CLIs are available on the system:
+Check available CLIs and parse `$ARGUMENTS` flags (`--gemini`, `--claude`, `--codex`, `--all`, or no flags = all available):
 
 ```bash
-# Check each CLI
 command -v gemini >/dev/null 2>&1 && echo "gemini:available" || echo "gemini:missing"
 command -v claude >/dev/null 2>&1 && echo "claude:available" || echo "claude:missing"
 command -v codex >/dev/null 2>&1 && echo "codex:available" || echo "codex:missing"
 ```
 
-Parse flags from `$ARGUMENTS`:
-- `--gemini` → include Gemini
-- `--claude` → include Claude
-- `--codex` → include Codex
-- `--all` → include all available
-- No flags → include all available
+// If none available → print install links and exit
+// If running inside a CLI (e.g. Claude), skip that CLI to ensure independence
+// MUST have at least one DIFFERENT CLI to proceed
 
-If no CLIs are available:
+If no CLIs found:
 ```
 No external AI CLIs found. Install at least one:
 - gemini: https://github.com/google-gemini/gemini-cli
 - codex: https://github.com/openai/codex
 - claude: https://github.com/anthropics/claude-code
 
-Then run /gsd:review again.
+Then run /gsd2:review again.
 ```
 Exit.
-
-If only one CLI is the current runtime (e.g. running inside Claude), skip it for the review
-to ensure independence. At least one DIFFERENT CLI must be available.
 </step>
 
 <step name="gather_context">
-Collect phase artifacts for the review prompt:
-
 ```bash
 INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
-Read from init: `phase_dir`, `phase_number`, `padded_phase`.
-
-Then read:
-1. `.planning/PROJECT.md` (first 80 lines — project context)
+Extract from init: `phase_dir`, `phase_number`, `padded_phase`. Then read:
+1. `.planning/PROJECT.md` (first 80 lines)
 2. Phase section from `.planning/ROADMAP.md`
-3. All `*-PLAN.md` files in the phase directory
-4. `*-CONTEXT.md` if present (user decisions)
-5. `*-RESEARCH.md` if present (domain research)
-6. `.planning/REQUIREMENTS.md` (requirements this phase addresses)
+3. All `*-PLAN.md` files in `phase_dir`
+4. `*-CONTEXT.md` if present
+5. `*-RESEARCH.md` if present
+6. `.planning/REQUIREMENTS.md`
 </step>
 
 <step name="build_prompt">
-Build a structured review prompt:
+Write to `/tmp/gsd-review-prompt-{phase}.md`:
 
 ```markdown
 # Cross-AI Plan Review Request
@@ -99,39 +82,20 @@ Analyze each plan and provide:
 4. **Suggestions** — Specific improvements (bullet points)
 5. **Risk Assessment** — Overall risk level (LOW/MEDIUM/HIGH) with justification
 
-Focus on:
-- Missing edge cases or error handling
-- Dependency ordering issues
-- Scope creep or over-engineering
-- Security considerations
-- Performance implications
-- Whether the plans actually achieve the phase goals
+Focus on: missing edge cases, error handling, dependency ordering, scope creep, security, performance, and whether plans achieve phase goals.
 
 Output your review in markdown format.
 ```
-
-Write to a temp file: `/tmp/gsd-review-prompt-{phase}.md`
 </step>
 
 <step name="invoke_reviewers">
-For each selected CLI, invoke in sequence (not parallel — avoid rate limits):
+Invoke selected CLIs in sequence (not parallel — avoid rate limits). On failure, log and continue.
 
-**Gemini:**
 ```bash
 gemini -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-review-gemini-{phase}.md
-```
-
-**Claude (separate session):**
-```bash
 claude -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" --no-input 2>/dev/null > /tmp/gsd-review-claude-{phase}.md
-```
-
-**Codex:**
-```bash
 codex -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-review-codex-{phase}.md
 ```
-
-If a CLI fails, log the error and continue with remaining CLIs.
 
 Display progress:
 ```
@@ -145,7 +109,7 @@ Display progress:
 </step>
 
 <step name="write_reviews">
-Combine all review responses into `{phase_dir}/{padded_phase}-REVIEWS.md`:
+Write `{phase_dir}/{padded_phase}-REVIEWS.md`:
 
 ```markdown
 ---
@@ -158,25 +122,21 @@ plans_reviewed: [{list of PLAN.md files}]
 # Cross-AI Plan Review — Phase {N}
 
 ## Gemini Review
-
 {gemini review content}
 
 ---
 
 ## Claude Review
-
 {claude review content}
 
 ---
 
 ## Codex Review
-
 {codex review content}
 
 ---
 
 ## Consensus Summary
-
 {synthesize common concerns across all reviewers}
 
 ### Agreed Strengths
@@ -189,15 +149,12 @@ plans_reviewed: [{list of PLAN.md files}]
 {where reviewers disagreed — worth investigating}
 ```
 
-Commit:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: cross-AI review for phase {N}" --files {phase_dir}/{padded_phase}-REVIEWS.md
 ```
 </step>
 
 <step name="present_results">
-Display summary:
-
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► REVIEW COMPLETE
@@ -211,7 +168,7 @@ Consensus concerns:
 Full review: {padded_phase}-REVIEWS.md
 
 To incorporate feedback into planning:
-  /gsd:plan-phase {N} --reviews
+  /gsd2:plan-phase {N} --reviews
 ```
 
 Clean up temp files.
@@ -224,5 +181,5 @@ Clean up temp files.
 - [ ] REVIEWS.md written with structured feedback
 - [ ] Consensus summary synthesized from multiple reviewers
 - [ ] Temp files cleaned up
-- [ ] User knows how to use feedback (/gsd:plan-phase --reviews)
+- [ ] User knows how to use feedback (/gsd2:plan-phase --reviews)
 </success_criteria>

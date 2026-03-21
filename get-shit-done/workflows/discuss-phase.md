@@ -1,145 +1,76 @@
 <purpose>
-Extract implementation decisions that downstream agents need through genuine conversation, not rigid interviewing. Analyze the phase to understand what's new vs what's established, then have a real back-and-forth discussion where the user's energy and emphasis guide depth.
-
-You are a thinking partner, not an interviewer. The user is the visionary — you are the builder. Your job is to capture decisions that will guide research and planning, not to figure out implementation yourself.
+Extract implementation decisions through genuine conversation. Analyze what's new vs established, then discuss — letting user energy guide depth. You are a thinking partner: the user is the visionary, you are the builder. Capture decisions with signal strength so downstream agents (researcher, planner) can act without re-asking.
 </purpose>
 
 <downstream_awareness>
-**CONTEXT.md feeds into:**
-
+CONTEXT.md feeds into:
 1. **gsd-phase-researcher** — Reads CONTEXT.md to know WHAT to research
-   - "User wants card-based layout" → researcher investigates card component patterns
-   - "Infinite scroll decided" → researcher looks into virtualization libraries
-
 2. **gsd-planner** — Reads CONTEXT.md to know WHAT decisions are locked
-   - "Pull-to-refresh on mobile" → planner includes that in task specs
-   - "Claude's Discretion: loading skeleton" → planner can decide approach
 
-**Signal strength matters downstream:**
-- [STRONG] decisions are NON-NEGOTIABLE — planner must implement exactly as specified
-- [WEAK] decisions are flexible — planner can adjust if implementation is simpler another way
-- [DISCRETION] areas — planner has full freedom
+Signal strength drives downstream behavior:
+- [STRONG] — non-negotiable, planner implements exactly as specified
+- [WEAK] — flexible, planner can adjust if simpler another way
+- [DISCRETION] — planner has full freedom
 
-**Your job:** Capture decisions clearly enough — with signal strength — that downstream agents can act on them without asking the user again.
+Your job: capture decisions with signal strength so downstream agents never re-ask the user.
+Not your job: figure out HOW to implement — that's research and planning.
 
-**Not your job:** Figure out HOW to implement. That's what research and planning do with the decisions you capture.
-
-**Cross-phase pollination:**
-During conversation, you may hear insights relevant to OTHER phases (e.g., while discussing UI phase, user mentions "the backend needs to handle X"). These are captured in `.planning/cross-phase-notes.md` so that when those phases are later discussed, the context is already there. This means earlier discussions pre-answer later questions — reducing total question count across all phases.
+**Cross-phase pollination:** Insights relevant to OTHER phases get captured in `.planning/cross-phase-notes.md` so later discussions have pre-gathered context, reducing total questions across all phases.
 </downstream_awareness>
 
 <conversation_philosophy>
-**Apply the same philosophy as new-project questioning (from references/questioning.md):**
+**Start open.** Let user dump their mental model without interrupting.
+**Follow energy.** Dig into what they emphasize or find hard.
+**Challenge vagueness.** "Good" means what? "Simple" means how?
+**Make abstract concrete.** "Walk me through using this." "What does that look like?"
+**Use codebase as anchor.** "Your app already uses X — should this follow the same pattern?"
+**Know when to stop.** When a planner could act on what you know — offer to proceed.
 
-**Start open.** Let the user dump their mental model. Don't interrupt with structure.
+**AskUserQuestion usage:**
+- ONLY for specific choice points: "Library A or B?" "Grid or list?"
+- Most discussion is plain text back-and-forth
+- When used: 2-3 concrete options, header max 12 chars
 
-**Follow energy.** Whatever they emphasized, dig into that. What excited them? What's the hard part?
+**Adaptive depth:** Complex phase with unknowns = deep discussion. Simple phase with established patterns = quick confirmation. Content drives depth, not a fixed count.
 
-**Challenge vagueness.** Never accept fuzzy answers. "Good" means what? "Simple" means how?
-
-**Make the abstract concrete.** "Walk me through using this." "What does that actually look like?"
-
-**Use existing code as conversation anchor.** "Your app already uses Card components everywhere — should this follow the same pattern, or is this different?"
-
-**Know when to stop.** When you understand what they want for THIS phase well enough that a planner could act on it — offer to proceed. Don't pad with extra questions.
-
-**AskUserQuestion is a tool, not the mode.**
-- Use it for SPECIFIC CHOICE POINTS: "Library A or B?" "Grid or list?"
-- Do NOT use it as the primary interaction. Most discussion should be plain text back-and-forth.
-- If the user wants to explain something, let them type freely. Don't force them into multiple-choice.
-- When you do use AskUserQuestion: 2-3 concrete options, header max 12 chars.
-
-**Adaptive depth:**
-- Complex phase with many unknowns → deep discussion, many questions
-- Simple phase where codebase already establishes patterns → quick confirmation, few questions
-- Let the CONTENT drive depth, not a fixed count
-
-**Anti-patterns (don't do these):**
-- Pre-generating a fixed list of gray areas and walking through them
-- Asking the same number of questions for every phase regardless of complexity
-- Using AskUserQuestion for open-ended exploration
-- Asking about areas the codebase already resolves (e.g., "what design system?" when Tailwind is already used everywhere)
-- Asking about core architecture when the phase is just UI polish
-- Firing questions without building on previous answers
+**Anti-patterns:** Pre-generating fixed question lists; asking same count for every phase; using AskUserQuestion for open-ended exploration; asking about things the codebase already resolves; firing questions without building on previous answers.
 </conversation_philosophy>
 
 <scope_guardrail>
-**CRITICAL: No scope creep.**
+Phase boundary from ROADMAP.md is FIXED. Discussion clarifies HOW to implement what's scoped, never WHETHER to add new capabilities. WHY: scope creep derails planning and invalidates the roadmap structure.
 
-The phase boundary comes from ROADMAP.md and is FIXED. Discussion clarifies HOW to implement what's scoped, never WHETHER to add new capabilities.
+**Allowed** (clarifying ambiguity): "How should posts display?" / "What happens on empty state?" / "Pull to refresh or manual?"
+**Not allowed** (scope creep): "Should we also add comments?" / "What about search/filtering?"
+**Heuristic:** Does this clarify implementation of what's scoped, or add a new capability that could be its own phase?
 
-**Allowed (clarifying ambiguity):**
-- "How should posts be displayed?" (layout, density, info shown)
-- "What happens on empty state?" (within the feature)
-- "Pull to refresh or manual?" (behavior choice)
-
-**Not allowed (scope creep):**
-- "Should we also add comments?" (new capability)
-- "What about search/filtering?" (new capability)
-- "Maybe include bookmarking?" (new capability)
-
-**The heuristic:** Does this clarify how we implement what's already in the phase, or does it add a new capability that could be its own phase?
-
-**When user suggests scope creep:**
-```
-"[Feature X] would be a new capability — that's its own phase.
-Want me to note it for the roadmap backlog?
-
-For now, let's focus on [phase domain]."
-```
-
-Capture the idea in a "Deferred Ideas" section. Don't lose it, don't act on it.
+When user suggests scope creep: note it as deferred idea, redirect to current phase domain.
 </scope_guardrail>
 
 <signal_strength_guide>
-**Every decision in CONTEXT.md gets a signal strength annotation:**
+Every decision in CONTEXT.md gets a signal strength:
 
-**[STRONG]** — User specifically insisted, gave detailed reasoning, referenced examples, or showed strong preference.
-- "I want it exactly like Pinterest's masonry grid" → [STRONG]
-- User corrected your assumption or pushed back on a suggestion → [STRONG]
-
-**[WEAK]** — User casually agreed, picked from a menu without elaboration, or said "probably" / "I guess" / "sure".
-- "Yeah, cards are fine" → [WEAK]
-- User picked option from AskUserQuestion without comment → [WEAK]
-
+**[STRONG]** — User insisted, gave detailed reasoning, referenced examples, showed strong preference, or corrected your assumption.
+**[STRONG, specialist-backed]** — Specialist recommended with HIGH confidence, user confirmed. Same downstream weight as [STRONG] but signals technical validation.
+**[STRONG, user-override]** — Specialist recommended differently, user overrode with own reasoning. Planner treats as non-negotiable (user knows their context).
+**[WEAK]** — User casually agreed, picked without elaboration, said "probably"/"I guess"/"sure".
+**[WEAK, specialist-backed]** — Specialist recommended with MEDIUM confidence, user casually accepted. Planner prefers specialist recommendation but can adjust.
 **[DISCRETION]** — User explicitly said "you decide" or "whatever works" or showed no preference.
-- "I don't care about the loading state, just make it work" → [DISCRETION]
 
-**How to assess:** Pay attention to:
-- Length of response (long explanation = strong, one word = weak)
-- Specificity (references examples = strong, generic = weak)
-- Pushback (corrected you = strong about the correction)
-- Enthusiasm ("yes! exactly!" = strong, "sure" = weak)
-- Hedging ("probably", "maybe", "I think" = weak)
+**Assessment signals:** Response length (long=strong, one word=weak), specificity (examples=strong), pushback (=strong), enthusiasm ("yes! exactly!"=strong), hedging ("probably"=weak), specialist backing (increases reliability regardless of tone).
 
-**Downstream impact:**
-- Planner treats [STRONG] as non-negotiable
-- Planner can adjust [WEAK] if implementation is simpler another way
-- Planner has full freedom on [DISCRETION]
+**Downstream:** [STRONG/STRONG,specialist-backed/STRONG,user-override] = non-negotiable. [WEAK] = adjustable. [WEAK,specialist-backed] = preferred but adjustable. [DISCRETION] = full freedom.
 </signal_strength_guide>
 
 <answer_validation>
-**IMPORTANT: Answer validation** — After every AskUserQuestion call, check if the response is empty or whitespace-only. If so:
-1. Retry the question once with the same parameters
-2. If still empty, present the options as a plain-text numbered list and ask the user to type their choice number
-Never proceed with an empty answer.
+After every AskUserQuestion call, check if response is empty/whitespace. If so: retry once, then fall back to plain-text numbered list.
 
-**Text mode (`workflow.text_mode: true` in config or `--text` flag):**
-When text mode is active, **do not use AskUserQuestion at all**. Instead, present every
-question as a plain-text numbered list and ask the user to type their choice number.
-This is required for Claude Code remote sessions (`/rc` mode) where the Claude App
-cannot forward TUI menu selections back to the host.
-
-Enable text mode:
-- Per-session: pass `--text` flag to any command (e.g., `/gsd:discuss-phase --text`)
-- Per-project: `gsd-tools config-set workflow.text_mode true`
-
-Text mode applies to ALL workflows in the session, not just discuss-phase.
+**Text mode** (`workflow.text_mode: true` or `--text` flag): Do not use AskUserQuestion at all — present as plain-text numbered lists. Required for Claude Code remote sessions (`/rc` mode).
+Enable: per-session `--text` flag, or per-project `gsd-tools config-set workflow.text_mode true`.
 </answer_validation>
 
 <process>
 
-**Express path available:** If you already have a PRD or acceptance criteria document, use `/gsd:plan-phase {phase} --prd path/to/prd.md` to skip this discussion and go straight to planning.
+**Express path:** If you have a PRD or acceptance criteria, use `/gsd2:plan-phase {phase} --prd path/to/prd.md` to skip discussion.
 
 <step name="initialize" priority="first">
 Phase number from argument (required).
@@ -151,290 +82,200 @@ if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 
 Parse JSON for: `commit_docs`, `phase_found`, `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded_phase`, `has_research`, `has_context`, `has_plans`, `has_verification`, `plan_count`, `roadmap_exists`, `planning_exists`.
 
-**If `phase_found` is false:**
-```
-Phase [X] not found in roadmap.
+If `phase_found` is false: show "Phase [X] not found. Use /gsd2:progress to see available phases." and exit.
 
-Use /gsd:progress to see available phases.
-```
-Exit workflow.
-
-**If `phase_found` is true:** Continue to check_existing.
-
-**Auto mode** — If `--auto` is present in ARGUMENTS:
-- In `check_existing`: auto-select "Skip" (if context exists) or continue without prompting (if no context/plans)
-- In `conversation`: for each discussion point, choose the recommended approach without using AskUserQuestion
-- Log each auto-selected choice inline so the user can review decisions in the context file
-- After discussion completes, auto-advance to plan-phase (existing behavior)
+**Auto mode (`--auto`):** Auto-select choices in check_existing, use recommended approaches in conversation without AskUserQuestion, log each auto-selected choice inline. After discussion, auto-advance to plan-phase.
 </step>
 
 <step name="check_existing">
-Check if CONTEXT.md already exists using `has_context` from init.
+Check if CONTEXT.md exists via `has_context` from init.
 
 ```bash
 ls ${phase_dir}/*-CONTEXT.md 2>/dev/null
 ```
 
 **If exists:**
-
-**If `--auto`:** Auto-select "Update it" — load existing context and continue to build_understanding. Log: `[auto] Context exists — updating with auto-selected decisions.`
-
-**Otherwise:** Use AskUserQuestion:
-- header: "Context"
-- question: "Phase [X] already has context. What do you want to do?"
-- options:
-  - "Update it" — Review and revise existing context
-  - "View it" — Show me what's there
-  - "Skip" — Use existing context as-is
-
-If "Update": Load existing, continue to build_understanding
-If "View": Display CONTEXT.md, then offer update/skip
-If "Skip": Exit workflow
+- `--auto`: Auto-select "Update it", log: `[auto] Context exists — updating with auto-selected decisions.`
+- Otherwise: AskUserQuestion (header: "Context", options: "Update it" / "View it" / "Skip")
+  - Update → load existing, continue to build_understanding
+  - View → display, then offer update/skip
+  - Skip → exit
 
 **If doesn't exist:**
+Check `has_plans`/`plan_count`. If plans exist:
+- `--auto`: Auto-select "Continue and replan after", log accordingly
+- Otherwise: AskUserQuestion (header: "Plans exist", explain plans were created without user context, options: "Continue and replan after" / "View existing plans" / "Cancel")
 
-Check `has_plans` and `plan_count` from init. **If `has_plans` is true:**
-
-**If `--auto`:** Auto-select "Continue and replan after". Log: `[auto] Plans exist — continuing with context capture, will replan after.`
-
-**Otherwise:** Use AskUserQuestion:
-- header: "Plans exist"
-- question: "Phase [X] already has {plan_count} plan(s) created without user context. Your decisions here won't affect existing plans unless you replan."
-- options:
-  - "Continue and replan after" — Capture context, then run /gsd:plan-phase {X} to replan
-  - "View existing plans" — Show plans before deciding
-  - "Cancel" — Skip discuss-phase
-
-If "Continue and replan after": Continue to build_understanding.
-If "View existing plans": Display plan files, then offer "Continue" / "Cancel".
-If "Cancel": Exit workflow.
-
-**If `has_plans` is false:** Continue to build_understanding.
+If no plans: continue to build_understanding.
 </step>
 
 <step name="build_understanding">
-Build a grounded understanding of the phase BEFORE talking to the user. This determines what you need to ask about.
+Build grounded understanding BEFORE talking to user. This determines what to ask about.
 
-**Step 1: Read project-level files**
+**1. Read project-level files**
 ```bash
 cat .planning/PROJECT.md 2>/dev/null
 cat .planning/REQUIREMENTS.md 2>/dev/null
 cat .planning/STATE.md 2>/dev/null
 ```
-
 Extract: vision, principles, constraints, current progress.
 
-**Step 2: Read all prior CONTEXT.md files**
+**2. Read prior CONTEXT.md files**
 ```bash
 find .planning/phases -name "*-CONTEXT.md" 2>/dev/null | sort
 ```
+For each prior phase: read `<decisions>` (locked preferences), `<specifics>` (references), note patterns.
 
-For each CONTEXT.md where phase number < current phase:
-- Read `<decisions>` — these are locked preferences
-- Read `<specifics>` — particular references or "I want it like X" moments
-- Note patterns (e.g., "user consistently prefers minimal UI")
+**3. Read ROADMAP.md phase description** — understand what this phase delivers.
 
-**Step 3: Read ROADMAP.md phase description**
-Understand what this phase is supposed to deliver.
-
-**Step 4: Scout the codebase**
-This is CRITICAL — the codebase determines what's already decided and what's genuinely new.
-
-Check for codebase maps first:
+**4. Scout codebase** — determines what's decided vs genuinely new.
 ```bash
 ls .planning/codebase/*.md 2>/dev/null
 ```
-
-If maps exist, read the most relevant ones. Otherwise, do targeted exploration:
-
+If maps exist, read relevant ones. Otherwise, targeted exploration:
 ```bash
-# Find files related to phase goal terms
 grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10
-
-# Find existing components/hooks/patterns
 ls src/components/ 2>/dev/null
 ls src/hooks/ 2>/dev/null
 ls src/lib/ src/utils/ 2>/dev/null
 ```
-
 Read 3-5 most relevant files.
 
-**Step 5: Classify what's ESTABLISHED vs what's NEW**
-
-This is the key insight that drives the conversation:
-
+**5. Classify ESTABLISHED vs NEW** — this drives the conversation:
 ```
-ESTABLISHED (don't ask about):
-- Design system: Tailwind with shadcn/ui (used in 40+ components)
-- State management: Zustand (3 existing stores)
-- Data fetching: React Query (used in all API calls)
-- Auth pattern: NextAuth with JWT (Phase 1 decided this)
-
-NEW (need to discuss):
-- Chart rendering: no existing pattern for data visualization
-- Websocket integration: no real-time data patterns exist yet
-- Mobile chart interactions: no touch gesture patterns
+ESTABLISHED (don't ask): design system, state management, existing patterns
+NEW (discuss): areas with no existing pattern, multiple approaches possible
 ```
 
-**Step 6: Cross-reference todos**
+**6. Cross-reference todos**
 ```bash
 TODO_MATCHES=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
 ```
+If matches found, store for discussion. If none, skip silently.
 
-If matches found, store for folding into discussion. If none, skip silently.
-
-**Step 7: Load cross-phase notes**
+**7. Load cross-phase notes**
 ```bash
 cat .planning/cross-phase-notes.md 2>/dev/null
 ```
+If entries tagged with current phase exist: treat as pre-answered context (don't re-ask). Validate during conversation: "From your Phase N discussion, you mentioned X. Still accurate?" Update signal strength based on response.
 
-If this file exists, look for entries tagged with the current phase number. These are insights gathered during discussions of OTHER phases that are relevant here. They represent pre-gathered context — things the user already told you in a different conversation.
+**8. Load discussion focus hints** — check ROADMAP.md phase detail for `**Discussion focus**:` line. Use to prioritize conversation, but user energy still drives depth.
 
-For each relevant note:
-- Treat it as pre-answered context (don't re-ask what the user already said)
-- Validate it during conversation: "From your Phase 2 discussion, you mentioned X. Is that still how you see it?"
-- If the user confirms → becomes a [STRONG] or [WEAK] decision based on their response
-- If the user contradicts → update the cross-phase note and use the new answer
-
-**Step 8: Load discussion focus hints**
-Check the ROADMAP.md phase detail section for a `**Discussion focus**:` line.
-
-If present, this tells you what the roadmapper (or prior workflow) identified as the key areas needing user input for this phase. Use it to prioritize your conversation — but don't treat it as a rigid script. The user's energy still drives depth.
-
-**Step 9: Initialize canonical refs accumulator**
-Start building the `<canonical_refs>` list:
-- Copy `Canonical refs:` from ROADMAP.md for this phase
-- Check REQUIREMENTS.md and PROJECT.md for specs/ADRs referenced for this phase
-- If codebase scout found docs referenced in code comments, add those
+**9. Initialize canonical refs accumulator** — copy refs from ROADMAP.md for this phase, check REQUIREMENTS.md/PROJECT.md for specs/ADRs, add docs found in code comments.
 </step>
 
 <step name="conversation">
-Now have a genuine conversation with the user. This is NOT a structured interview — it's collaborative thinking.
+Have a genuine conversation — collaborative thinking, NOT structured interview.
 
 **Opening:**
-
-Present what you found and invite the user to talk:
-
 ```
 ## Phase {X}: {Name}
 
 **What it delivers:** {from ROADMAP}
 
 **What I found in the codebase:**
-- {Established pattern 1} — already in use
-- {Established pattern 2} — decided in Phase {N}
-- ...
+- {Established pattern} — already in use
+- {Established pattern} — decided in Phase {N}
 
-**What's new in this phase** (where I need your input):
-- {New area 1} — no existing pattern
-- {New area 2} — multiple approaches possible
+**What's new** (where I need your input):
+- {New area} — no existing pattern
+- {New area} — multiple approaches possible
 
-{If prior decisions apply:}
-**Carrying forward:** {Decision from Phase N}
-
-{If todo matches found:}
-**Related backlog items:** {todo titles} — should any of these fold into this phase?
+{If prior decisions:} **Carrying forward:** {Decision from Phase N}
+{If todo matches:} **Related backlog items:** {titles} — should any fold into this phase?
 
 ---
 
 Tell me about how you see this phase. What's the most important thing to get right?
 ```
 
-**Then: Follow the conversation naturally.**
+Then follow the conversation naturally.
 
-Guidelines for the discussion:
-- **Build on their answers.** If they mention "charts", dig into charts. Don't pivot to something unrelated.
-- **Use the codebase as anchor.** "Your app already does X for Y — should this follow the same pattern?"
-- **Use AskUserQuestion ONLY for binary/ternary choices** where concrete options help. E.g., "Library A or B?" not "Tell me about your vision."
-- **Track signal strength as you go.** Notice enthusiasm, hedging, pushback, specificity.
-- **Don't re-ask decided things.** Prior phases decided infinite scroll? Don't ask about pagination.
-- **Probe what matters, skip what doesn't.** If they light up about the chart interactions, go deep. If they shrug at color scheme, mark it [DISCRETION] and move on.
-- **Accumulate canonical refs.** When the user says "check the spec" or "per the ADR", immediately read the doc and add to refs.
+<question_triage>
+**Specialist-in-the-loop — classify before asking implementation/architecture/tech questions:**
 
-**Adaptive depth rules:**
-- After each exchange, internally check: "Could a planner create tasks from what I know so far?"
-- If YES for all new areas → offer to proceed
-- If NO for some areas → continue discussing those areas
-- Never ask more than needed. 3 questions might be enough. 15 might be needed. Let the content decide.
+| Answer depends on... | Type | Action |
+|---|---|---|
+| User taste, brand, visual feel, priority, business logic | **PREFERENCE** | Ask user directly |
+| Domain constraints, performance limits, ecosystem standards | **TECHNICAL** | Spawn micro-research first |
+| Both — technical feasibility shapes options, user picks from viable ones | **HYBRID** | Research first, present viable options |
 
-**When you have enough context:**
+**Examples:**
+- "Card or list layout?" → PREFERENCE (visual preference)
+- "REST or WebSocket for real-time HFT?" → TECHNICAL (latency constraints make REST unviable)
+- "Which chart library?" → HYBRID (research narrows to 2-3, user picks)
+- "SQL or NoSQL for time-series trading data?" → TECHNICAL (access patterns determine this)
+- "Which auth provider?" → HYBRID (all viable, tradeoffs need context)
 
-Use AskUserQuestion:
-- header: "Ready?"
-- question: "I think I have a good picture of what you want for this phase. Ready to capture it, or want to discuss more?"
-- options:
-  - "Capture it" — Write CONTEXT.md
-  - "Keep discussing" — I want to share more
-  - "Let me review first" — Show me what you'd capture
-
-If "Keep discussing" → ask what they want to add, continue conversation
-If "Let me review first" → show draft decisions, then offer capture/discuss
-If "Capture it" → proceed to write_context
-
-**Auto mode (`--auto`):** Skip the conversation entirely. Use the ROADMAP description + codebase scout + prior context to generate reasonable defaults for all decisions. Mark everything [WEAK] since no user input was gathered. Log: `[auto] Generated context from project state — all decisions marked [WEAK]`.
-
-**Scope creep handling:**
-If user mentions something outside the phase domain:
+**For TECHNICAL/HYBRID — spawn micro-research:**
 ```
-"[Feature] sounds like a new capability — that belongs in its own phase.
-I'll note it as a deferred idea.
-
-Back to [current area]: [return to current thread]"
+Task(subagent_type="gsd-phase-researcher", prompt="
+<micro_research>
+QUESTION: {the specific technical question}
+CONSTRAINTS: {relevant project constraints from PROJECT.md and codebase scout}
+PHASE GOAL: {from ROADMAP.md}
+DOMAIN: {the technical domain — e.g., real-time data, authentication, database design}
+</micro_research>
+", description="Technical Q: {short summary}")
 ```
 
-Track deferred ideas internally.
+**Present based on confidence:**
+- **HIGH** → recommendation: "For [domain], [recommendation] is standard — [reasoning]. Going with that unless you object?"
+- **MEDIUM** → informed suggestion with options: "Research suggests [X] because [reasoning]. Alternative: [Y]. Preference?"
+- **LOW** → fall back to asking user: "I looked into [topic] but it depends on your context. [findings]. Your thinking?"
 
-**Cross-phase pollination — capture insights for other phases:**
-During the conversation, watch for statements that are relevant to OTHER phases in the roadmap. Examples:
-- Discussing UI phase, user says "the API needs to support pagination for this" → relevant to the API phase
-- Discussing auth phase, user says "we'll need SSO for the enterprise dashboard too" → relevant to the dashboard phase
-- Discussing data model, user mentions "charts will need real-time websocket data" → relevant to the charts phase
+**Signal strength for specialist-backed decisions:**
+- User confirms HIGH recommendation → [STRONG, specialist-backed]
+- User overrides specialist with reasoning → [STRONG, user-override]
+- User accepts MEDIUM suggestion casually → [WEAK, specialist-backed]
+- User picks from HYBRID options with enthusiasm → [STRONG]
+- Specialist LOW, user answers from own knowledge → normal [STRONG/WEAK] based on response
 
-When you detect a cross-phase insight:
-1. Don't interrupt the conversation flow — note it internally
-2. After the conversation completes (before write_context), append to `.planning/cross-phase-notes.md`
+**Skip micro-research when:** question is clearly preference; codebase already answers it; prior phases decided it; question is scope/business logic.
 
-Format for cross-phase notes:
+**Budget:** 0-5 micro-research calls per session. Reserve for genuinely ambiguous technical decisions where getting it wrong costs significant rework.
+</question_triage>
+
+**Discussion guidelines:**
+- Build on answers — don't pivot to unrelated topics
+- Use codebase as anchor
+- Track signal strength as you go (enthusiasm, hedging, pushback, specificity)
+- Don't re-ask decided things from prior phases
+- Probe what matters, skip what doesn't — mark low-interest areas [DISCRETION]
+- Accumulate canonical refs when user references specs/ADRs
+- Follow `<question_triage>` for technical questions
+
+**Adaptive depth:** After each exchange, check: "Could a planner create tasks from what I know?" If yes for all new areas → offer to proceed. If no → continue those areas.
+
+**When you have enough context:** AskUserQuestion (header: "Ready?", options: "Capture it" / "Keep discussing" / "Let me review first").
+
+**Auto mode (`--auto`):** Skip conversation. Use ROADMAP + codebase scout + prior context to generate defaults. Mark everything [WEAK]. Log: `[auto] Generated context from project state — all decisions marked [WEAK]`.
+
+**Scope creep:** Note as deferred idea, redirect: "[Feature] is a new capability — noting for future. Back to [current area]."
+
+**Cross-phase pollination:** Watch for statements relevant to other phases. Note internally, append to `.planning/cross-phase-notes.md` after conversation:
 ```markdown
 ### From Phase {current} discussion ({date})
 
-**For Phase {target_phase_number}: {target_phase_name}**
-- {Insight}: "{what the user said, paraphrased}"
-- Signal: [STRONG/WEAK] — {why: "user emphasized this" / "mentioned in passing"}
-- Context: {brief context of how this came up}
+**For Phase {target}: {name}**
+- {Insight}: "{paraphrased}"
+- Signal: [STRONG/WEAK] — {rationale}
+- Context: {how it came up}
 ```
+Append only (don't overwrite). Skip if no cross-phase insights.
 
-Append, don't overwrite — this file accumulates across all discuss-phase sessions.
-
-If no cross-phase insights emerged, don't create or modify the file.
-
-**Track discussion log data internally:**
-For each significant exchange, accumulate:
-- Topic discussed
-- User's input (paraphrased)
-- Decision captured + signal strength
-- Any follow-up or clarifications
+**Track discussion log data internally:** For each significant exchange: topic, user input (paraphrased), decision + signal strength, follow-ups.
 </step>
 
 <step name="write_context">
-Create CONTEXT.md capturing decisions made.
+Create CONTEXT.md. Use `phase_dir`, `phase_slug`, `padded_phase` from init.
 
-**Also generate DISCUSSION-LOG.md** — a full audit trail of the discuss-phase Q&A.
-This file is for human reference only (software audits, compliance reviews). It is NOT
-consumed by downstream agents (researcher, planner, executor).
-
-**Find or create phase directory:**
-
-Use values from init: `phase_dir`, `phase_slug`, `padded_phase`.
-
-If `phase_dir` is null (phase exists in roadmap but no directory):
+If `phase_dir` is null:
 ```bash
 mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 ```
 
-**File location:** `${phase_dir}/${padded_phase}-CONTEXT.md`
-
-**Structure the content by what was discussed:**
+**File:** `${phase_dir}/${padded_phase}-CONTEXT.md`
 
 ```markdown
 # Phase [X]: [Name] - Context
@@ -445,36 +286,27 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 <domain>
 ## Phase Boundary
 
-[Clear statement of what this phase delivers — the scope anchor]
+[What this phase delivers — the scope anchor]
 
 </domain>
 
 <established>
 ## Established Patterns (from codebase)
 
-[What the codebase already decides — planner should follow these without deviation]
-- [Pattern]: [How it's used, where it's established]
-- [Pattern]: [From Phase N decision]
+- [Pattern]: [How used, where established]
 
 </established>
 
 <decisions>
 ## Implementation Decisions
 
-### [Topic 1 from discussion]
-- [Decision] [STRONG — user referenced Pinterest specifically, wants masonry grid]
-- [Decision] [WEAK — user said "probably" without strong preference]
-
-### [Topic 2 from discussion]
-- [Decision] [STRONG — user pushed back on alternative, insisted on this approach]
-
-### [Topic 3 from discussion]
-- [Decision] [DISCRETION — user said "whatever works best"]
+### [Topic]
+- [Decision] [STRONG — user referenced X specifically]
+- [Decision] [WEAK — casual agreement]
 
 ### Folded Todos
-[If any todos were folded into scope from backlog, list them here.
-Each entry should include the todo title, original problem, and how it fits this phase's scope.
-If no todos were folded: omit this subsection entirely.]
+[If any todos folded from backlog: title, original problem, how it fits.
+If none: omit subsection.]
 
 </decisions>
 
@@ -483,17 +315,10 @@ If no todos were folded: omit this subsection entirely.]
 
 **Downstream agents MUST read these before planning or implementing.**
 
-[MANDATORY section. Write the FULL accumulated canonical refs list here.
-Sources: ROADMAP.md refs + REQUIREMENTS.md refs + user-referenced docs during
-discussion + any docs discovered during codebase scout. Group by topic area.
-Every entry needs a full relative path — not just a name.]
+[MANDATORY. Full accumulated refs from ROADMAP.md + REQUIREMENTS.md + user-referenced docs + codebase scout. Group by topic. Full relative paths.]
 
-### [Topic area 1]
-- `path/to/adr-or-spec.md` — [What it decides/defines that's relevant]
-- `path/to/doc.md` §N — [Specific section reference]
-
-### [Topic area 2]
-- `path/to/feature-doc.md` — [What this doc defines]
+### [Topic area]
+- `path/to/spec.md` — [What it decides]
 
 [If no external specs: "No external specs — requirements fully captured in decisions above"]
 
@@ -503,7 +328,7 @@ Every entry needs a full relative path — not just a name.]
 ## Existing Code Insights
 
 ### Reusable Assets
-- [Component/hook/utility]: [How it could be used in this phase]
+- [Component/hook/utility]: [How it could be used]
 
 ### Established Patterns
 - [Pattern]: [How it constrains/enables this phase]
@@ -516,24 +341,17 @@ Every entry needs a full relative path — not just a name.]
 <specifics>
 ## Specific Ideas
 
-[Any particular references, examples, or "I want it like X" moments from discussion]
-
-[If none: "No specific requirements — open to standard approaches"]
+[References, examples, "I want it like X" moments. If none: "No specific requirements — open to standard approaches"]
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-[Ideas that came up but belong in other phases. Don't lose them.]
-
 ### Reviewed Todos (not folded)
-[If any todos were reviewed but not folded into scope,
-list them here so future phases know they were considered.
-Each entry: todo title + reason it was deferred (out of scope, belongs in Phase Y, etc.)
-If no reviewed-but-deferred todos: omit this subsection entirely.]
+[If any reviewed but not folded: title + reason deferred. If none: omit subsection.]
 
-[If none: "None — discussion stayed within phase scope"]
+[If no deferred ideas: "None — discussion stayed within phase scope"]
 
 </deferred>
 
@@ -557,114 +375,85 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 ### [Topic] — [count] decisions
 - [Key decision] [SIGNAL]
 
-### [Topic] — [count] decisions
-- [Key decision] [SIGNAL]
+[Summary: X total — Y strong, Z weak, W discretion]
 
-[Summary: X decisions total — Y strong, Z weak, W discretion]
-
-[If deferred ideas exist:]
+[If deferred ideas:]
 ## Noted for Later
 - [Deferred idea] — future phase
 
 ---
 
-## ▶ Next Up
+## Next Up
 
 **Phase ${PHASE}: [Name]** — [Goal from ROADMAP.md]
 
-`/gsd:plan-phase ${PHASE}`
+`/gsd2:plan-phase ${PHASE}`
 
-<sub>`/clear` first → fresh context window</sub>
+<sub>`/clear` first for fresh context window</sub>
 
 ---
 
 **Also available:**
-- `/gsd:plan-phase ${PHASE} --skip-research` — plan without research
-- `/gsd:ui-phase ${PHASE}` — generate UI design contract before planning (if phase has frontend work)
+- `/gsd2:plan-phase ${PHASE} --skip-research` — plan without research
+- `/gsd2:ui-phase ${PHASE}` — generate UI design contract (if frontend work)
 - Review/edit CONTEXT.md before continuing
-
----
 ```
 </step>
 
 <step name="git_commit">
-**Write DISCUSSION-LOG.md before committing:**
-
-**File location:** `${phase_dir}/${padded_phase}-DISCUSSION-LOG.md`
+**Write DISCUSSION-LOG.md** at `${phase_dir}/${padded_phase}-DISCUSSION-LOG.md`:
 
 ```markdown
 # Phase [X]: [Name] - Discussion Log
 
-> **Audit trail only.** Do not use as input to planning, research, or execution agents.
-> Decisions are captured in CONTEXT.md — this log preserves the conversation and reasoning.
+> **Audit trail only.** Not consumed by downstream agents. Decisions are in CONTEXT.md.
 
 **Date:** [ISO date]
-**Phase:** [phase number]-[phase name]
-**Discussion style:** Conversation-first
-**Decisions captured:** [count] ([strong count] strong, [weak count] weak, [discretion count] discretion)
+**Phase:** [number]-[name]
+**Decisions captured:** [count] ([strong] strong, [weak] weak, [discretion] discretion)
 
 ---
 
 ## Conversation Summary
 
-[For each significant topic discussed:]
-
 ### [Topic]
-**User's perspective:** [What they said, paraphrased — capture tone and emphasis]
+**User's perspective:** [Paraphrased with tone/emphasis]
 **Decision:** [What was decided]
-**Signal:** [STRONG/WEAK/DISCRETION] — [Why this signal level: "user gave detailed example" / "casual agreement" / "explicitly deferred"]
-
----
-
-[Repeat for each topic]
+**Signal:** [STRENGTH] — [Rationale]
 
 ## Established (Not Discussed)
-[Patterns from codebase that were presented but not questioned — user implicitly accepted]
+[Patterns presented but not questioned]
 
 ## Deferred Ideas
-[Ideas mentioned during discussion that were noted for future phases]
+[Ideas noted for future phases]
 ```
 
-Write file.
-
 **Write cross-phase notes (if any):**
-If cross-phase insights were gathered during conversation, append them to `.planning/cross-phase-notes.md`.
-If the file doesn't exist, create it with a header:
+If insights gathered, append to `.planning/cross-phase-notes.md`. Create with header if file doesn't exist:
 ```markdown
 # Cross-Phase Notes
 
-> Insights gathered during phase discussions that are relevant to other phases.
-> Each discuss-phase session appends here. Later discussions read this for pre-gathered context.
+> Insights from phase discussions relevant to other phases. Each session appends here.
 
 ---
 ```
 
-Then append the notes for this session.
-
-Commit phase context, discussion log, and cross-phase notes:
-
+**Commit:**
 ```bash
-# Build file list for commit
 COMMIT_FILES="${phase_dir}/${padded_phase}-CONTEXT.md ${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
 if [ -f .planning/cross-phase-notes.md ]; then
   COMMIT_FILES="$COMMIT_FILES .planning/cross-phase-notes.md"
 fi
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files $COMMIT_FILES
 ```
-
-Confirm: "Committed: docs(${padded_phase}): capture phase context"
 </step>
 
 <step name="update_state">
-Update STATE.md with session info:
-
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
   --stopped-at "Phase ${PHASE} context gathered" \
   --resume-file "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
-
-Commit STATE.md:
 
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(state): record phase ${PHASE} context session" --files .planning/STATE.md
@@ -672,97 +461,54 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(state): record
 </step>
 
 <step name="auto_advance">
-Check for auto-advance trigger:
+Check for auto-advance:
 
-1. Parse `--auto` flag from $ARGUMENTS
-2. **Sync chain flag with intent** — if user invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference):
+1. Parse `--auto` from $ARGUMENTS
+2. Sync chain flag — if manual invocation (no `--auto`), clear ephemeral chain flag (not `workflow.auto_advance`):
    ```bash
    if [[ ! "$ARGUMENTS" =~ --auto ]]; then
      node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
    fi
    ```
-3. Read both the chain flag and user preference:
+3. Read flags:
    ```bash
    AUTO_CHAIN=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
    AUTO_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
-**If `--auto` flag present AND `AUTO_CHAIN` is not true:** Persist chain flag to config (handles direct `--auto` usage without new-project):
+If `--auto` present AND `AUTO_CHAIN` not true: persist chain flag:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
 ```
 
-**If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true:**
+**If `--auto` OR `AUTO_CHAIN` true OR `AUTO_CFG` true:**
 
-Display banner:
+Display auto-advance banner, then launch via Skill tool (avoids nested Task freezes per #686):
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GSD ► AUTO-ADVANCING TO PLAN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Context captured. Launching plan-phase...
+Skill(skill="gsd2:plan-phase", args="${PHASE} --auto")
 ```
 
-Launch plan-phase using the Skill tool to avoid nested Task sessions (which cause runtime freezes due to deep agent nesting — see #686):
-```
-Skill(skill="gsd:plan-phase", args="${PHASE} --auto")
-```
+Handle return:
+- **PHASE COMPLETE** → show success, suggest `/gsd2:discuss-phase ${NEXT_PHASE} --auto` with `/clear` first
+- **PLANNING COMPLETE** → "Execution didn't finish. Continue: /gsd2:execute-phase ${PHASE}"
+- **PLANNING INCONCLUSIVE/CHECKPOINT** → "Planning needs input. Continue: /gsd2:plan-phase ${PHASE}"
+- **GAPS FOUND** → "Gaps found. Continue: /gsd2:plan-phase ${PHASE} --gaps"
 
-This keeps the auto-advance chain flat — discuss, plan, and execute all run at the same nesting level rather than spawning increasingly deep Task agents.
-
-**Handle plan-phase return:**
-- **PHASE COMPLETE** → Full chain succeeded. Display:
-  ```
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   GSD ► PHASE ${PHASE} COMPLETE
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  Auto-advance pipeline finished: discuss → plan → execute
-
-  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto
-  <sub>/clear first → fresh context window</sub>
-  ```
-- **PLANNING COMPLETE** → Planning done, execution didn't complete:
-  ```
-  Auto-advance partial: Planning complete, execution did not finish.
-  Continue: /gsd:execute-phase ${PHASE}
-  ```
-- **PLANNING INCONCLUSIVE / CHECKPOINT** → Stop chain:
-  ```
-  Auto-advance stopped: Planning needs input.
-  Continue: /gsd:plan-phase ${PHASE}
-  ```
-- **GAPS FOUND** → Stop chain:
-  ```
-  Auto-advance stopped: Gaps found during execution.
-  Continue: /gsd:plan-phase ${PHASE} --gaps
-  ```
-
-**If neither `--auto` nor config enabled:**
-Route to `confirm_creation` step (existing behavior — show manual next steps).
+**If none active:** Route to confirm_creation (manual next steps).
 </step>
 
 </process>
 
 <success_criteria>
-- Phase validated against roadmap
-- Prior context loaded (PROJECT.md, REQUIREMENTS.md, STATE.md, prior CONTEXT.md files)
-- Codebase scouted and classified into ESTABLISHED vs NEW
-- Already-decided things not re-asked (carried forward from prior phases AND codebase)
-- Genuine conversation had — not a rigid interview
-- User's energy and emphasis followed — deep where it matters, brief where it doesn't
-- Every decision has signal strength annotation [STRONG/WEAK/DISCRETION]
+- Phase validated against roadmap; prior context loaded
+- Codebase scouted: ESTABLISHED vs NEW classified
+- Already-decided things not re-asked (prior phases AND codebase)
+- Genuine conversation — user energy/emphasis followed, not rigid interview
+- Every decision has signal strength [STRONG/WEAK/DISCRETION] with variants
 - Scope creep redirected to deferred ideas
-- CONTEXT.md includes `<established>` section with codebase patterns
-- CONTEXT.md includes `<canonical_refs>` section with full file paths (MANDATORY)
-- CONTEXT.md includes `<code_context>` section with reusable assets and patterns
-- Deferred ideas preserved for future phases
-- DISCUSSION-LOG.md captures conversation reasoning and signal strength rationale
-- Cross-phase notes written if insights relevant to other phases were detected
-- Pre-existing cross-phase notes (from prior phase discussions) were loaded and validated
-- Discussion focus hints from ROADMAP.md were used to prioritize conversation (if present)
-- STATE.md updated with session info
-- User knows next steps
+- CONTEXT.md has `<established>`, `<canonical_refs>` (MANDATORY, full paths), `<code_context>` sections
+- DISCUSSION-LOG.md captures reasoning and signal rationale
+- Cross-phase notes written if relevant insights detected; prior notes loaded and validated
+- Discussion focus hints from ROADMAP.md used if present
+- STATE.md updated; user knows next steps
 </success_criteria>
-</content>
-</invoke>

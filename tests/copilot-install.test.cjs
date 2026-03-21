@@ -303,7 +303,7 @@ describe('convertClaudeToCopilotContent', () => {
 
   test('converts gsd: to gsd- in command names', () => {
     assert.strictEqual(
-      convertClaudeToCopilotContent('run /gsd:health or gsd:progress'),
+      convertClaudeToCopilotContent('run /gsd2:health or gsd:progress'),
       'run /gsd-health or gsd-progress'
     );
   });
@@ -311,7 +311,7 @@ describe('convertClaudeToCopilotContent', () => {
   test('handles mixed content in local mode', () => {
     const input = 'Config at ~/.claude/settings and $HOME/.claude/config.\n' +
       'Local at ./.claude/data and .claude/commands.\n' +
-      'Run gsd:health and /gsd:progress.';
+      'Run gsd:health and /gsd2:progress.';
     const result = convertClaudeToCopilotContent(input);
     assert.ok(result.includes('.github/settings'), 'tilde path converted to local');
     assert.ok(!result.includes('$HOME/.claude/'), '$HOME path converted');
@@ -324,7 +324,7 @@ describe('convertClaudeToCopilotContent', () => {
   test('handles mixed content in global mode', () => {
     const input = 'Config at ~/.claude/settings and $HOME/.claude/config.\n' +
       'Local at ./.claude/data and .claude/commands.\n' +
-      'Run gsd:health and /gsd:progress.';
+      'Run gsd:health and /gsd2:progress.';
     const result = convertClaudeToCopilotContent(input, true);
     assert.ok(result.includes('~/.copilot/settings'), 'tilde path converted to global');
     assert.ok(result.includes('$HOME/.copilot/config'), '$HOME path converted to global');
@@ -460,12 +460,12 @@ name: gsd:test
 description: Test skill
 ---
 
-Run gsd:health and /gsd:progress for diagnostics.`;
+Run gsd:health and /gsd2:progress for diagnostics.`;
 
     const result = convertClaudeCommandToCopilotSkill(input, 'gsd-test');
     assert.ok(result.includes('gsd-health'), 'gsd:health converted');
-    assert.ok(result.includes('/gsd-progress'), '/gsd:progress converted');
-    assert.ok(!result.match(/gsd:[a-z]/), 'no gsd: command refs remain');
+    assert.ok(result.includes('/gsd-progress'), '/gsd2:progress converted');
+    assert.ok(!result.match(/gsd2:[a-z]/), 'no gsd: command refs remain');
   });
 
   test('handles content without frontmatter (local mode)', () => {
@@ -580,7 +580,7 @@ Check ~/.claude/settings and run gsd:health.`;
     assert.ok(result.includes('.github/settings'), 'CONV-06 applied (local)');
     assert.ok(result.includes('gsd-health'), 'CONV-07 applied');
     assert.ok(!result.includes('~/.claude/'), 'no ~/.claude/ remains');
-    assert.ok(!result.match(/gsd:[a-z]/), 'no gsd: command refs remain');
+    assert.ok(!result.match(/gsd2:[a-z]/), 'no gsd: command refs remain');
   });
 
   test('applies CONV-06 and CONV-07 to body (global mode)', () => {
@@ -644,7 +644,7 @@ describe('copyCommandsAsCopilotSkills', () => {
       assert.ok(!skillContent.includes('allowed-tools:\n  -'), 'NOT YAML multiline format');
       // CONV-06/07 applied
       assert.ok(!skillContent.includes('~/.claude/'), 'no ~/.claude/ references');
-      assert.ok(!skillContent.match(/gsd:[a-z]/), 'no gsd: command references');
+      assert.ok(!skillContent.match(/gsd2:[a-z]/), 'no gsd: command references');
     } finally {
       fs.rmSync(tempDir, { recursive: true });
     }
@@ -688,10 +688,10 @@ describe('copyCommandsAsCopilotSkills', () => {
     const result = convertClaudeToCopilotContent(srcContent);
 
     // gsd:autonomous references should be converted to gsd-autonomous
-    assert.ok(!result.match(/gsd:[a-z]/), 'no gsd: command references remain after conversion');
+    assert.ok(!result.match(/gsd2:[a-z]/), 'no gsd: command references remain after conversion');
     // Specific: gsd:discuss-phase, gsd:plan-phase, gsd:execute-phase mentioned in body
     // The body references gsd-tools.cjs (not a gsd: command) — those should be unaffected
-    // But /gsd:autonomous → /gsd-autonomous, gsd:discuss-phase → gsd-discuss-phase etc.
+    // But /gsd2:autonomous → /gsd-autonomous, gsd:discuss-phase → gsd-discuss-phase etc.
     if (srcContent.includes('gsd:autonomous')) {
       assert.ok(result.includes('gsd-autonomous'), 'gsd:autonomous converted to gsd-autonomous');
     }
@@ -772,7 +772,7 @@ describe('Copilot content conversion - engine files', () => {
 
     assert.ok(!result.includes('~/.claude/'), 'no ~/.claude/ references remain');
     assert.ok(!result.includes('$HOME/.claude/'), 'no $HOME/.claude/ references remain');
-    assert.ok(!result.match(/\/gsd:[a-z]/), 'no /gsd: command references remain');
+    assert.ok(!result.match(/\/gsd2:[a-z]/), 'no /gsd2: command references remain');
     assert.ok(!result.match(/(?<!\/)gsd:[a-z]/), 'no bare gsd: command references remain');
     // Local mode: ~ and $HOME resolve to .github (repo-relative, no ./ prefix)
     assert.ok(result.includes('.github/'), 'paths converted to .github for local');
@@ -800,7 +800,7 @@ describe('Copilot content conversion - engine files', () => {
     );
     const result = convertClaudeToCopilotContent(verifyCjs);
 
-    assert.ok(!result.match(/gsd:[a-z]/), 'no gsd: references remain');
+    assert.ok(!result.match(/gsd2:[a-z]/), 'no gsd: references remain');
     assert.ok(result.includes('gsd-new-project'), 'gsd:new-project converted');
     assert.ok(result.includes('gsd-health'), 'gsd:health converted');
   });
@@ -1079,13 +1079,13 @@ describe('Copilot manifest and patches fixes', () => {
       assert.ok(result.length > 0, 'returns patched files list');
       const output = logs.join('\n');
       assert.ok(output.includes('/gsd-reapply-patches'), 'uses dash format for Copilot');
-      assert.ok(!output.includes('/gsd:reapply-patches'), 'does not use colon format');
+      assert.ok(!output.includes('/gsd2:reapply-patches'), 'does not use colon format');
     } finally {
       console.log = originalLog;
     }
   });
 
-  test('reportLocalPatches shows /gsd:reapply-patches for Claude (unchanged)', () => {
+  test('reportLocalPatches shows /gsd2:reapply-patches for Claude (unchanged)', () => {
     // Create patches directory with metadata
     const patchesDir = path.join(tmpDir, 'gsd-local-patches');
     fs.mkdirSync(patchesDir, { recursive: true });
@@ -1104,7 +1104,7 @@ describe('Copilot manifest and patches fixes', () => {
 
       assert.ok(result.length > 0, 'returns patched files list');
       const output = logs.join('\n');
-      assert.ok(output.includes('/gsd:reapply-patches'), 'uses colon format for Claude');
+      assert.ok(output.includes('/gsd2:reapply-patches'), 'uses colon format for Claude');
     } finally {
       console.log = originalLog;
     }

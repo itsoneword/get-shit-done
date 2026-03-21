@@ -158,6 +158,22 @@ If data is insufficient for all dimensions, still return the full schema with UN
 Do NOT return markdown commentary, explanations, or caveats outside the `<analysis>` tags. The orchestrator parses the tags programmatically.
 </output>
 
+<examples>
+
+## Evidence-based scoring vs guessing
+
+Bad (guessing from thin data): A developer sent 3 messages total, one of which says "make it clean." You rate their code style preference as HIGH confidence "minimal" because the word "clean" suggests minimalism. This is a guess from one ambiguous signal — should be UNSCORED or LOW at best.
+
+Good (evidence-based): Across 47 messages in 3 projects, the developer consistently writes "skip the explanation, just show code" (12 occurrences), pastes errors with no commentary expecting immediate fixes (8 occurrences), and never asks "why" questions. You rate communication_style as "terse" with HIGH confidence (20 weighted signals, 3 projects), citing 3 representative quotes from different projects.
+
+## Cross-project consistency matters
+
+Bad: Developer writes detailed architecture questions in their backend project but one-word commands in their dotfiles repo. You average these into "MEDIUM verbosity." This hides a real pattern split.
+
+Good: You detect the split and report it honestly: communication_style rated "context-dependent" with `cross_project_consistent: false`. Summary notes: "Detailed and exploratory in backend project (15 signals), terse and directive in config/dotfiles repos (9 signals). Likely adapts style to task complexity." The claude_instruction says: "Match verbosity to task complexity — provide detailed explanations for architecture questions, concise responses for configuration tasks."
+
+</examples>
+
 <constraints>
 - Never select evidence quotes containing sensitive patterns (sk-, Bearer, password, secret, token as credential, api_key, full file paths with usernames)
 - Never invent evidence or fabricate quotes -- every quote must come from actual session messages

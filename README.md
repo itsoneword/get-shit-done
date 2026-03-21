@@ -56,19 +56,66 @@ Result: 10-15 questions across 5 phases instead of 5 × 4 = 20, because answers 
 
 Roadmapper now generates `**Discussion focus**:` per phase — what's ambiguous and needs user input. Discuss-phase reads this to prioritize conversation.
 
+**5. Specialist-in-the-loop during discussion** (done)
+
+Technical questions during discuss-phase are now answered by a specialist agent instead of the user. Before asking any implementation/architecture question, the orchestrator classifies it:
+
+- **PREFERENCE** (user taste/priority) → ask user directly
+- **TECHNICAL** (domain constraints, ecosystem standards) → spawn `gsd-phase-researcher` in micro-research mode, present recommendation
+- **HYBRID** (technical feasibility shapes options) → research first, present viable options to user
+
+```
+BEFORE: "Should we use REST or WebSocket for HFT data?" → user guesses
+AFTER:  Specialist researches → "WebSocket — REST adds 50-200ms latency,
+        unviable for HFT [HIGH confidence]" → user confirms
+```
+
+New signal strength types: `[STRONG, specialist-backed]`, `[WEAK, specialist-backed]`, `[STRONG, user-override]`.
+
+**6. Agent prompt optimization** (done)
+
+All 15 agent definitions rewritten based on current best practices research:
+
+- **9,210 → 4,961 lines** (-46%) with **47 concrete examples** added
+- Replaced prescriptive step-by-step with broad goals (smarter models need simpler prompts)
+- Replaced aggressive language (CRITICAL/MUST/NEVER) with normal prose explaining WHY
+- Added good-vs-bad examples to every agent (exemplars outperform instructions per NeurIPS 2024)
+- Research backing: `docs/RESEARCH-agent-best-practices.md` (Anthropic docs, academic papers, all with source URLs)
+
+**7. Workflow prompt optimization** (done)
+
+All 49 workflow files optimized for orchestrator token efficiency:
+
+- **16,176 → 12,708 lines** (-21%) — different approach than agents since workflows are procedural orchestration, not behavioral prompts
+- Cut redundancy and meta-commentary while preserving all procedural steps
+- Added WHY to emphasized constraints, capped at 3-5 per file
+- Moved critical instructions to end of files (30% quality improvement per Anthropic research)
+- Research backing: `docs/RESEARCH-workflow-optimization.md`
+
+**8. Namespace migration to gsd2** (done)
+
+- All commands renamed from `/gsd:*` to `/gsd2:*`
+- Installer auto-cleans old `commands/gsd/` directory during upgrade
+- `.planning/` data is fully backward compatible
+
 ### What's NOT Changed
 
-- new-project workflow (already good)
-- plan-phase, execute-phase, verify-work (working well)
-- All agents, gsd-tools CLI, hooks
-- Installation, runtime support
+- `.planning/` file formats (STATE.md, CONTEXT.md, PLAN.md, etc.)
+- gsd-tools CLI interface and JSON output
+- Installation and runtime support (Claude Code, Gemini, Codex, Copilot, Cursor, Antigravity)
 
 ## Install
 
 ```bash
-git clone -b discuss-phase-v2 https://github.com/itsoneword/get-shit-done.git
+npx gsd2@latest
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/itsoneword/get-shit-done.git
 cd get-shit-done
-node bin/install.js
+npm run dev
 ```
 
 ## Architecture Visualizations

@@ -43,7 +43,7 @@ description: Plan a phase
 ---
 
 Next:
-/gsd:execute-phase 17
+/gsd2:execute-phase 17
 /gsd-help
 gsd:progress
 `;
@@ -53,7 +53,7 @@ gsd:progress
     assert.ok(result.includes('/gsd-execute-phase 17'), 'slash command remains slash-prefixed');
     assert.ok(result.includes('/gsd-help'), 'existing slash command is preserved');
     assert.ok(result.includes('gsd-progress'), 'non-slash gsd: references still normalize');
-    assert.ok(!result.includes('/gsd:execute-phase'), 'legacy colon command form is removed');
+    assert.ok(!result.includes('/gsd2:execute-phase'), 'legacy colon command form is removed');
   });
 });
 

@@ -22,7 +22,7 @@ AUDITOR_MODEL=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-mod
 NYQUIST_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config get workflow.nyquist_validation --raw)
 ```
 
-If `NYQUIST_CFG` is `false`: exit with "Nyquist validation is disabled. Enable via /gsd:settings."
+MUST exit if `NYQUIST_CFG` is `false`: "Nyquist validation is disabled. Enable via /gsd2:settings."
 
 Display banner: `GSD > VALIDATE PHASE {N}: {name}`
 
@@ -35,7 +35,7 @@ SUMMARY_FILES=$(ls "${PHASE_DIR}"/*-SUMMARY.md 2>/dev/null)
 
 - **State A** (`VALIDATION_FILE` non-empty): Audit existing
 - **State B** (`VALIDATION_FILE` empty, `SUMMARY_FILES` non-empty): Reconstruct from artifacts
-- **State C** (`SUMMARY_FILES` empty): Exit — "Phase {N} not executed. Run /gsd:execute-phase {N} first."
+- **State C** (`SUMMARY_FILES` empty): MUST exit — "Phase {N} not executed. Run /gsd2:execute-phase {N} first."
 
 ## 2. Discovery
 
@@ -104,14 +104,9 @@ Handle return:
 
 ## 6. Generate/Update VALIDATION.md
 
-**State B (create):**
-1. Read template from `~/.claude/get-shit-done/templates/VALIDATION.md`
-2. Fill: frontmatter, Test Infrastructure, Per-Task Map, Manual-Only, Sign-Off
-3. Write to `${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md`
+State B (create): Read `~/.claude/get-shit-done/templates/VALIDATION.md`, fill frontmatter/Test Infrastructure/Per-Task Map/Manual-Only/Sign-Off, write to `${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md`.
 
-**State A (update):**
-1. Update Per-Task Map statuses, add escalated to Manual-Only, update frontmatter
-2. Append audit trail:
+State A (update): Update Per-Task Map statuses, add escalated to Manual-Only, update frontmatter. Append:
 
 ```markdown
 ## Validation Audit {date}
@@ -133,18 +128,18 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PHASE}
 
 ## 8. Results + Routing
 
-**Compliant:**
+Compliant:
 ```
 GSD > PHASE {N} IS NYQUIST-COMPLIANT
 All requirements have automated verification.
-▶ Next: /gsd:audit-milestone
+▶ Next: /gsd2:audit-milestone
 ```
 
-**Partial:**
+Partial:
 ```
 GSD > PHASE {N} VALIDATED (PARTIAL)
 {M} automated, {K} manual-only.
-▶ Retry: /gsd:validate-phase {N}
+▶ Retry: /gsd2:validate-phase {N}
 ```
 
 Display `/clear` reminder.

@@ -110,11 +110,11 @@ description: Test agent
 tools: Read
 ---
 
-Run /gsd:execute-phase to proceed.`;
+Run /gsd2:execute-phase to proceed.`;
 
     const result = convertClaudeAgentToCodexAgent(input);
     assert.ok(result.includes('$gsd-execute-phase'), 'converts slash commands');
-    assert.ok(!result.includes('/gsd:execute-phase'), 'original slash command removed');
+    assert.ok(!result.includes('/gsd2:execute-phase'), 'original slash command removed');
   });
 
   test('handles content without frontmatter', () => {

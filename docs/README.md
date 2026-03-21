@@ -17,7 +17,7 @@ Comprehensive documentation for the Get Shit Done (GSD) framework — a meta-pro
 
 ## Quick Links
 
-- **Getting started:** [README](../README.md) → install → `/gsd:new-project`
+- **Getting started:** [README](../README.md) → install → `/gsd2:new-project`
 - **Full workflow walkthrough:** [User Guide](USER-GUIDE.md)
 - **All commands at a glance:** [Command Reference](COMMANDS.md)
 - **Configuring GSD:** [Configuration Reference](CONFIGURATION.md)

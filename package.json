@@ -1,7 +1,7 @@
 {
   "name": "gsd2",
-  "version": "1.0.0",
-  "description": "Experimental fork of GSD with conversation-first discussion, signal strength, and cross-phase pollination. Based on get-shit-done by TÂCHES.",
+  "version": "1.2.0",
+  "description": "Experimental fork of GSD with conversation-first discussion, signal strength, cross-phase pollination, and specialist-in-the-loop technical question triage. Based on get-shit-done by TÂCHES.",
   "bin": {
     "gsd2": "bin/install.js"
   },
@@ -44,6 +44,7 @@
   },
   "scripts": {
     "build:hooks": "node scripts/build-hooks.js",
+    "dev": "npm run build:hooks && node bin/install.js --local",
     "prepublishOnly": "npm run build:hooks",
     "test": "node scripts/run-tests.cjs",
     "test:coverage": "c8 --check-coverage --lines 70 --reporter text --include 'get-shit-done/bin/lib/*.cjs' --exclude 'tests/**' --all node scripts/run-tests.cjs"

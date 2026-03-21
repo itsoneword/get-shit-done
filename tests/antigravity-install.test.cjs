@@ -143,15 +143,15 @@ describe('convertClaudeToAntigravityContent', () => {
   });
 
   describe('command name conversion', () => {
-    test('converts /gsd:command to /gsd-command', () => {
-      const input = 'Run /gsd:new-project to start';
+    test('converts /gsd2:command to /gsd-command', () => {
+      const input = 'Run /gsd2:new-project to start';
       const result = convertClaudeToAntigravityContent(input, true);
       assert.ok(result.includes('/gsd-new-project'), result);
       assert.ok(!result.includes('gsd:'), result);
     });
 
     test('converts all gsd: references', () => {
-      const input = '/gsd:plan-phase and /gsd:execute-phase';
+      const input = '/gsd2:plan-phase and /gsd2:execute-phase';
       const result = convertClaudeToAntigravityContent(input, false);
       assert.ok(result.includes('/gsd-plan-phase'), result);
       assert.ok(result.includes('/gsd-execute-phase'), result);
@@ -209,7 +209,7 @@ Initialize new project at ~/.claude/get-shit-done/workflows/new-project.md
 name: test
 description: test skill
 ---
-Run /gsd:new-project to get started.
+Run /gsd2:new-project to get started.
 `;
     const result = convertClaudeCommandToAntigravitySkill(content, 'gsd-test', false);
     assert.ok(result.includes('/gsd-new-project'), result);
@@ -300,7 +300,7 @@ allowed-tools:
   - Read
   - Write
 ---
-Run /gsd:new-project to start.
+Run /gsd2:new-project to start.
 `);
 
     // Create a subdirectory command
