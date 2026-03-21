@@ -97,11 +97,13 @@ process.stdin.on('end', () => {
     if (fs.existsSync(cacheFile)) {
       try {
         const cache = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
-        if (cache.update_available) {
-          gsdUpdate = '\x1b[33m⬆ /gsd2:update\x1b[0m │ ';
-        }
-        if (cache.stale_hooks && cache.stale_hooks.length > 0) {
-          gsdUpdate += '\x1b[31m⚠ stale hooks — run /gsd2:update\x1b[0m │ ';
+        if (!cache.dev_mode) {
+          if (cache.update_available) {
+            gsdUpdate = '\x1b[33m⬆ /gsd2:update\x1b[0m │ ';
+          }
+          if (cache.stale_hooks && cache.stale_hooks.length > 0) {
+            gsdUpdate += '\x1b[31m⚠ stale hooks — run /gsd2:update\x1b[0m │ ';
+          }
         }
       } catch (e) {}
     }

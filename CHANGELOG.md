@@ -2,6 +2,13 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.2.1] - 2026-03-21
+
+### Fixed
+- **Update checker false positive in dev mode** — skip npm version check when running from GSD source repo
+- **Stale hooks false positive** — added missing version header to workflow-guard hook
+- **Build version stamping** — `build-hooks.js` now replaces `{{GSD_VERSION}}` placeholder in dist hooks
+
 ## [1.0.0] - 2026-03-20
 
 ### Changed

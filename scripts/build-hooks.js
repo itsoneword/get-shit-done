@@ -67,7 +67,15 @@ function build() {
     }
 
     console.log(`\x1b[32m✓\x1b[0m Copying ${hook}...`);
-    fs.copyFileSync(src, dest);
+    // Stamp {{GSD_VERSION}} placeholder with actual version from package.json
+    let content = fs.readFileSync(src, 'utf8');
+    if (content.includes('{{GSD_VERSION}}')) {
+      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+      content = content.replace(/\{\{GSD_VERSION\}\}/g, pkg.version);
+      fs.writeFileSync(dest, content);
+    } else {
+      fs.copyFileSync(src, dest);
+    }
   }
 
   if (hasErrors) {

@@ -90,17 +90,32 @@ const child = spawn(process.execPath, ['-e', `
     } catch (e) {}
   }
 
-  let latest = null;
+  // Dev mode detection: if cwd is the GSD source repo, skip npm check
+  let devMode = false;
   try {
-    latest = execSync('npm view get-shit-done-cc version', { encoding: 'utf8', timeout: 10000, windowsHide: true }).trim();
+    const cwdPkg = path.join(process.cwd(), 'package.json');
+    if (fs.existsSync(cwdPkg)) {
+      const pkg = JSON.parse(fs.readFileSync(cwdPkg, 'utf8'));
+      if (pkg.name === 'gsd2' || pkg.name === 'get-shit-done-cc') {
+        devMode = true;
+      }
+    }
   } catch (e) {}
 
+  let latest = null;
+  if (!devMode) {
+    try {
+      latest = execSync('npm view get-shit-done-cc version', { encoding: 'utf8', timeout: 10000, windowsHide: true }).trim();
+    } catch (e) {}
+  }
+
   const result = {
-    update_available: latest && installed !== latest,
+    update_available: !devMode && latest && installed !== latest,
     installed,
     latest: latest || 'unknown',
     checked: Math.floor(Date.now() / 1000),
-    stale_hooks: staleHooks.length > 0 ? staleHooks : undefined
+    stale_hooks: staleHooks.length > 0 ? staleHooks : undefined,
+    dev_mode: devMode || undefined
   };
 
   fs.writeFileSync(cacheFile, JSON.stringify(result));
