@@ -62,14 +62,10 @@ YOLO implicit. Ask remaining config in 2 rounds:
 
 **Round 1 — Core settings:**
 
+**Granularity (AI-recommended):** Analyze the provided document's scope and complexity, then recommend a granularity with brief reasoning (same approach as Step 5 manual mode). Present as plain text recommendation, let user confirm or adjust.
+
 ```
 AskUserQuestion([
-  { header: "Granularity", question: "How finely should scope be sliced into phases?", multiSelect: false,
-    options: [
-      { label: "Coarse (Recommended)", description: "Fewer, broader phases (3-5 phases, 1-3 plans each)" },
-      { label: "Standard", description: "Balanced phase size (5-8 phases, 3-5 plans each)" },
-      { label: "Fine", description: "Many focused phases (8-12 phases, 5-10 plans each)" }
-    ] },
   { header: "Execution", question: "Run plans in parallel?", multiSelect: false,
     options: [
       { label: "Parallel (Recommended)", description: "Independent plans run simultaneously" },
@@ -254,21 +250,40 @@ AskUserQuestion([
 ```
 If "Yes": use those values, skip to **Commit config.json** below.
 
-**Round 1 — Core settings (4 questions):**
+**Round 1 — Core settings:**
 
+**Step 1: Mode**
 ```
-questions: [
+AskUserQuestion([
   { header: "Mode", question: "How do you want to work?", multiSelect: false,
     options: [
       { label: "YOLO (Recommended)", description: "Auto-approve, just execute" },
       { label: "Interactive", description: "Confirm at each step" }
-    ] },
-  { header: "Granularity", question: "How finely should scope be sliced into phases?", multiSelect: false,
-    options: [
-      { label: "Coarse", description: "Fewer, broader phases (3-5 phases, 1-3 plans each)" },
-      { label: "Standard", description: "Balanced phase size (5-8 phases, 3-5 plans each)" },
-      { label: "Fine", description: "Many focused phases (8-12 phases, 5-10 plans each)" }
-    ] },
+    ] }
+])
+```
+
+**Step 2: Granularity (AI-recommended)**
+
+Based on what you learned about the project during questioning (scope, complexity, number of features, technical domains involved), recommend a granularity level with reasoning:
+
+```
+"Based on what we discussed, I'd recommend **[Coarse/Standard/Fine]** granularity for this project.
+
+**Why:** [1-2 sentences explaining the reasoning — e.g., "This is a focused project with 3 main features and a single technical domain, so fewer broader phases will avoid overhead" or "This has multiple independent subsystems (auth, API, UI, data pipeline) that benefit from dedicated phases"]
+
+- **Coarse** — 3-5 phases, 1-3 plans each (best for focused projects, single domain)
+- **Standard** — 5-8 phases, 3-5 plans each (balanced, multiple features)
+- **Fine** — 8-12 phases, 5-10 plans each (complex systems, many independent parts)
+
+Does that work, or would you prefer a different level?"
+```
+
+Let the user confirm or pick differently via plain text. Don't use AskUserQuestion for this — the reasoning context matters more than a quick menu pick.
+
+**Step 3: Execution + Git**
+```
+AskUserQuestion([
   { header: "Execution", question: "Run plans in parallel?", multiSelect: false,
     options: [
       { label: "Parallel (Recommended)", description: "Independent plans run simultaneously" },
@@ -279,7 +294,7 @@ questions: [
       { label: "Yes (Recommended)", description: "Planning docs tracked in version control" },
       { label: "No", description: "Keep .planning/ local-only (add to .gitignore)" }
     ] }
-]
+])
 ```
 
 **Round 2 — Workflow agents:**
