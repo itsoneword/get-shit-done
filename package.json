@@ -1,6 +1,6 @@
 {
   "name": "gsd2",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Experimental fork of GSD with conversation-first discussion, signal strength, cross-phase pollination, and specialist-in-the-loop technical question triage. Based on get-shit-done by TÂCHES.",
   "bin": {
     "gsd2": "bin/install.js"
