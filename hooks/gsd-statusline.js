@@ -108,12 +108,26 @@ process.stdin.on('end', () => {
       } catch (e) {}
     }
 
+    // GSD version from VERSION file
+    let gsdVersion = '';
+    for (const base of [process.cwd(), homeDir]) {
+      for (const rdir of ['.claude', '.config/opencode', '.opencode', '.gemini', '.codex']) {
+        const vFile = path.join(base, rdir, 'get-shit-done', 'VERSION');
+        if (fs.existsSync(vFile)) {
+          try { gsdVersion = fs.readFileSync(vFile, 'utf8').trim(); } catch (e) {}
+          if (gsdVersion) break;
+        }
+      }
+      if (gsdVersion) break;
+    }
+    const gsdLabel = gsdVersion ? `\x1b[36mGSD v${gsdVersion}\x1b[0m │ ` : '';
+
     // Output
     const dirname = path.basename(dir);
     if (task) {
-      process.stdout.write(`${gsdUpdate}\x1b[2m${model}\x1b[0m │ \x1b[1m${task}\x1b[0m │ \x1b[2m${dirname}\x1b[0m${ctx}`);
+      process.stdout.write(`${gsdUpdate}${gsdLabel}\x1b[2m${model}\x1b[0m │ \x1b[1m${task}\x1b[0m │ \x1b[2m${dirname}\x1b[0m${ctx}`);
     } else {
-      process.stdout.write(`${gsdUpdate}\x1b[2m${model}\x1b[0m │ \x1b[2m${dirname}\x1b[0m${ctx}`);
+      process.stdout.write(`${gsdUpdate}${gsdLabel}\x1b[2m${model}\x1b[0m │ \x1b[2m${dirname}\x1b[0m${ctx}`);
     }
   } catch (e) {
     // Silent fail - don't break statusline on parse errors
