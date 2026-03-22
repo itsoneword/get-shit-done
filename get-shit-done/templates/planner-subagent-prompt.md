@@ -49,8 +49,35 @@ Before returning PLANNING COMPLETE:
 - [ ] Tasks are specific and actionable
 - [ ] Dependencies correctly identified
 - [ ] Waves assigned for parallel execution
-- [ ] must_haves derived from phase goal
+- [ ] must_haves derived from phase goal AND Expected Outcome in CONTEXT.md (if present)
+- [ ] Assumptions flagged in ## ASSUMPTIONS section
 </quality_gate>
+
+<assumption_tracking>
+When making decisions not explicitly covered by CONTEXT.md or user input, mark them as assumptions.
+
+After all PLAN.md files, output a ## ASSUMPTIONS section listing decisions you made without explicit user direction:
+
+```markdown
+## ASSUMPTIONS
+
+| Decision | In Plan | Type | Why assumed |
+|----------|---------|------|-------------|
+| Using modal dialog for confirmation | 01-PLAN | preference | No UI guidance in CONTEXT.md for confirmation flow |
+| Redirecting to dashboard after completion | 02-PLAN | preference | Expected Outcome says "user sees it working" but doesn't specify where |
+| Using react-hook-form for validation | 01-PLAN | technical | Matches existing codebase pattern |
+
+**Type key:**
+- `preference` — UX/design/flow choice the user might care about. Orchestrator may surface these for user confirmation.
+- `technical` — Implementation detail resolved from codebase patterns or best practices. No user input needed.
+```
+
+**Rules:**
+- Only flag decisions where reasonable alternatives exist (don't flag obvious choices)
+- `preference` = the user might want it differently (UI layout, flow, wording, behavior)
+- `technical` = resolved by codebase conventions or engineering best practices
+- If CONTEXT.md has an Expected Outcome section, derive must_haves from it — not just the ROADMAP goal line
+</assumption_tracking>
 ```
 
 ---

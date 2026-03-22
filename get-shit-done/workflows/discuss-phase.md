@@ -189,6 +189,31 @@ Have a genuine conversation — collaborative thinking, NOT structured interview
 Tell me about how you see this phase. What's the most important thing to get right?
 ```
 
+**Then: Establish the outcome before diving into implementation.**
+
+<outcome_discovery>
+Before discussing HOW to build, understand WHAT the end state looks like.
+
+After the user responds to your opening, ask about the outcome — naturally, not as a rigid checklist. The goal is to understand what "done" means from the user's perspective.
+
+**Good outcome questions (adapt to context, don't ask all):**
+- "What does the end state look like? The user finishes [this flow / using this feature], and then what?"
+- "When this phase is done and working, what does the user see or do?"
+- "How will you know this phase succeeded — what would you check?"
+
+**Bad outcome questions (avoid):**
+- "How should it feel?" — too vague, invites hand-wavy answers
+- "Walk me through the UX of step 3" — too detailed too early, that's implementation
+- "What emotions should the user experience?" — not actionable
+
+**The right depth:** Capture general shape, not every detail. "User finishes setup, sees confirmation, gets redirected to dashboard where they see it working" is perfect. Don't push for "what color is the confirmation banner."
+
+**Transition to implementation:** Once you have the outcome, anchor the rest of the conversation:
+"Good — so the end state is [X]. Now let's talk about how we get there."
+
+Outcome answers flow into `## Expected Outcome` in CONTEXT.md. The planner uses this to derive `must_haves` — what must be TRUE for the phase goal to be achieved.
+</outcome_discovery>
+
 Then follow the conversation naturally.
 
 <question_triage>
@@ -309,6 +334,20 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 If none: omit subsection.]
 
 </decisions>
+
+<expected_outcome>
+## Expected Outcome
+
+[What "done" looks like from the user's perspective. Captured during outcome discovery.
+This is the north star for planning — the planner derives must_haves from this section.
+Keep it at the general level: end state, what the user sees, how they know it worked.
+Don't include implementation details — those belong in Implementation Decisions above.]
+
+- **End state:** [What the user sees/has when the phase is complete]
+- **Success signal:** [How the user knows it worked]
+- **Flow:** [High-level journey: user does X → sees Y → ends up at Z]
+
+</expected_outcome>
 
 <canonical_refs>
 ## Canonical References

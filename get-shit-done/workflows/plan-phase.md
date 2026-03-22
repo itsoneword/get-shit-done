@@ -469,7 +469,8 @@ Every task MUST include these fields — they are NOT optional:
 - [ ] Every `<action>` contains concrete values (no "align X with Y" without specifying what)
 - [ ] Dependencies correctly identified
 - [ ] Waves assigned for parallel execution
-- [ ] must_haves derived from phase goal
+- [ ] must_haves derived from phase goal AND Expected Outcome in CONTEXT.md (if present)
+- [ ] Assumptions flagged in ## ASSUMPTIONS section (see planner-subagent-prompt.md)
 </quality_gate>
 ```
 
@@ -484,9 +485,74 @@ Task(
 
 ## 9. Handle Planner Return
 
-- **`## PLANNING COMPLETE`:** Display plan count. If `--skip-verify` or `plan_checker_enabled` is false (from init): skip to step 13. Otherwise: step 10.
+- **`## PLANNING COMPLETE`:** Display plan count. Check for `## ASSUMPTIONS` section → proceed to step 9.5. If no assumptions, skip to step 10 (or step 13 if `--skip-verify`).
 - **`## CHECKPOINT REACHED`:** Present to user, get response, spawn continuation (step 12)
 - **`## PLANNING INCONCLUSIVE`:** Show attempts, offer: Add context / Retry / Manual
+
+## 9.5. Preference Gap Check
+
+**Skip if:** `--auto` flag is present OR no `## ASSUMPTIONS` section in planner output.
+
+The planner outputs an `## ASSUMPTIONS` table listing decisions it made without explicit user input. Each is typed as `preference` (user might care) or `technical` (resolved by codebase/best practices).
+
+**Step 1:** Filter for `preference` assumptions only. Technical assumptions are resolved — don't bother the user.
+
+**Step 2:** If no preference assumptions → skip to step 10.
+
+**Step 3:** Surface preference assumptions to user:
+
+```
+## Planner Assumptions
+
+The planner made {N} decisions without explicit input from you.
+Technical choices (based on codebase patterns) were resolved automatically.
+These are **preference decisions** where you might want something different:
+
+| # | Decision | In Plan | Why assumed |
+|---|----------|---------|-------------|
+| 1 | {decision} | {plan} | {reason} |
+| 2 | {decision} | {plan} | {reason} |
+
+Options:
+1. **Approve all** — these assumptions are fine, continue
+2. **Adjust some** — I want to change specific ones
+3. **Review plans first** — let me read the plans before deciding
+```
+
+Use AskUserQuestion with these 3 options.
+
+- **"Approve all":** Continue to step 10.
+- **"Review plans first":** Display plan files, then re-present assumptions.
+- **"Adjust some":** Ask which to change (plain text). For each adjustment, spawn targeted revision:
+
+```markdown
+<revision_context>
+**Phase:** {phase_number}
+**Mode:** assumption_update
+
+<files_to_read>
+- {PHASE_DIR}/*-PLAN.md (Existing plans)
+</files_to_read>
+
+**User corrections to assumptions:**
+{list of changed assumptions with user's preferred approach}
+
+Update affected plans to reflect these preferences. Do not replan from scratch.
+</revision_context>
+```
+
+```
+Task(
+  prompt=revision_prompt,
+  subagent_type="gsd-planner",
+  model="{planner_model}",
+  description="Update assumptions Phase {phase}"
+)
+```
+
+After revision → continue to step 10.
+
+**Auto mode (`--auto`):** Skip entirely — all assumptions accepted.
 
 ## 10. Spawn gsd-plan-checker Agent
 

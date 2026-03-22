@@ -600,7 +600,7 @@ Task completion ≠ Goal achievement. A task "create chat component" can complet
 
 **Verification flow:**
 
-1. Plan-phase derives must_haves from phase goal (goal-backward)
+1. Plan-phase derives must_haves from phase goal AND Expected Outcome in CONTEXT.md (goal-backward)
 2. Must_haves written to PLAN.md frontmatter
 3. Execute-phase runs all plans
 4. Verification subagent checks must_haves against codebase
