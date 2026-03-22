@@ -1,5 +1,5 @@
 <purpose>
-Check for GSD updates via npm, display changelog for versions between installed and latest, obtain user confirmation, and execute clean installation with cache clearing.
+Check for GSD updates via GitHub, display changelog for versions between installed and latest, obtain user confirmation, and execute clean installation with cache clearing.
 </purpose>
 
 <process>
