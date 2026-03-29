@@ -4,6 +4,9 @@ Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done)
 
 ## [1.3.2] - 2026-03-29
 
+### Changed
+- **`/gsd2:progress` command** — now always displays a full phase table with status icons and descriptions
+
 ### Added
 - **`/gsd2:fix` command** — post-execution issue fixing with dependency awareness. After executing a phase, list what's wrong and the fixer classifies each issue (current-phase / regression / not-yet-built), maps dependencies before changing code, and fixes without cascading breakage
 - **`gsd-fixer` agent** — example-driven agent design based on research best practices. Four concrete naive-vs-smart examples guide behavior instead of prescriptive rules

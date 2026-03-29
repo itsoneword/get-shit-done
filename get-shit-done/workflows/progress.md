@@ -62,6 +62,16 @@ PROGRESS_BAR=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" progress bar
 **Progress:** {PROGRESS_BAR}
 **Profile:** [quality/balanced/budget/inherit]
 
+## Phases
+
+| # | Phase | Status | Description |
+|---|-------|--------|-------------|
+| [N] | [phase-name] | [status icon + label] | [goal from roadmap] |
+
+Status icons: ✓ complete | ▶ in progress | ○ planned | - not started
+Mark current phase with **bold**.
+Derive status per phase from `$ROADMAP.phases[]`: if summaries = plans > 0 → complete, if summaries > 0 but < plans → in progress, if plans > 0 but summaries = 0 → planned, else not started.
+
 ## Recent Work
 - [Phase X, Plan Y]: [1-line from summary-extract]
 - [Phase X, Plan Z]: [1-line from summary-extract]
