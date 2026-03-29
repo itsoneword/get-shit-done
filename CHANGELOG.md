@@ -2,6 +2,25 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.3.2] - 2026-03-29
+
+### Added
+- **`/gsd2:fix` command** — post-execution issue fixing with dependency awareness. After executing a phase, list what's wrong and the fixer classifies each issue (current-phase / regression / not-yet-built), maps dependencies before changing code, and fixes without cascading breakage
+- **`gsd-fixer` agent** — example-driven agent design based on research best practices. Four concrete naive-vs-smart examples guide behavior instead of prescriptive rules
+
+### Removed
+- **`/gsd2:fast` command** — trivial inline task execution (no longer needed; just ask directly)
+- **`/gsd2:quick` command** — ad-hoc task execution with planning (replaced by phase workflow + `/gsd2:fix`)
+- **`quick_branch_template` config** — removed with quick command
+- Quick task tests (`quick-branching.test.cjs`, `quick-research.test.cjs`)
+
+### Changed
+- **Workflow guard hook** — now suggests `/gsd2:fix` instead of fast/quick
+- **`/gsd2:do` router** — routes fix/broken/issue inputs to `/gsd2:fix`
+- **Help reference** — replaced Quick Mode section with Fixing Issues section
+- **CLAUDE.md template** — references `/gsd2:fix` instead of `/gsd2:quick`
+- Updated all docs (COMMANDS, AGENTS, ARCHITECTURE, FEATURES, USER-GUIDE, CLI-TOOLS, CONFIGURATION)
+
 ## [1.2.1] - 2026-03-21
 
 ### Fixed

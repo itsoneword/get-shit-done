@@ -402,10 +402,6 @@ Equivalent paths for other runtimes:
 │       ├── XX-UI-SPEC.md       # UI design contract (from ui-phase)
 │       ├── XX-UI-REVIEW.md     # Visual audit scores (from ui-review)
 │       └── XX-UAT.md           # User acceptance test results
-├── quick/                  # Quick task tracking
-│   └── YYMMDD-xxx-slug/
-│       ├── PLAN.md
-│       └── SUMMARY.md
 ├── todos/
 │   ├── pending/            # Captured ideas
 │   └── done/               # Completed todos

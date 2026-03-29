@@ -183,7 +183,7 @@ const CLAUDE_MD_WORKFLOW_ENFORCEMENT = [
   'Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.',
   '',
   'Use these entry points:',
-  '- `/gsd2:quick` for small fixes, doc updates, and ad-hoc tasks',
+  '- `/gsd2:fix` for post-execution issue fixing with dependency awareness',
   '- `/gsd2:debug` for investigation and bug fixing',
   '- `/gsd2:execute-phase` for planned phase work',
   '',

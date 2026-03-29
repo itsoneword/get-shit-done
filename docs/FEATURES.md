@@ -17,7 +17,7 @@
   - [Milestone Management](#8-milestone-management)
 - [Planning Features](#planning-features)
   - [Phase Management](#9-phase-management)
-  - [Quick Mode](#10-quick-mode)
+  - [Fix Mode](#10-fix-mode)
   - [Autonomous Mode](#11-autonomous-mode)
   - [Freeform Routing](#12-freeform-routing)
   - [Note Capture](#13-note-capture)
@@ -371,22 +371,19 @@ Specialist-backed decisions carry enhanced signal strength: `[STRONG, specialist
 
 ---
 
-### 10. Quick Mode
+### 10. Fix Mode
 
-**Command:** `/gsd2:quick [--full] [--discuss] [--research]`
+**Command:** `/gsd2:fix [phase-number] [issue descriptions]`
 
-**Purpose:** Ad-hoc task execution with GSD guarantees but a faster path.
+**Purpose:** Fix issues found after phase execution with dependency awareness. Spawns a gsd-fixer agent for isolated investigation.
 
 **Requirements:**
-- REQ-QUICK-01: System MUST accept freeform task description
-- REQ-QUICK-02: System MUST use same planner + executor agents as full workflow
-- REQ-QUICK-03: System MUST skip research, plan checker, and verifier by default
-- REQ-QUICK-04: `--full` flag MUST enable plan checking (max 2 iterations) and post-execution verification
-- REQ-QUICK-05: `--discuss` flag MUST run lightweight pre-planning discussion
-- REQ-QUICK-06: `--research` flag MUST spawn focused research agent before planning
-- REQ-QUICK-07: Flags MUST be composable (`--discuss --research --full`)
-- REQ-QUICK-08: System MUST track quick tasks in `.planning/quick/YYMMDD-xxx-slug/`
-- REQ-QUICK-09: System MUST produce atomic commits for quick task execution
+- REQ-FIX-01: System MUST accept phase number and comma-separated issue descriptions
+- REQ-FIX-02: System MUST classify issues: current-phase, regression, not-yet-built, unrelated
+- REQ-FIX-03: System MUST map dependencies before changing code (callers, importers, CSS consumers)
+- REQ-FIX-04: System MUST choose fix approach that minimizes cascade risk
+- REQ-FIX-05: System MUST commit each fix atomically
+- REQ-FIX-06: System MUST spawn gsd-fixer agent for isolated investigation
 
 ---
 

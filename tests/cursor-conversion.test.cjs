@@ -19,8 +19,8 @@ const {
 describe('convertClaudeCommandToCursorSkill', () => {
   test('writes unquoted Cursor skill name in frontmatter', () => {
     const input = `---
-name: quick
-description: Execute a quick task
+name: fix
+description: Fix issues after phase execution
 ---
 
 <objective>
@@ -28,12 +28,12 @@ Test body
 </objective>
 `;
 
-    const result = convertClaudeCommandToCursorSkill(input, 'gsd-quick');
+    const result = convertClaudeCommandToCursorSkill(input, 'gsd-fix');
     const nameMatch = result.match(/^name:\s*(.+)$/m);
 
     assert.ok(nameMatch, 'frontmatter contains name field');
-    assert.strictEqual(nameMatch[1], 'gsd-quick', 'skill name is plain scalar');
-    assert.ok(!result.includes('name: "gsd-quick"'), 'quoted skill name is not emitted');
+    assert.strictEqual(nameMatch[1], 'gsd-fix', 'skill name is plain scalar');
+    assert.ok(!result.includes('name: "gsd-fix"'), 'quoted skill name is not emitted');
   });
 
   test('preserves slash for slash commands in markdown body', () => {

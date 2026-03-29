@@ -392,24 +392,25 @@ Show all commands and usage guide.
 
 ## Utility Commands
 
-### `/gsd2:quick`
+### `/gsd2:fix`
 
-Execute ad-hoc task with GSD guarantees.
+Fix issues found after phase execution with dependency awareness.
 
-| Flag | Description |
-|------|-------------|
-| `--full` | Enable plan checking (2 iterations) + post-execution verification |
-| `--discuss` | Lightweight pre-planning discussion |
-| `--research` | Spawn focused researcher before planning |
-
-Flags are composable.
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `N` | **Yes** | Phase number |
+| `issue descriptions` | **Yes** | Comma-separated issue descriptions |
 
 ```bash
-/gsd2:quick                          # Basic quick task
-/gsd2:quick --discuss --research     # Discussion + research + planning
-/gsd2:quick --full                   # With plan checking and verification
-/gsd2:quick --discuss --research --full  # All optional stages
+/gsd2:fix 5 sidebar overlaps, save throws error
 ```
+
+**Behavior:**
+- Classifies issues: current-phase, regression, not-yet-built, unrelated
+- Maps dependencies before changing code (callers, importers, CSS consumers)
+- Chooses fix approach that minimizes cascade risk
+- Commits each fix atomically
+- Spawns gsd-fixer agent for isolated investigation
 
 ### `/gsd2:autonomous`
 

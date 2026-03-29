@@ -323,7 +323,7 @@ Controlled by `workflow.ui_safety_gate` config toggle.
 | Command | Purpose | When to Use |
 |---------|---------|-------------|
 | `/gsd2:map-codebase` | Analyze existing codebase | Before `/gsd2:new-project` on existing code |
-| `/gsd2:quick` | Ad-hoc task with GSD guarantees | Bug fixes, small features, config changes |
+| `/gsd2:fix [N] [issues]` | Fix issues with dependency awareness | Post-execution issues, regressions |
 | `/gsd2:debug [desc]` | Systematic debugging with persistent state | When something breaks |
 | `/gsd2:add-todo [desc]` | Capture an idea for later | Think of something during a session |
 | `/gsd2:check-todos` | List pending todos | Review captured ideas |
@@ -360,7 +360,7 @@ GSD stores project settings in `.planning/config.json`. Configure during `/gsd2:
     "branching_strategy": "none",
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
     "milestone_branch_template": "gsd/{milestone}-{slug}",
-    "quick_branch_template": null
+    "fix_branch_template": null
   }
 }
 ```
@@ -402,7 +402,7 @@ Disable these to speed up phases in familiar domains or when conserving tokens.
 | `git.branching_strategy` | `none`, `phase`, `milestone` | `none` | When and how branches are created |
 | `git.phase_branch_template` | Template string | `gsd/phase-{phase}-{slug}` | Branch name for phase strategy |
 | `git.milestone_branch_template` | Template string | `gsd/{milestone}-{slug}` | Branch name for milestone strategy |
-| `git.quick_branch_template` | Template string or `null` | `null` | Optional branch name for `/gsd2:quick` tasks |
+| `git.fix_branch_template` | Template string or `null` | `null` | Optional branch name for `/gsd2:fix` tasks |
 
 **Branching strategies explained:**
 
@@ -412,13 +412,13 @@ Disable these to speed up phases in familiar domains or when conserving tokens.
 | `phase` | At each `execute-phase` | One phase per branch | Code review per phase, granular rollback |
 | `milestone` | At first `execute-phase` | All phases share one branch | Release branches, PR per version |
 
-**Template variables:** `{phase}` = zero-padded number (e.g., "03"), `{slug}` = lowercase hyphenated name, `{milestone}` = version (e.g., "v1.0"), `{num}` / `{quick}` = quick task ID (e.g., "260317-abc").
+**Template variables:** `{phase}` = zero-padded number (e.g., "03"), `{slug}` = lowercase hyphenated name, `{milestone}` = version (e.g., "v1.0").
 
-Example quick-task branching:
+Example fix-task branching:
 
 ```json
 "git": {
-  "quick_branch_template": "gsd/quick-{num}-{slug}"
+  "fix_branch_template": "gsd/fix-{phase}-{slug}"
 }
 ```
 
@@ -485,11 +485,10 @@ claude --dangerously-skip-permissions
 # (normal phase workflow from here)
 ```
 
-### Quick Bug Fix
+### Fixing Issues After Execution
 
 ```bash
-/gsd2:quick
-> "Fix the login button not responding on mobile Safari"
+/gsd2:fix 5 sidebar overlaps, save throws error
 ```
 
 ### Resuming After a Break
@@ -552,7 +551,7 @@ Run `/gsd2:progress`. It reads all state files and tells you exactly where you a
 
 ### Need to Change Something After Execution
 
-Do not re-run `/gsd2:execute-phase`. Use `/gsd2:quick` for targeted fixes, or `/gsd2:verify-work` to systematically identify and fix issues through UAT.
+Do not re-run `/gsd2:execute-phase`. Use `/gsd2:fix` for targeted fixes with dependency awareness, or `/gsd2:verify-work` to systematically identify and fix issues through UAT.
 
 ### Model Costs Too High
 
@@ -572,7 +571,7 @@ Since v1.17, the installer backs up locally modified files to `gsd-local-patches
 
 ### Subagent Appears to Fail but Work Was Done
 
-A known workaround exists for a Claude Code classification bug. GSD's orchestrators (execute-phase, quick) spot-check actual output before reporting failure. If you see a failure message but commits were made, check `git log` -- the work may have succeeded.
+A known workaround exists for a Claude Code classification bug. GSD's orchestrators (execute-phase) spot-check actual output before reporting failure. If you see a failure message but commits were made, check `git log` -- the work may have succeeded.
 
 ### Parallel Execution Causes Build Lock Errors
 
@@ -600,7 +599,7 @@ If the installer crashes with `EPERM: operation not permitted, scandir` on Windo
 | Need to change scope | `/gsd2:add-phase`, `/gsd2:insert-phase`, or `/gsd2:remove-phase` |
 | Milestone audit found gaps | `/gsd2:plan-milestone-gaps` |
 | Something broke | `/gsd2:debug "description"` |
-| Quick targeted fix | `/gsd2:quick` |
+| Fix post-execution issues | `/gsd2:fix [N] [issues]` |
 | Plan doesn't match your vision | `/gsd2:discuss-phase [N]` then re-plan |
 | Costs running high | `/gsd2:set-profile budget` and `/gsd2:settings` to toggle agents off |
 | Update broke local changes | `/gsd2:reapply-patches` |

@@ -130,41 +130,19 @@ Usage: `/gsd2:do fix the login button`
 Usage: `/gsd2:do refactor the auth system`
 Usage: `/gsd2:do I want to start a new milestone`
 
-### Quick Mode
+### Fixing Issues
 
-**`/gsd2:quick [--full] [--discuss] [--research]`**
-Execute small, ad-hoc tasks with GSD guarantees but skip optional agents.
+**`/gsd2:fix [phase-number] [issue descriptions]`**
+Fix issues found after phase execution with dependency awareness.
 
-Quick mode uses the same system with a shorter path:
-- Spawns planner + executor (skips researcher, checker, verifier by default)
-- Quick tasks live in `.planning/quick/` separate from planned phases
-- Updates STATE.md tracking (not ROADMAP.md)
+After executing a phase, check the results and list what's wrong. The fixer:
+- Classifies each issue (current-phase / regression / not-yet-built / unrelated)
+- Maps dependencies before changing anything (who calls this? who uses this class?)
+- Chooses the fix approach that minimizes cascade risk
+- Commits each fix atomically
 
-Flags enable additional quality steps:
-- `--discuss` — Lightweight discussion to surface gray areas before planning
-- `--research` — Focused research agent investigates approaches before planning
-- `--full` — Adds plan-checking (max 2 iterations) and post-execution verification
-
-Flags are composable: `--discuss --research --full` gives the complete quality pipeline for a single task.
-
-Usage: `/gsd2:quick`
-Usage: `/gsd2:quick --research --full`
-Result: Creates `.planning/quick/NNN-slug/PLAN.md`, `.planning/quick/NNN-slug/SUMMARY.md`
-
----
-
-**`/gsd2:fast [description]`**
-Execute a trivial task inline — no subagents, no planning files, no overhead.
-
-For tasks too small to justify planning: typo fixes, config changes, forgotten commits, simple additions. Runs in the current context, makes the change, commits, and logs to STATE.md.
-
-- No PLAN.md or SUMMARY.md created
-- No subagent spawned (runs inline)
-- ≤ 3 file edits — redirects to `/gsd2:quick` if task is non-trivial
-- Atomic commit with conventional message
-
-Usage: `/gsd2:fast "fix the typo in README"`
-Usage: `/gsd2:fast "add .env to gitignore"`
+Usage: `/gsd2:fix 5 sidebar overlaps main content, save button throws type error`
+Usage: `/gsd2:fix` (auto-detects phase, asks for issues)
 
 ### Roadmap Management
 
@@ -586,7 +564,15 @@ Example config:
 /gsd2:check-todos api             # Filter by area
 ```
 
-**Debugging an issue:**
+**Fixing issues after execution:**
+
+```
+/gsd2:execute-phase 5                          # Execute the phase
+# ... check results, find issues ...
+/gsd2:fix 5 sidebar overlaps, save button error  # Fix with dependency awareness
+```
+
+**Debugging an unknown issue:**
 
 ```
 /gsd2:debug "form submission fails silently"  # Start debug session

@@ -36,7 +36,7 @@ describe('generate-claude-md', () => {
     const claudePath = path.join(tmpDir, 'CLAUDE.md');
     const content = fs.readFileSync(claudePath, 'utf-8');
     assert.ok(content.includes('## GSD Workflow Enforcement'));
-    assert.ok(content.includes('/gsd2:quick'));
+    assert.ok(content.includes('/gsd2:fix'));
     assert.ok(content.includes('/gsd2:debug'));
     assert.ok(content.includes('/gsd2:execute-phase'));
     assert.ok(content.includes('Do not make direct repo edits outside a GSD workflow'));

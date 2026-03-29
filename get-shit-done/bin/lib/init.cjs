@@ -292,64 +292,6 @@ function cmdInitNewMilestone(cwd, raw) {
   output(result, raw);
 }
 
-function cmdInitQuick(cwd, description, raw) {
-  const config = loadConfig(cwd);
-  const now = new Date();
-  const slug = description ? generateSlugInternal(description)?.substring(0, 40) : null;
-
-  // Generate collision-resistant quick task ID: YYMMDD-xxx
-  // xxx = 2-second precision blocks since midnight, encoded as 3-char Base36 (lowercase)
-  // Range: 000 (00:00:00) to xbz (23:59:58), guaranteed 3 chars for any time of day.
-  // Provides ~2s uniqueness window per user — practically collision-free across a team.
-  const yy = String(now.getFullYear()).slice(-2);
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const dateStr = yy + mm + dd;
-  const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-  const timeBlocks = Math.floor(secondsSinceMidnight / 2);
-  const timeEncoded = timeBlocks.toString(36).padStart(3, '0');
-  const quickId = dateStr + '-' + timeEncoded;
-  const branchSlug = slug || 'quick';
-  const quickBranchName = config.quick_branch_template
-    ? config.quick_branch_template
-        .replace('{num}', quickId)
-        .replace('{quick}', quickId)
-        .replace('{slug}', branchSlug)
-    : null;
-
-  const result = {
-    // Models
-    planner_model: resolveModelInternal(cwd, 'gsd-planner'),
-    executor_model: resolveModelInternal(cwd, 'gsd-executor'),
-    checker_model: resolveModelInternal(cwd, 'gsd-plan-checker'),
-    verifier_model: resolveModelInternal(cwd, 'gsd-verifier'),
-
-    // Config
-    commit_docs: config.commit_docs,
-    branch_name: quickBranchName,
-
-    // Quick task info
-    quick_id: quickId,
-    slug: slug,
-    description: description || null,
-
-    // Timestamps
-    date: now.toISOString().split('T')[0],
-    timestamp: now.toISOString(),
-
-    // Paths
-    quick_dir: '.planning/quick',
-    task_dir: slug ? `.planning/quick/${quickId}-${slug}` : null,
-
-    // File existence
-    roadmap_exists: pathExistsInternal(cwd, '.planning/ROADMAP.md'),
-    planning_exists: pathExistsInternal(cwd, '.planning'),
-
-  };
-
-  output(result, raw);
-}
-
 function cmdInitResume(cwd, raw) {
   const config = loadConfig(cwd);
 
@@ -821,7 +763,6 @@ module.exports = {
   cmdInitPlanPhase,
   cmdInitNewProject,
   cmdInitNewMilestone,
-  cmdInitQuick,
   cmdInitResume,
   cmdInitVerifyWork,
   cmdInitPhaseOp,

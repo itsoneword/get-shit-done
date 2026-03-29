@@ -145,7 +145,7 @@ To keep planning artifacts out of git:
 | `git.branching_strategy` | enum | `none` | `none`, `phase`, or `milestone` |
 | `git.phase_branch_template` | string | `gsd/phase-{phase}-{slug}` | Branch name template for phase strategy |
 | `git.milestone_branch_template` | string | `gsd/{milestone}-{slug}` | Branch name template for milestone strategy |
-| `git.quick_branch_template` | string or null | `null` | Optional branch name template for `/gsd2:quick` tasks |
+
 
 ### Strategy Comparison
 

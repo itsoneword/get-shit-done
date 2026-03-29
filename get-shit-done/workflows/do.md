@@ -52,7 +52,7 @@ Evaluate `$ARGUMENTS` against these routing rules. Apply the **first matching** 
 | A note, idea, or "remember to..." | `/gsd2:add-todo` | Capture for later |
 | Adding tests, "write tests", "test coverage" | `/gsd2:add-tests` | Test generation |
 | Completing a milestone, shipping, releasing | `/gsd2:complete-milestone` | Milestone lifecycle |
-| A specific, actionable, small task (add feature, fix typo, update config) | `/gsd2:quick` | Self-contained, single executor |
+| Post-execution issues, bugs, broken behavior, things that need fixing | `/gsd2:fix` | Dependency-aware fixing |
 
 **Requires `.planning/` directory:** All routes except `/gsd2:new-project`, `/gsd2:map-codebase`, `/gsd2:help`, and `/gsd2:join-discord`. If the project doesn't exist and the route requires it, suggest `/gsd2:new-project` first.
 
@@ -61,7 +61,7 @@ Evaluate `$ARGUMENTS` against these routing rules. Apply the **first matching** 
 ```
 "Refactor the authentication system" could be:
 1. /gsd2:add-phase — Full planning cycle (recommended for multi-file refactors)
-2. /gsd2:quick — Quick execution (if scope is small and clear)
+2. /gsd2:fix — Fix issues (if something is broken or needs correction)
 
 Which approach fits better?
 ```

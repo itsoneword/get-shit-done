@@ -1,6 +1,6 @@
 # GSD Agent Reference
 
-> All 16 specialized agents (including micro-research mode) — roles, tools, spawn patterns, and relationships. For architecture context, see [Architecture](ARCHITECTURE.md).
+> All 17 specialized agents (including micro-research mode) — roles, tools, spawn patterns, and relationships. For architecture context, see [Architecture](ARCHITECTURE.md).
 
 ---
 
@@ -21,6 +21,7 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 | Verifiers | 1 | verifier |
 | Auditors | 2 | nyquist-auditor, ui-auditor |
 | Mappers | 1 | codebase-mapper |
+| Fixers | 1 | fixer |
 | Debuggers | 1 | debugger |
 
 ---
@@ -108,7 +109,7 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 
 | Property | Value |
 |----------|-------|
-| **Spawned by** | `/gsd2:plan-phase`, `/gsd2:quick` |
+| **Spawned by** | `/gsd2:plan-phase` |
 | **Parallelism** | Single instance |
 | **Tools** | Read, Write, Bash, Glob, Grep, WebFetch, mcp (context7) |
 | **Model (balanced)** | Opus |
@@ -151,7 +152,7 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 
 | Property | Value |
 |----------|-------|
-| **Spawned by** | `/gsd2:execute-phase`, `/gsd2:quick` |
+| **Spawned by** | `/gsd2:execute-phase` |
 | **Parallelism** | Multiple (parallel within waves, sequential across waves) |
 | **Tools** | Read, Write, Edit, Bash, Grep, Glob |
 | **Model (balanced)** | Sonnet |
@@ -353,6 +354,26 @@ Communication style, decision patterns, debugging approach, UX preferences, vend
 
 ---
 
+### gsd-fixer
+
+**Role:** Post-execution issue fixer with dependency awareness. Classifies issues, maps what depends on code before changing it, fixes without cascading breakage.
+
+| Property | Value |
+|----------|-------|
+| **Spawned by** | `/gsd2:fix` |
+| **Parallelism** | Single instance |
+| **Tools** | Read, Write, Edit, Bash, Grep, Glob |
+| **Model (balanced)** | Sonnet |
+| **Produces** | Atomic fix commits, updated verification artifacts |
+
+**Key behaviors:**
+- Classifies issues: current-phase, regression, not-yet-built, unrelated
+- Maps dependencies before changing code (callers, importers, CSS consumers)
+- Chooses fix approach that minimizes cascade risk
+- Commits each fix atomically
+
+---
+
 ## Agent Tool Permissions Summary
 
 | Agent | Read | Write | Edit | Bash | Grep | Glob | WebSearch | WebFetch | MCP |
@@ -371,6 +392,7 @@ Communication style, decision patterns, debugging approach, UX preferences, vend
 | nyquist-auditor | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | |
 | ui-auditor | ✓ | ✓ | | ✓ | ✓ | ✓ | | | |
 | codebase-mapper | ✓ | ✓ | | ✓ | ✓ | ✓ | | | |
+| fixer | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | | |
 | debugger | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
 | user-profiler | ✓ | | | | | | | | |
 

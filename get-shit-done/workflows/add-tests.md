@@ -195,7 +195,7 @@ git commit -m "test(phase-${phase_number}): add unit and E2E tests from add-test
 ```
 ## ▶ Next Up
 
-{if bugs:}     Fix: `/gsd2:quick fix the {N} test failures discovered in phase ${phase_number}`
+{if bugs:}     Fix: `/gsd2:fix ${phase_number} fix the {N} test failures discovered`
 {if blocked:}  Resolve blockers: {description}
 {otherwise:}   All tests passing — phase ${phase_number} is fully tested.
 
