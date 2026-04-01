@@ -45,7 +45,9 @@ Model profiles control which Claude model each GSD agent uses. This allows balan
 
 ## Using Non-Anthropic Models (OpenRouter, Local, etc.)
 
-If you're using Claude Code with OpenRouter, a local model, or any non-Anthropic provider, set the `inherit` profile to prevent GSD from calling Anthropic models for subagents:
+**Non-Claude runtimes (Codex, Gemini, etc.):** GSD automatically forces `inherit` — no manual configuration needed.
+
+**Claude Code with OpenRouter or local models:** Set the `inherit` profile manually to prevent GSD from calling Anthropic models for subagents:
 
 ```bash
 # Via settings command
@@ -60,15 +62,23 @@ If you're using Claude Code with OpenRouter, a local model, or any non-Anthropic
 
 Without `inherit`, GSD's default `balanced` profile spawns specific Anthropic models (`opus`, `sonnet`, `haiku`) for each agent type, which can result in additional API costs through your non-Anthropic provider.
 
+## Automatic Runtime Detection
+
+GSD auto-detects non-Claude runtimes (Codex, Gemini, Copilot, Cursor, Antigravity) based on the installation path. When running inside a non-Claude runtime, all agents automatically resolve to `inherit` — regardless of the configured profile. This prevents Claude-specific model aliases (`sonnet`, `opus`, `haiku`) from being passed to runtimes that don't understand them.
+
+Per-agent overrides in `model_overrides` still take effect, so you can pin specific model names if your runtime supports it.
+
 ## Resolution Logic
 
 Orchestrators resolve model before spawning:
 
 ```
-1. Read .planning/config.json
-2. Check model_overrides for agent-specific override
-3. If no override, look up agent in profile table
-4. Pass model parameter to Task call
+1. Detect runtime from installation path
+2. If non-Claude runtime → return 'inherit' (skip profile lookup)
+3. Read .planning/config.json
+4. Check model_overrides for agent-specific override
+5. If no override, look up agent in profile table
+6. Pass model parameter to Task call
 ```
 
 ## Per-Agent Overrides

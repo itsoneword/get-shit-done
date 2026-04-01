@@ -2,6 +2,11 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.3.3] - 2026-04-01
+
+### Fixed
+- **Runtime-aware model resolution** — non-Claude runtimes (Codex, Gemini, Copilot, Cursor, Antigravity) now auto-detect and force `inherit` for all agents, preventing meaningless Claude model aliases from being passed to foreign runtimes
+
 ## [1.3.2] - 2026-03-29
 
 ### Changed

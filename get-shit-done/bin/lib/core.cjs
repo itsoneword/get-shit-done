@@ -604,6 +604,29 @@ function getRoadmapPhaseInternal(cwd, phaseNum) {
   }
 }
 
+// ─── Runtime detection ────────────────────────────────────────────────────────
+
+/**
+ * Detect which runtime GSD is installed under based on __dirname.
+ * Installed paths follow the pattern: ~/.{runtime}/get-shit-done/bin/lib/
+ * Returns 'claude' for Claude Code, or the runtime name for others.
+ */
+const NON_CLAUDE_RUNTIMES = ['codex', 'gemini', 'copilot', 'cursor', 'antigravity'];
+
+function detectRuntime() {
+  const normalizedDir = __dirname.replace(/\\/g, '/');
+  for (const runtime of NON_CLAUDE_RUNTIMES) {
+    if (normalizedDir.includes(`/.${runtime}/`) || normalizedDir.includes(`\\.${runtime}\\`)) {
+      return runtime;
+    }
+  }
+  return 'claude';
+}
+
+function isNonClaudeRuntime() {
+  return detectRuntime() !== 'claude';
+}
+
 // ─── Model alias resolution ───────────────────────────────────────────────────
 
 /**
@@ -619,6 +642,13 @@ const MODEL_ALIAS_MAP = {
 
 function resolveModelInternal(cwd, agentType) {
   const config = loadConfig(cwd);
+
+  // Non-Claude runtimes (Codex, Gemini, etc.) force 'inherit' unless the user
+  // has explicitly set a per-agent override — Claude model aliases like 'sonnet'
+  // are meaningless in those environments.
+  if (isNonClaudeRuntime() && !config.model_overrides?.[agentType]) {
+    return 'inherit';
+  }
 
   // Check per-agent override first
   const override = config.model_overrides?.[agentType];
@@ -768,6 +798,8 @@ module.exports = {
   findPhaseInternal,
   getArchivedPhaseDirs,
   getRoadmapPhaseInternal,
+  detectRuntime,
+  isNonClaudeRuntime,
   resolveModelInternal,
   pathExistsInternal,
   generateSlugInternal,
