@@ -2,6 +2,24 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.3.5] - 2026-04-06
+
+### Added
+- **`/gsd2:test-phase` command** — generates verification contract (TEST-SPEC.md) before planning. Solves the "no objective signal that the phase actually works" problem by locking what observable behaviors prove a phase is done, before any code is written
+- **`gsd-test-designer` agent** — behavior-tracing verifier that infers scenarios from REQUIREMENTS/CONTEXT/RESEARCH (no technical interrogation of user), runs internal coverage loop with 7 rules (requirement coverage, endpoint coverage, failure paths, side effects, independence, observability, scope), translates technical scenarios into plain-language digest for user approval
+- **`TEST-SPEC.md` template** — dual-layer artifact with user-facing summary (plain language) and technical scenarios (preconditions, action, observables, pass criteria) plus a Coverage Map mapping each requirement ID to scenarios
+- **`workflow.test_phase` config toggle** — enable/disable verification contract generation (defaults to `true`)
+
+### Changed
+- **`gsd-planner`** — now reads TEST-SPEC.md in `gather_phase_context`. Scenario observables become candidate `<verify>` commands for tasks. Every scenario must be satisfied by at least one task in resulting plans. Also picks up UI-SPEC.md (was previously missing from planner context)
+- **`/gsd2:verify-work`** — TEST-SPEC.md now takes priority over SUMMARY.md as the test source. When present, scenarios are run as the verification step instead of conversational UAT extraction. Falls back to existing SUMMARY-based behavior when TEST-SPEC.md absent
+
+### Design Notes
+- Bright-line rule baked into agent prompt: every observable must be scriptable (one-line bash/curl/grep/SQL returning true/false). No "works correctly" or "user is logged in" — always concrete checks (HTTP status + body shape, DB row, file exists, exit code)
+- Self-approving in v1 — no separate checker agent. Internal coverage loop capped at 3 iterations + 2 user revision rounds. May split into designer + checker if scenario quality drifts
+- Auto-detects non-testable phase types (docs, research, pure design) and writes `status: not_applicable` stub instead of forcing fake scenarios
+- Single-agent architecture trade-off documented: same agent writes scenarios for code that another agent will write — separation of concerns is partial. If verification rigor matters more than token cost, future v2 should split test-writer from implementation-writer
+
 ## [1.3.3] - 2026-04-01
 
 ### Fixed
