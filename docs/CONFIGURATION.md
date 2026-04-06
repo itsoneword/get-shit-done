@@ -89,6 +89,7 @@ All workflow toggles follow the **absent = enabled** pattern. If a key is missin
 | `workflow.nyquist_validation` | boolean | `true` | Test coverage mapping during plan-phase research |
 | `workflow.ui_phase` | boolean | `true` | Generate UI design contracts for frontend phases |
 | `workflow.ui_safety_gate` | boolean | `true` | Prompt to run /gsd2:ui-phase for frontend phases during plan-phase |
+| `workflow.test_phase` | boolean | `true` | Generate verification contracts (TEST-SPEC.md) via /gsd2:test-phase before planning |
 | `workflow.node_repair` | boolean | `true` | Autonomous task repair on verification failure |
 | `workflow.node_repair_budget` | number | `2` | Max repair attempts per failed task |
 

@@ -359,8 +359,12 @@ Two-step context assembly:
 cat "$phase_dir"/*-CONTEXT.md 2>/dev/null
 cat "$phase_dir"/*-RESEARCH.md 2>/dev/null
 cat "$phase_dir"/*-DISCOVERY.md 2>/dev/null
+cat "$phase_dir"/*-TEST-SPEC.md 2>/dev/null
+cat "$phase_dir"/*-UI-SPEC.md 2>/dev/null
 ```
 Honor locked decisions from CONTEXT.md. Use research findings from RESEARCH.md.
+
+**If TEST-SPEC.md exists:** treat its scenarios as the verification contract for this phase. Every scenario's observables become a candidate `<verify>` command for tasks. Every scenario must be satisfied by at least one task in the resulting plans. Use the Coverage Map to ensure no requirement is dropped during plan decomposition.
 </step>
 
 <step name="plan">

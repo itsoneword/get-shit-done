@@ -14,6 +14,7 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 |----------|-------|--------|
 | Researchers | 3 | project-researcher, phase-researcher, ui-researcher |
 | Synthesizers | 1 | research-synthesizer |
+| Designers | 1 | test-designer |
 | Planners | 1 | planner |
 | Roadmappers | 1 | roadmapper |
 | Executors | 1 | executor |
@@ -85,6 +86,34 @@ GSD uses a multi-agent architecture where thin orchestrators (workflow files) sp
 - Offers shadcn initialization for React/Next.js/Vite projects
 - Asks only unanswered design contract questions
 - Enforces registry safety gate for third-party components
+
+---
+
+### gsd-test-designer
+
+**Role:** Produces verification contracts (TEST-SPEC.md) before planning. Behavior-tracing verifier — infers scenarios, runs coverage loop, presents user-facing digest.
+
+| Property | Value |
+|----------|-------|
+| **Spawned by** | `/gsd2:test-phase` |
+| **Parallelism** | Single instance |
+| **Tools** | Read, Write, Bash, Grep, Glob, AskUserQuestion |
+| **Model (balanced)** | Sonnet |
+| **Color** | `#34D399` (green) |
+| **Produces** | `{phase}-TEST-SPEC.md` |
+
+**Capabilities:**
+- Infers behavior-level scenarios from REQUIREMENTS/CONTEXT/RESEARCH (no technical interrogation of user)
+- Internal self-review loop enforces 7 coverage rules (requirement coverage, endpoint coverage, failure paths, side-effect coverage, scenario independence, observability, scope discipline)
+- Translates technical scenarios into plain-language digest before user review
+- Bright-line observable rule: every check must be scriptable (curl/grep/SQL/bash returns true/false)
+- Auto-detects non-testable phases (docs, research, pure design) and writes `status: not_applicable` stub
+- Self-approves after coverage loop passes — no separate checker agent in v1
+
+**Downstream consumers:**
+- `gsd-planner` — uses scenario observables as task `<verify>` candidates, ensures every scenario has a covering task
+- `gsd-executor` — source of truth for "is this phase done"
+- `/gsd2:verify-work` — runs scenarios as verification step, replacing conversational UAT for covered behavior
 
 ---
 
@@ -381,6 +410,7 @@ Communication style, decision patterns, debugging approach, UX preferences, vend
 | project-researcher | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | phase-researcher | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | ui-researcher | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| test-designer | ✓ | ✓ | | ✓ | ✓ | ✓ | | | |
 | research-synthesizer | ✓ | ✓ | | ✓ | | | | | |
 | planner | ✓ | ✓ | | ✓ | ✓ | ✓ | | ✓ | ✓ |
 | roadmapper | ✓ | ✓ | | ✓ | ✓ | ✓ | | | |

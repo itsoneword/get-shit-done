@@ -72,6 +72,23 @@ Read each SUMMARY.md to extract testable deliverables.
 </step>
 
 <step name="extract_tests">
+**Source priority: TEST-SPEC.md first, SUMMARY.md fallback.**
+
+```bash
+TEST_SPEC_FILE=$(ls "$phase_dir"/*-TEST-SPEC.md 2>/dev/null | head -1)
+```
+
+**If TEST-SPEC.md exists** (and `status` is not `not_applicable`):
+- Read its `## What We'll Verify (User-Facing)` section for test names (User Flows + System Promises)
+- Read its `## Technical Scenarios` section for matching observables and pass criteria
+- For each scenario, create test entry:
+  - name: user-facing line from the digest (plain language)
+  - expected: technical observables joined into a checkable description ("HTTP 200 + token in body + last_login timestamp updated")
+  - source: `test-spec` (record in test entry for traceability)
+- Skip the SUMMARY-extraction logic below — TEST-SPEC.md is the authoritative source for what was promised.
+
+**If TEST-SPEC.md missing or `not_applicable`** (fallback to current behavior):
+
 Parse SUMMARYs for Accomplishments and User-facing changes. Focus on USER-OBSERVABLE outcomes only (skip refactors, type changes).
 
 For each deliverable, create: name + expected (specific, observable).

@@ -297,7 +297,10 @@ discuss-phase → CONTEXT.md (user preferences + specialist-backed decisions)
     │  of asking user. Preference questions still go to user.
     │
     ▼
-ui-phase → UI-SPEC.md (design contract, optional)
+ui-phase → UI-SPEC.md (design contract, optional — frontend only)
+    │
+    ▼
+test-phase → TEST-SPEC.md (verification contract, optional — non-doc phases)
     │
     ▼
 plan-phase
@@ -400,6 +403,7 @@ Equivalent paths for other runtimes:
 │       ├── XX-VERIFICATION.md  # Post-execution verification
 │       ├── XX-VALIDATION.md    # Nyquist test coverage mapping
 │       ├── XX-UI-SPEC.md       # UI design contract (from ui-phase)
+│       ├── XX-TEST-SPEC.md     # Verification contract (from test-phase)
 │       ├── XX-UI-REVIEW.md     # Visual audit scores (from ui-review)
 │       └── XX-UAT.md           # User acceptance test results
 ├── todos/

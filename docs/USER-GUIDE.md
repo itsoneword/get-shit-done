@@ -39,6 +39,10 @@ A detailed reference for workflows, troubleshooting, and configuration. For quic
              │  └──────────┬─────────┘    │
              │             │              │
              │  ┌──────────▼─────────┐    │
+             │  │ /gsd2:test-phase    │    │  <- Verification contract
+             │  └──────────┬─────────┘    │
+             │             │              │
+             │  ┌──────────▼─────────┐    │
              │  │ /gsd2:plan-phase    │    │  <- Research + Plan + Verify
              │  └──────────┬─────────┘    │
              │             │              │
@@ -203,6 +207,39 @@ AI-generated frontends are visually inconsistent not because Claude Code is bad 
 
 **Output:** `{padded_phase}-UI-REVIEW.md` in phase directory with scores and top 3 priority fixes.
 
+---
+
+## Verification Contract
+
+### Why
+
+After a phase "completes," there's often no objective signal that it actually works. Conversational UAT relies on the user to remember what to test and how. `/gsd2:test-phase` produces a TEST-SPEC.md before planning that defines, in plain language, what observable behaviors prove the phase works — and stores the technical observables next to them so `verify-work` can run them as a script.
+
+### Command
+
+| Command | Description |
+|---------|-------------|
+| `/gsd2:test-phase [N]` | Generate verification contract before planning |
+
+### Workflow: `/gsd2:test-phase`
+
+**When to run:** After `/gsd2:discuss-phase` (and `/gsd2:ui-phase` if frontend), before `/gsd2:plan-phase`. Skipped automatically for docs/research/pure-design phases.
+
+**Flow:**
+1. Reads REQUIREMENTS.md (required), CONTEXT.md, RESEARCH.md, UI-SPEC.md if present
+2. Internal inference loop — derives behavior scenarios, runs 7 coverage rules, regenerates if rules fail (max 3 internal iterations)
+3. Translates technical scenarios into plain user-facing language
+4. Presents digest via `AskUserQuestion`: user approves or describes additions (max 2 revision rounds)
+5. Writes `{phase}-TEST-SPEC.md` with user-facing summary + technical scenarios + coverage map
+
+**Output:** `{padded_phase}-TEST-SPEC.md` in `.planning/phases/{phase-dir}/`
+
+**Downstream effect:**
+- `plan-phase` reads TEST-SPEC.md and uses scenario observables as task `<verify>` commands
+- `verify-work` runs scenarios from TEST-SPEC.md instead of extracting tests from SUMMARY.md (when present)
+
+**The bright-line rule:** Every observable in every scenario must be scriptable. No "works correctly," no "user is logged in" — always a concrete check (HTTP status + body shape, DB row, file exists, exit code, element visible). This is the discipline that makes verification objective instead of conversational.
+
 ### Configuration
 
 | Setting | Default | Description |
@@ -285,6 +322,7 @@ Controlled by `workflow.ui_safety_gate` config toggle.
 | `/gsd2:new-project --auto @idea.md` | Automated init from document | Have a PRD or idea doc ready |
 | `/gsd2:discuss-phase [N]` | Capture implementation decisions | Before planning, to shape how it gets built |
 | `/gsd2:ui-phase [N]` | Generate UI design contract | After discuss-phase, before plan-phase (frontend phases) |
+| `/gsd2:test-phase [N]` | Generate verification contract | After discuss-phase, before plan-phase (any testable phase) |
 | `/gsd2:plan-phase [N]` | Research + plan + verify | Before executing a phase |
 | `/gsd2:execute-phase <N>` | Execute all plans in parallel waves | After planning is complete |
 | `/gsd2:verify-work [N]` | Manual UAT with auto-diagnosis | After execution completes |
@@ -638,6 +676,7 @@ For reference, here is what GSD creates in your project:
       RESEARCH.md         # Ecosystem research findings
       VERIFICATION.md     # Post-execution verification results
       XX-UI-SPEC.md       # UI design contract (from /gsd2:ui-phase)
+      XX-TEST-SPEC.md     # Verification contract (from /gsd2:test-phase)
       XX-UI-REVIEW.md     # Visual audit scores (from /gsd2:ui-review)
   ui-reviews/             # Screenshots from /gsd2:ui-review (gitignored)
 ```

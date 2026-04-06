@@ -177,6 +177,38 @@ Specialist-backed decisions carry enhanced signal strength: `[STRONG, specialist
 
 ---
 
+### Verification Contract
+
+**Command:** `/gsd2:test-phase [N]`
+
+**Purpose:** Lock "what does done mean" as runnable scenarios before the planner creates tasks. Solves the "no objective signal that the phase actually works" problem — replaces conversational UAT with executable scenarios.
+
+**Requirements:**
+- REQ-TEST-01: System MUST infer scenarios from REQUIREMENTS/CONTEXT/RESEARCH without technical interrogation of the user
+- REQ-TEST-02: System MUST enforce coverage rules (every requirement → scenario, every endpoint → callability + contract checks, every side effect → verification observable, every failable endpoint → failure-path scenario)
+- REQ-TEST-03: System MUST present scenarios in plain user-facing language before saving (technical version is for the executor, not the user)
+- REQ-TEST-04: Every observable MUST be scriptable — checkable by a one-line bash/curl/grep/SQL command without human judgment
+- REQ-TEST-05: System MUST detect non-testable phase types (docs, research, pure design) and write a `status: not_applicable` stub
+- REQ-TEST-06: System MUST produce a Coverage Map mapping each requirement ID to the scenario IDs that cover it
+- REQ-TEST-07: System MUST self-approve after internal coverage loop passes (no separate checker in v1, capped at 3 internal iterations + 2 user revision rounds)
+
+**Produces:** `{padded_phase}-TEST-SPEC.md` — Verification contract consumed by:
+- `gsd-planner` (scenario observables become task `<verify>` candidates)
+- `gsd-executor` (source of truth for "done")
+- `/gsd2:verify-work` (runs scenarios instead of conversational UAT when TEST-SPEC.md present)
+
+**The single bright-line rule (in agent prompt):** Every observable must be something a script can check without human judgment. If you cannot write a one-line bash/curl/grep command that returns true or false for this observable, the observable is not concrete enough — rewrite it.
+
+**Internal Inference Loop (no user involvement until step 5):**
+1. Inventory — extract flows, endpoints, side effects, inputs, outputs from upstream artifacts
+2. Decompose — generate observable checkpoints per item type (callability, contract, transition, side-effect, failure path)
+3. Self-review — apply 7 coverage rules, regenerate up to 3x if any rule fails
+4. Translate — write user-facing one-sentence version per technical scenario
+5. Present — show plain-language digest via AskUserQuestion (max 2 user revision rounds)
+6. Write TEST-SPEC.md with both layers (user-facing summary + technical scenarios + coverage map)
+
+---
+
 ### 4. Phase Planning
 
 **Command:** `/gsd2:plan-phase [N] [--auto] [--skip-research] [--skip-verify]`

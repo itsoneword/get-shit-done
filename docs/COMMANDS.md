@@ -73,6 +73,25 @@ Generate UI design contract for frontend phases.
 
 ---
 
+### `/gsd2:test-phase`
+
+Generate verification contract (TEST-SPEC.md) before planning. Spawns `gsd-test-designer` which infers behavior-level scenarios from REQUIREMENTS/CONTEXT/RESEARCH, runs an internal coverage loop, and presents a plain-language digest for approval. The user reviews behavior, never test framework details.
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `N` | No | Phase number (defaults to next unplanned phase) |
+
+**Prerequisites:** `.planning/REQUIREMENTS.md` exists (blocking). `CONTEXT.md` recommended (warning if missing).
+**Produces:** `{phase}-TEST-SPEC.md` — verification contract with user-facing summary + technical scenarios + coverage map. Consumed by `gsd-planner` (scenario observables become task `<verify>` commands) and `/gsd2:verify-work` (runs scenarios as the verification step instead of conversational UAT).
+
+```bash
+/gsd2:test-phase 4                   # Verification contract for phase 4
+```
+
+**When to skip:** Pure docs/research/design phases. Agent auto-detects and writes a `status: not_applicable` stub.
+
+---
+
 ### `/gsd2:plan-phase`
 
 Research, plan, and verify a phase.
