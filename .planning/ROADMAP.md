@@ -61,6 +61,6 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Domain Router | 0/2 | Planning | - |
+| 1. Domain Router | 1/2 | In Progress|  |
 | 2. AGENT-SPEC | 0/TBD | Not started | - |
 | 3. Documentation Agent | 0/TBD | Not started | - |
