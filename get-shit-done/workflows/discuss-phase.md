@@ -147,6 +147,34 @@ ESTABLISHED (don't ask): design system, state management, existing patterns
 NEW (discuss): areas with no existing pattern, multiple approaches possible
 ```
 
+**Step 5.5: Classify domain**
+
+Using what you found in Step 4 (codebase structure) and Step 3 (ROADMAP phase goal/description),
+classify the phase domain:
+
+**UI signals to check:**
+- Structural: presence of `src/components/`, `app/` (Next.js), `pages/`, `*.tsx`/`*.jsx` files,
+  `tailwind.config.*`, shadcn/ui config, `src/styles/`
+- Keywords in phase goal: UI, interface, frontend, component, layout, page, screen, view, form,
+  dashboard, widget, design, visual
+
+**Agentic signals to check:**
+- Structural: presence of `agents/`, `src/agents/`, `workflows/`, `prompts/`, `*.agent.ts` files
+- Keywords in phase goal: agent, orchestrat, multi-agent, workflow, spawn, pipeline, LLM, autonomous,
+  classif, rout, delegat, coordinat
+
+**Confidence rules:**
+- 2+ signal types (structural + keywords) agree -> HIGH -> proceed with detected domain
+- 1 signal type only (structural OR keywords, not both) -> MEDIUM -> proceed with best-guess domain
+- No signals or conflicting signals -> LOW -> use Generic, skip domain confirm prompt
+
+**If both UI and Agentic signals are present:** detected_domain = "UI+Agentic"
+
+**Store internally for use in conversation step:**
+- `detected_domain`: "UI" | "Agentic" | "Generic" | "UI+Agentic"
+- `domain_evidence`: list of signals that triggered classification
+- `domain_confidence`: HIGH | MEDIUM | LOW
+
 **6. Cross-reference todos**
 ```bash
 TODO_MATCHES=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
@@ -173,6 +201,12 @@ Have a genuine conversation — collaborative thinking, NOT structured interview
 
 **What it delivers:** {from ROADMAP}
 
+{If detected_domain is not "Generic" (i.e., confidence is HIGH or MEDIUM):}
+**Detected: [{detected_domain}]** -- {comma-separated domain_evidence signals}
+
+{If detected_domain is "Generic" (LOW confidence):}
+**Detected: [Generic]** -- no domain-specific signals found
+
 **What I found in the codebase:**
 - {Established pattern} — already in use
 - {Established pattern} — decided in Phase {N}
@@ -187,6 +221,14 @@ Have a genuine conversation — collaborative thinking, NOT structured interview
 ---
 
 Tell me about how you see this phase. What's the most important thing to get right?
+
+{If detected_domain is NOT "Generic":}
+
+> **Domain check:** Does the detection above look right? Say 'yes' to confirm, or tell me the
+> correct domain (UI, Agentic, Generic, UI+Agentic).
+
+{If detected_domain IS "Generic":}
+[No confirm prompt -- proceed directly to discussion]
 ```
 
 **Then: Establish the outcome before diving into implementation.**
@@ -311,7 +353,11 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 <domain>
 ## Phase Boundary
 
-[What this phase delivers — the scope anchor]
+[Clear statement of what this phase delivers -- the scope anchor]
+
+**Detected domain:** {detected_domain}
+**Evidence:** {comma-separated domain_evidence}
+**Confirmed by user:** {yes | overridden to [new_domain]}
 
 </domain>
 
