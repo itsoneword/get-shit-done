@@ -204,6 +204,27 @@ Update `.planning/ROADMAP.md` — group completed milestone phases under collaps
 
 </step>
 
+<step name="offer_documentation">
+
+Before archiving this milestone, offer to refresh the system map. The milestone's phase artifacts are about to be archived; regenerating docs now captures the final milestone state while those artifacts are still live in `.planning/phases/`.
+
+Check for `--skip-docs` in `$ARGUMENTS`. If present, skip this step and proceed to `archive_milestone`.
+
+Otherwise, prompt the user:
+
+```
+This milestone is about to be archived. The system map in docs/ may be stale.
+
+Refresh it now by running /gsd2:document? (y/n)
+```
+
+- **y** → Instruct the user to run `/gsd2:document` in a fresh conversation (or in a separate invocation of this agent), then re-run `/gsd2:complete-milestone` when done. Pause this workflow. Do NOT invoke `/gsd2:document` inline — archival must not be blocked by doc generation errors (see pitfall: milestone hook blocks archive).
+- **n** → Continue to `archive_milestone`.
+
+Rationale: Doc refresh is a suggestion, not a gate. User retains full control. Inline invocation is deferred to a future iteration once UX friction is observed (v1 keeps coupling minimal).
+
+</step>
+
 <step name="archive_milestone">
 
 ```bash
