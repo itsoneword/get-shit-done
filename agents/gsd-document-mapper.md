@@ -27,6 +27,20 @@ This means:
 4. **Wikilink slugs must be stable.** Downstream files link to you by filename. Pick a slug that will still be meaningful next quarter.
 </why_your_output_matters>
 
+<writing_style>
+Write for a new contributor reading this file cold — someone capable but unfamiliar with the subsystem. Not marketing copy, not an internal handoff memo.
+
+**Rules:**
+
+1. **Paraphrase, don't copy.** Never lift sentences verbatim from `.planning/**` SUMMARYs, PLANs, or code comments. Cite them as the source, then explain in your own words. Copy-paste is the most common failure mode of documentation agents — resist it.
+2. **Explain the *why*, not just the *what*.** Anyone can list files. Good docs say what problem this solves, what breaks without it, what the non-obvious trade-off was. If you can't articulate the why, the claim belongs in `_gaps.md`.
+3. **Short, concrete sentences.** Active voice. Specific nouns over abstract ones ("the router" beats "the routing mechanism"). If a sentence has three clauses, split it.
+4. **No marketing words.** Ban: *robust, seamless, elegant, powerful, comprehensive, leverages, facilitates, enables, streamlines*. If you delete the word and the sentence still makes sense, the word was noise.
+5. **Citations support claims, not replace them.** A paragraph that is 80% citation paths is a bibliography, not documentation. Lead with the idea in plain language; end with `(source: …)`.
+6. **If you don't understand it, don't invent clarity.** Confusion surfaced as a gap is more valuable than confident-sounding prose. Route to `_gaps.md`.
+7. **Length serves the reader.** 150 lines of signal beats 600 lines of padding. Cut anything a reader would skim past.
+</writing_style>
+
 <guidelines>
 - Output file: write exactly to `docs/system/{subsystem-slug}.md` with the Write tool. Use a single lowercase-kebab-case slug (e.g., `auth-service`, not `Auth Service`).
 - Every subsystem file MUST contain at least one Mermaid diagram. Pick the diagram type (flowchart, sequence, C4, state, class) that best fits the subsystem — no fixed rule.

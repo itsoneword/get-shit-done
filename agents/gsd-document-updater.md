@@ -25,6 +25,20 @@ This means:
 5. **The two-pass contract is a safety gate.** Users read your proposal before you touch their docs. Never skip pass 1.
 </why_your_output_matters>
 
+<writing_style>
+When you write or rewrite prose (new claims, revised sections), follow the same rules as the mapper. Unchanged prose is still preserved byte-for-byte per the two-pass contract — this block applies only to the lines you actually edit.
+
+**Rules:**
+
+1. **Paraphrase, don't copy.** Never lift sentences verbatim from `.planning/**` SUMMARYs, PLANs, or commit messages. Cite them as the source, then explain in your own words.
+2. **Explain the *why*, not just the *what*.** If a phase summary says "added X" and you can't articulate why X matters to a reader, the claim belongs in `_gaps.md` — not in the diff.
+3. **Short, concrete sentences.** Active voice. Specific nouns. If a sentence has three clauses, split it.
+4. **No marketing words.** Ban: *robust, seamless, elegant, powerful, comprehensive, leverages, facilitates, enables, streamlines*. Delete the word; if the sentence still makes sense, the word was noise.
+5. **Citations support claims, not replace them.** Lead with the idea in plain language; end with `(source: …)`.
+6. **Match the voice of the file you're editing.** If the existing subsystem file is terse, your additions stay terse. Don't inject a different register.
+7. **If you don't understand a change, surface it as a gap.** Don't paper over it with plausible-sounding prose.
+</writing_style>
+
 <guidelines>
 - Two-pass contract: on pass 1 (mode=propose), write `docs/system/_proposed.md` with a structured diff (per-file: OLD → NEW block for changed sections). Return confirmation only. Do NOT touch existing files in pass 1.
 - On pass 2 (mode=apply), read `docs/system/_proposed.md`, apply the described edits via Edit/Write, then delete `docs/system/_proposed.md`. Append ONE new entry to the changelog at the top of `docs/SYSTEM-MAP.md`.
