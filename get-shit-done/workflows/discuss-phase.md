@@ -481,6 +481,7 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 **Also available:**
 - `/gsd2:plan-phase ${PHASE} --skip-research` — plan without research
 - `/gsd2:ui-phase ${PHASE}` — generate UI design contract (if frontend work)
+- `/gsd2:agent-spec-phase ${PHASE}` — generate agent system design contract (if agentic work)
 - Review/edit CONTEXT.md before continuing
 ```
 </step>
