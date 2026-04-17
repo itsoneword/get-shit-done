@@ -10,7 +10,7 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Domain Router** - Automatic domain classification replaces hardcoded UI-SPEC trigger in discuss-phase
+- [x] **Phase 1: Domain Router** - Automatic domain classification replaces hardcoded UI-SPEC trigger in discuss-phase (completed 2026-04-17)
 - [ ] **Phase 2: AGENT-SPEC** - Full agentic system spec template, questionnaire, checker, and plan-phase integration
 - [ ] **Phase 3: Documentation Agent** - `/gsd2:document` generates a sourced system map from artifacts, code, and git history
 
@@ -40,7 +40,7 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
   3. The checker agent surfaces a quality report against defined dimensions; a spec with critical gaps is not silently accepted
   4. Test contracts in the generated AGENT-SPEC are structurally compatible with TEST-SPEC.md (no manual reformatting needed)
   5. plan-phase reads AGENT-SPEC.md as input context when it exists in the phase folder (via init.cjs)
-**Plans**: TBD
+**Plans**: 02-01 (Wave 1: AGENT-SPEC template + AGENTIC-PATTERNS reference), 02-02 (Wave 1: agent registration + config + init.cjs + plan-phase integration), 02-03 (Wave 2: agent-spec-phase workflow + command + discuss-phase trigger)
 
 ### Phase 3: Documentation Agent
 **Goal**: Users can generate a sourced, up-to-date system map at any point — from a new project with only code, or a mature one with planning artifacts and milestone history
@@ -61,6 +61,6 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Domain Router | 1/2 | In Progress|  |
-| 2. AGENT-SPEC | 0/TBD | Not started | - |
+| 1. Domain Router | 2/2 | Complete   | 2026-04-17 |
+| 2. AGENT-SPEC | 0/3 | Planning complete | - |
 | 3. Documentation Agent | 0/TBD | Not started | - |
