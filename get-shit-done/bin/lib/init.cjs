@@ -89,11 +89,27 @@ function cmdInitExecutePhase(cwd, phase, raw) {
     state_exists: pathExistsInternal(cwd, '.planning/STATE.md'),
     roadmap_exists: pathExistsInternal(cwd, '.planning/ROADMAP.md'),
     config_exists: pathExistsInternal(cwd, '.planning/config.json'),
+
+    // Existing artifacts (defaults; populated below if found)
+    has_agent_spec: false,
+
     // File paths
     state_path: '.planning/STATE.md',
     roadmap_path: '.planning/ROADMAP.md',
     config_path: '.planning/config.json',
   };
+
+  if (phaseInfo?.directory) {
+    const phaseDirFull = path.join(cwd, phaseInfo.directory);
+    try {
+      const files = fs.readdirSync(phaseDirFull);
+      const agentSpecFile = files.find(f => f.endsWith('-AGENT-SPEC.md') || f === 'AGENT-SPEC.md');
+      if (agentSpecFile) {
+        result.agent_spec_path = toPosixPath(path.join(phaseInfo.directory, agentSpecFile));
+        result.has_agent_spec = true;
+      }
+    } catch { /* intentionally empty */ }
+  }
 
   output(result, raw);
 }
@@ -137,6 +153,7 @@ function cmdInitPlanPhase(cwd, phase, raw) {
     // Existing artifacts
     has_research: phaseInfo?.has_research || false,
     has_context: phaseInfo?.has_context || false,
+    has_agent_spec: false,
     has_plans: (phaseInfo?.plans?.length || 0) > 0,
     plan_count: phaseInfo?.plans?.length || 0,
 
@@ -170,6 +187,11 @@ function cmdInitPlanPhase(cwd, phase, raw) {
       const uatFile = files.find(f => f.endsWith('-UAT.md') || f === 'UAT.md');
       if (uatFile) {
         result.uat_path = toPosixPath(path.join(phaseInfo.directory, uatFile));
+      }
+      const agentSpecFile = files.find(f => f.endsWith('-AGENT-SPEC.md') || f === 'AGENT-SPEC.md');
+      if (agentSpecFile) {
+        result.agent_spec_path = toPosixPath(path.join(phaseInfo.directory, agentSpecFile));
+        result.has_agent_spec = true;
       }
     } catch { /* intentionally empty */ }
   }

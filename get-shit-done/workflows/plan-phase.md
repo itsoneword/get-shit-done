@@ -346,8 +346,10 @@ Use the domain classification from discuss-phase. No keyword grep needed.
   ```bash
   AGENT_SPEC_FILE=$(ls "${PHASE_DIR}"/*-AGENT-SPEC.md 2>/dev/null | head -1)
   ```
-  - **If AGENT-SPEC.md found:** Set `AGENT_SPEC_PATH=$AGENT_SPEC_FILE`. Display: `Using agent spec: ${AGENT_SPEC_PATH}`
-  - **If AGENT-SPEC.md missing:** Skip silently. (AGENT-SPEC workflow is delivered in Phase 2.)
+  - **If AGENT-SPEC.md found:** Set `AGENT_SPEC_PATH=$AGENT_SPEC_FILE`.
+    Display: `Using agent spec: ${AGENT_SPEC_PATH}`.
+    The planner prompt construction in step 8 will include `AGENT_SPEC_PATH` in `<files_to_read>` alongside CONTEXT.md and RESEARCH.md (line: `- ${AGENT_SPEC_PATH} (Agent System Design Contract)`).
+  - **If AGENT-SPEC.md missing:** Display: `No AGENT-SPEC.md found. Run /gsd2:agent-spec-phase ${PHASE} to generate one.` Continue without it.
 
 - **If `DETECTED_DOMAIN` is "Generic":** Skip silently to step 6.
 
@@ -456,6 +458,7 @@ Planner prompt:
 - {verification_path} (Verification Gaps - if --gaps)
 - {uat_path} (UAT Gaps - if --gaps)
 - {UI_SPEC_PATH} (UI Design Contract — visual/interaction specs, if exists)
+- {AGENT_SPEC_PATH} (Agent System Design Contract — architecture, communication contracts, test contracts, observability decisions, if exists)
 </files_to_read>
 
 **Phase requirement IDs (every ID MUST appear in a plan's `requirements` field):** {phase_req_ids}
