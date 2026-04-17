@@ -314,7 +314,48 @@ UI_GATE_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get wo
 
 **If both are `false`:** Skip to step 6.
 
-Check if phase has frontend indicators:
+**Domain-aware classification (preferred path):**
+
+Check if CONTEXT.md exists and has a **Detected domain:** classification from discuss-phase:
+
+```bash
+DETECTED_DOMAIN=""
+if [[ -n "$CONTEXT_PATH" ]] && [[ -f "$CONTEXT_PATH" ]]; then
+  DETECTED_DOMAIN=$(grep "^\*\*Detected domain:\*\*" "${CONTEXT_PATH}" 2>/dev/null | sed 's/.*\*\* //' | tr -d '\r')
+fi
+```
+
+**If `DETECTED_DOMAIN` is non-empty (CONTEXT.md has domain classification):**
+
+Use the domain classification from discuss-phase. No keyword grep needed.
+
+- **If `DETECTED_DOMAIN` contains "UI"** (matches "UI" or "UI+Agentic"):
+  ```bash
+  UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
+  ```
+  - **If UI-SPEC.md found:** Set `UI_SPEC_PATH=$UI_SPEC_FILE`. Display: `Using UI design contract: ${UI_SPEC_PATH}`
+  - **If UI-SPEC.md missing AND `UI_GATE_CFG` is `true`:**
+    Use AskUserQuestion:
+    - header: "UI Design Contract"
+    - question: "Phase {N} is classified as {DETECTED_DOMAIN} but has no UI-SPEC.md. Generate a design contract before planning?"
+    - options:
+      - "Generate UI-SPEC first" -> Display: "Run `/gsd2:ui-phase {N}` then re-run `/gsd2:plan-phase {N}`". Exit workflow.
+      - "Continue without UI-SPEC" -> Continue to step 6.
+
+- **If `DETECTED_DOMAIN` contains "Agentic"** (matches "Agentic" or "UI+Agentic"):
+  ```bash
+  AGENT_SPEC_FILE=$(ls "${PHASE_DIR}"/*-AGENT-SPEC.md 2>/dev/null | head -1)
+  ```
+  - **If AGENT-SPEC.md found:** Set `AGENT_SPEC_PATH=$AGENT_SPEC_FILE`. Display: `Using agent spec: ${AGENT_SPEC_PATH}`
+  - **If AGENT-SPEC.md missing:** Skip silently. (AGENT-SPEC workflow is delivered in Phase 2.)
+
+- **If `DETECTED_DOMAIN` is "Generic":** Skip silently to step 6.
+
+**Fallback path (no CONTEXT.md or no domain field — backward compatibility):**
+
+**If `DETECTED_DOMAIN` is empty (no CONTEXT.md or no domain classification):**
+
+Fall back to keyword grep on ROADMAP phase section (original behavior):
 
 ```bash
 PHASE_SECTION=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
@@ -337,9 +378,9 @@ Use AskUserQuestion:
 - header: "UI Design Contract"
 - question: "Phase {N} has frontend indicators but no UI-SPEC.md. Generate a design contract before planning?"
 - options:
-  - "Generate UI-SPEC first" → Display: "Run `/gsd2:ui-phase {N}` then re-run `/gsd2:plan-phase {N}`". Exit workflow.
-  - "Continue without UI-SPEC" → Continue to step 6.
-  - "Not a frontend phase" → Continue to step 6.
+  - "Generate UI-SPEC first" -> Display: "Run `/gsd2:ui-phase {N}` then re-run `/gsd2:plan-phase {N}`". Exit workflow.
+  - "Continue without UI-SPEC" -> Continue to step 6.
+  - "Not a frontend phase" -> Continue to step 6.
 
 **If `HAS_UI` is 1 (no frontend indicators):** Skip silently to step 6.
 
