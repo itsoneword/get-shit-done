@@ -16,6 +16,7 @@ const VALID_CONFIG_KEYS = new Set([
   'search_gitignored', 'brave_search',
   'workflow.research', 'workflow.plan_check', 'workflow.verifier',
   'workflow.nyquist_validation', 'workflow.ui_phase', 'workflow.ui_safety_gate',
+  'workflow.agent_spec', 'workflow.agent_spec_gate',
   'workflow.text_mode',
   'workflow._auto_chain_active',
   'git.branching_strategy', 'git.phase_branch_template', 'git.milestone_branch_template',
