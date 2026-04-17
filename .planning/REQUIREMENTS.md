@@ -26,7 +26,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Documentation Agent
 
-- [ ] **DOCS-01**: `/gsd2:document` command generates system map from planning artifacts, git history, and code
+- [x] **DOCS-01**: `/gsd2:document` command generates system map from planning artifacts, git history, and code
 - [ ] **DOCS-02**: System map includes Mermaid diagrams for component relationships and boundaries
 - [ ] **DOCS-03**: All documentation claims cite source artifacts — gaps marked as [undocumented]
 - [ ] **DOCS-04**: Works for new projects with no milestones (reads code and git history only)
@@ -78,7 +78,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPEC-04 | Phase 2 | Complete |
 | SPEC-05 | Phase 2 | Complete |
 | SPEC-06 | Phase 2 | Complete |
-| DOCS-01 | Phase 3 | Pending |
+| DOCS-01 | Phase 3 | Complete |
 | DOCS-02 | Phase 3 | Pending |
 | DOCS-03 | Phase 3 | Pending |
 | DOCS-04 | Phase 3 | Pending |

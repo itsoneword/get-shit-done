@@ -53,7 +53,7 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
   3. Every claim in SYSTEM-MAP.md cites its source artifact; anything without a traceable source is marked [undocumented]
   4. Running `/gsd2:document` a second time updates SYSTEM-MAP.md incrementally — sections with no changes are preserved, changed sections are updated with a diff note
   5. After milestone completion, the transition workflow surfaces a prompt suggesting the user run `/gsd2:document`
-**Plans**: TBD
+**Plans**: 03-01 (Wave 1: init document + model profiles + mapper/updater agent personas), 03-02 (Wave 1: /gsd2:document command stub), 03-03 (Wave 2: document.md workflow + complete-milestone hook + E2E verification)
 
 ## Progress
 
@@ -63,4 +63,4 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 |-------|----------------|--------|-----------|
 | 1. Domain Router | 2/2 | Complete   | 2026-04-17 |
 | 2. AGENT-SPEC | 0/3 | Planning complete | - |
-| 3. Documentation Agent | 0/TBD | Not started | - |
+| 3. Documentation Agent | 0/3 | Planning complete | - |
