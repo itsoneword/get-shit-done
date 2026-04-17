@@ -16,6 +16,8 @@ const MODEL_PROFILES = {
   'gsd-debugger': { quality: 'opus', balanced: 'sonnet', budget: 'sonnet' },
   'gsd-fixer': { quality: 'opus', balanced: 'sonnet', budget: 'sonnet' },
   'gsd-codebase-mapper': { quality: 'sonnet', balanced: 'haiku', budget: 'haiku' },
+  'gsd-document-mapper':  { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
+  'gsd-document-updater': { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
   'gsd-verifier': { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
   'gsd-plan-checker': { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
   'gsd-integration-checker': { quality: 'sonnet', balanced: 'sonnet', budget: 'haiku' },
