@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-agent-spec/02-01-PLAN.md
-last_updated: "2026-04-17T11:16:50.714Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-04-17T11:21:35.923Z"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 ## Current Position
@@ -50,6 +50,11 @@ Recent decisions affecting current work:
 - [Phase 02-agent-spec]: [Phase 02-01]: Test contract format mirrors TEST-SPEC.md exactly (Action/Observables/Pass criteria) for SPEC-04 structural reuse
 - [Phase 02-agent-spec]: [Phase 02-01]: Observability section uses three required subsections (Tracing, Boundary Logging, Failure Diagnosis) so checker can validate concretely
 - [Phase 02-agent-spec]: [Phase 02-01]: AGENTIC-PATTERNS.md uses GSD's own workflows (discuss/plan/execute pipeline, domain router, wave executor) as concrete real-world examples
+- [Phase 02-agent-spec]: Used Node:test runner for new test (Jest not a project dependency)
+- [Phase 02-agent-spec]: AGENT-SPEC discovery added to both init plan-phase and execute-phase for symmetry
+- [Phase 02-agent-spec]: [Phase 02-03] Researcher and checker personas defined inline in agent-spec-phase.md prompts (no separate agent .md files), matching ui-phase.md convention
+- [Phase 02-agent-spec]: [Phase 02-03] Checker uses binary PASS/FLAG/FAIL criteria; Observability dimension treats TBD or standard logging as automatic FAIL
+- [Phase 02-agent-spec]: [Phase 02-03] discuss-phase change is additive one-line (agent-spec-phase shown alongside ui-phase, not replacing)
 
 ### Pending Todos
 
@@ -61,6 +66,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-17T11:16:24.136Z
-Stopped at: Completed 02-agent-spec/02-01-PLAN.md
+Last session: 2026-04-17T11:21:35.920Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None

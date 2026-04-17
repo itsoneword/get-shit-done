@@ -18,11 +18,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### AGENT-SPEC
 
 - [x] **SPEC-01**: AGENT-SPEC template with core fields: agent roster, communication contracts (typed), topology pattern, permission boundaries, test contracts, observability (cross-cutting)
-- [ ] **SPEC-02**: Agent researcher agent gathers agentic system context through adaptive questioning
-- [ ] **SPEC-03**: Agent checker agent validates AGENT-SPEC quality against defined dimensions
+- [x] **SPEC-02**: Agent researcher agent gathers agentic system context through adaptive questioning
+- [x] **SPEC-03**: Agent checker agent validates AGENT-SPEC quality against defined dimensions
 - [x] **SPEC-04**: Test contracts in AGENT-SPEC are compatible with existing TEST-SPEC.md format
 - [x] **SPEC-05**: Framework pattern reference document showing chain, graph, orchestrator, and parallel topology patterns with examples
-- [ ] **SPEC-06**: AGENT-SPEC integrates into plan-phase via init.cjs (planner reads spec as input)
+- [x] **SPEC-06**: AGENT-SPEC integrates into plan-phase via init.cjs (planner reads spec as input)
 
 ### Documentation Agent
 
@@ -73,11 +73,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRTR-04 | Phase 1 | Complete |
 | DRTR-05 | Phase 1 | Complete |
 | SPEC-01 | Phase 2 | Complete |
-| SPEC-02 | Phase 2 | Pending |
-| SPEC-03 | Phase 2 | Pending |
+| SPEC-02 | Phase 2 | Complete |
+| SPEC-03 | Phase 2 | Complete |
 | SPEC-04 | Phase 2 | Complete |
 | SPEC-05 | Phase 2 | Complete |
-| SPEC-06 | Phase 2 | Pending |
+| SPEC-06 | Phase 2 | Complete |
 | DOCS-01 | Phase 3 | Pending |
 | DOCS-02 | Phase 3 | Pending |
 | DOCS-03 | Phase 3 | Pending |
