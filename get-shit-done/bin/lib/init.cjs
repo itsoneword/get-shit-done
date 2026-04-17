@@ -633,6 +633,122 @@ function cmdInitMapCodebase(cwd, raw) {
   output(result, raw);
 }
 
+function cmdInitDocument(cwd, raw) {
+  const config = loadConfig(cwd);
+
+  const rootMapPath = path.join(cwd, 'docs', 'SYSTEM-MAP.md');
+  const systemDir = path.join(cwd, 'docs', 'system');
+
+  // existing_subsystems: .md files in docs/system/ excluding _gaps.md and _proposed.md
+  let existingSubsystems = [];
+  try {
+    existingSubsystems = fs.readdirSync(systemDir)
+      .filter(f => f.endsWith('.md') && f !== '_gaps.md' && f !== '_proposed.md');
+  } catch { /* no dir yet */ }
+
+  // last_run_iso: first dated line in root SYSTEM-MAP.md changelog
+  let lastRunIso = null;
+  try {
+    const content = fs.readFileSync(rootMapPath, 'utf-8');
+    const match = content.match(/^\s*-\s*(\d{4}-\d{2}-\d{2}T[\d:.Z]+)/m);
+    if (match) lastRunIso = match[1];
+  } catch { /* no root map yet */ }
+
+  // commits_since: git commit count since last_run_iso
+  let commitsSince = 0;
+  if (lastRunIso) {
+    try {
+      const out = execSync(`git log --since="${lastRunIso}" --oneline`, { cwd }).toString();
+      commitsSince = out.trim().split('\n').filter(Boolean).length;
+    } catch { /* not a git repo or git error */ }
+  }
+
+  // new_summaries: SUMMARY.md files under .planning/phases modified since last_run_iso
+  let newSummaries = [];
+  if (lastRunIso) {
+    try {
+      const lastRunMs = new Date(lastRunIso).getTime();
+      const phasesDir = path.join(cwd, '.planning', 'phases');
+      const walk = (dir) => {
+        const out = [];
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const ent of entries) {
+          const p = path.join(dir, ent.name);
+          if (ent.isDirectory()) {
+            out.push(...walk(p));
+          } else if (ent.isFile() && (ent.name === 'SUMMARY.md' || ent.name.endsWith('-SUMMARY.md'))) {
+            try {
+              const mtime = fs.statSync(p).mtime.getTime();
+              if (mtime > lastRunMs) out.push(path.relative(cwd, p));
+            } catch { /* stat failed */ }
+          }
+        }
+        return out;
+      };
+      newSummaries = walk(phasesDir);
+    } catch { /* no phases dir */ }
+  }
+
+  // completed_phases_since: phases marked [x] in ROADMAP.md
+  let completedPhasesSince = [];
+  try {
+    const roadmap = fs.readFileSync(path.join(cwd, '.planning', 'ROADMAP.md'), 'utf-8');
+    const re = /- \[x\]\s*\*\*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:/gi;
+    let m;
+    while ((m = re.exec(roadmap)) !== null) {
+      completedPhasesSince.push(m[1]);
+    }
+  } catch { /* no roadmap */ }
+
+  // new_todos: count of lines added under .planning/todos since last_run_iso
+  let newTodos = 0;
+  if (lastRunIso && pathExistsInternal(cwd, '.planning/todos')) {
+    try {
+      const out = execSync(
+        `git log --since="${lastRunIso}" --numstat -- .planning/todos`,
+        { cwd }
+      ).toString();
+      for (const line of out.split('\n')) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 3 && /^\d+$/.test(parts[0])) {
+          newTodos += parseInt(parts[0], 10);
+        }
+      }
+    } catch { /* git error */ }
+  }
+
+  const result = {
+    // Models
+    mapper_model: resolveModelInternal(cwd, 'gsd-document-mapper'),
+    updater_model: resolveModelInternal(cwd, 'gsd-document-updater'),
+
+    // Config
+    commit_docs: config.commit_docs,
+
+    // Paths (relative)
+    docs_dir: 'docs',
+    system_dir: 'docs/system',
+    root_map_path: 'docs/SYSTEM-MAP.md',
+    gaps_path: 'docs/system/_gaps.md',
+
+    // State
+    root_map_exists: pathExistsInternal(cwd, 'docs/SYSTEM-MAP.md'),
+    system_dir_exists: pathExistsInternal(cwd, 'docs/system'),
+    existing_subsystems: existingSubsystems,
+    last_run_iso: lastRunIso,
+    has_planning: pathExistsInternal(cwd, '.planning'),
+    has_codebase_maps: pathExistsInternal(cwd, '.planning/codebase'),
+
+    // Activity signals since last_run_iso
+    commits_since: commitsSince,
+    new_summaries: newSummaries,
+    completed_phases_since: completedPhasesSince,
+    new_todos: newTodos,
+  };
+
+  output(result, raw);
+}
+
 function cmdInitProgress(cwd, raw) {
   const config = loadConfig(cwd);
   const milestone = getMilestoneInfo(cwd);
@@ -792,4 +908,5 @@ module.exports = {
   cmdInitMilestoneOp,
   cmdInitMapCodebase,
   cmdInitProgress,
+  cmdInitDocument,
 };
