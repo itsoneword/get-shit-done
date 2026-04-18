@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gsd-hook-version: 1.3.3
+// gsd-hook-version: 1.4.1
 // Claude Code Statusline - GSD Edition
 // Shows: model | current task | directory | context usage
 
@@ -120,7 +120,7 @@ process.stdin.on('end', () => {
       }
       if (gsdVersion) break;
     }
-    const gsdLabel = gsdVersion ? `\x1b[36mGSD v${gsdVersion}\x1b[0m │ ` : '';
+    const gsdLabel = gsdVersion ? `\x1b[36mGSD2 v${gsdVersion}\x1b[0m │ ` : '';
 
     // Output
     const dirname = path.basename(dir);

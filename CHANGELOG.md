@@ -2,6 +2,37 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.4.1] - 2026-04-18
+
+Milestone **v1.4 — Domain-Aware Planning**. Three phases: domain router, AGENT-SPEC for agentic systems, and an on-demand documentation agent.
+
+### Added
+
+#### Phase 01 — Domain Router
+- **Domain classification router in `/gsd2:discuss-phase`** — automatically classifies the phase (frontend, agentic, backend, infra, etc.) instead of asking yes/no per domain. Replaces the old "would you like a UI spec?" gate that fired even on non-UI work
+- **Domain-aware artifact check in `/gsd2:plan-phase`** (step 5.6) — planner picks up domain-specific specs (UI-SPEC, AGENT-SPEC, …) without per-domain branches
+
+#### Phase 02 — AGENT-SPEC Workflow
+- **`AGENT-SPEC.md` template** — design contract for agentic systems covering communication contracts, security boundaries, observability, and test-driven scenarios
+- **`AGENTIC-PATTERNS.md`** — topology reference (orchestrator/worker, router, evaluator/optimizer, etc.) consumed by the agent-spec workflow
+- **`/gsd2:agent-spec-phase` command** — generates AGENT-SPEC.md before planning; triggered automatically by domain router for agentic phases
+- **AGENT-SPEC discovery in init and plan-phase** — both pick up the spec when present
+
+#### Phase 03 — Documentation Agent
+- **`/gsd2:document` command** — generates or updates a layered, sourced SYSTEM-MAP in `docs/` from planning artifacts, code, and git history. Supports init (full map) and incremental update modes
+- **`document-mapper` agent** — produces the SYSTEM-MAP from existing artifacts (no inline narration by executor agents)
+- **`document-updater` agent** — incremental updates against prior map, diffing completed phases
+- **`offer_documentation` hook** — fires before `archive_milestone` so docs stay in sync with shipped work
+- **Replaced legacy `docs/*.md`** with auto-generated `docs/system/` tree
+
+### Fixed
+- **CLAUDE.md sidecar handling** — markdown-aware filter, hybrid shape, auto-sync on `/gsd2:map-codebase`
+
+### Design Notes
+- `existing_subsystems` filter excludes both `_gaps.md` and `_proposed.md` (updater scratch files)
+- `completed_phases_since` returns all `[x]` phases (not date-filtered) — orchestrator diffs against prior map
+- document-mapper/updater profile = sonnet/sonnet/haiku (higher balanced than codebase-mapper since narrative writing needs more reasoning)
+
 ## [1.3.5] - 2026-04-06
 
 ### Added
