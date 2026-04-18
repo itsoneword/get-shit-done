@@ -277,6 +277,127 @@ function extractMarkdownSection(content, sectionName) {
 
 // ─── CLAUDE.md Section Generators ─────────────────────────────────────────────
 
+/**
+ * Markdown-aware filter for sidecar content embedded into CLAUDE.md managed sections.
+ *
+ * Transforms:
+ *   - Strips sidecar H1 and "Analysis Date" metadata line.
+ *   - Demotes headings one level (## → ###, ### → ####, capped at 6) so children
+ *     of the wrapper ## section render at the correct outline depth.
+ *   - Preserves fenced code block contents (```lang ... ```) verbatim.
+ *   - Drops empty-valued bullets (label with no body, or placeholder [..]/TBD body).
+ *   - Drops headings with no content before the next heading or EOF.
+ */
+function summarizeSidecar(content, opts = {}) {
+  if (!content) return '';
+  const { maxContentLines = null, pointerPath = null } = opts;
+  const rawLines = content.split('\n');
+
+  // Pass 1: drop H1 + "Analysis Date" metadata, demote headings, handle fences.
+  const pass1 = [];
+  let inFence = false;
+  for (const line of rawLines) {
+    const fenceMatch = line.match(/^```/);
+    if (fenceMatch) {
+      inFence = !inFence;
+      pass1.push(line);
+      continue;
+    }
+    if (inFence) {
+      pass1.push(line);
+      continue;
+    }
+    // Drop sidecar H1 (single #, not ##).
+    if (/^# [^#]/.test(line)) continue;
+    // Drop "Analysis Date" metadata line.
+    if (/^\*\*Analysis Date:\*\*/i.test(line)) continue;
+    // Demote heading levels, cap at 6.
+    const headingMatch = line.match(/^(#{2,6})(\s)/);
+    if (headingMatch) {
+      const current = headingMatch[1].length;
+      const demoted = Math.min(current + 1, 6);
+      pass1.push('#'.repeat(demoted) + line.slice(current));
+      continue;
+    }
+    pass1.push(line);
+  }
+
+  // Pass 2: drop empty-valued bullets and placeholder-body bullets.
+  const EMPTY_LABEL_BULLET = /^\s*[-*]\s+(\*\*[^*]+\*\*\s*:?\s*)?$/;
+  const PLACEHOLDER_BULLET = /^\s*[-*]\s+.*?(:\s*\[[^\]]+\]\s*|:\s*TBD\s*)$/i;
+  const pass2 = [];
+  inFence = false;
+  for (const line of pass1) {
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      pass2.push(line);
+      continue;
+    }
+    if (inFence) {
+      pass2.push(line);
+      continue;
+    }
+    if (EMPTY_LABEL_BULLET.test(line)) continue;
+    if (PLACEHOLDER_BULLET.test(line)) continue;
+    pass2.push(line);
+  }
+
+  // Pass 3: drop headings with no content before next heading / EOF.
+  const dropEmptyHeadings = (lines) => {
+    const out = [];
+    let fence = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^```/.test(line)) {
+        fence = !fence;
+        out.push(line);
+        continue;
+      }
+      if (!fence && /^#{1,6}\s/.test(line)) {
+        let hasContent = false;
+        for (let j = i + 1; j < lines.length; j++) {
+          const next = lines[j];
+          if (/^#{1,6}\s/.test(next)) break;
+          if (next.trim() !== '') { hasContent = true; break; }
+        }
+        if (!hasContent) continue;
+      }
+      out.push(line);
+    }
+    return out;
+  };
+  const pass3 = dropEmptyHeadings(pass2);
+
+  // Pass 4 (optional): cap to maxContentLines non-blank content lines. Keep
+  // surrounding blank lines intact when possible so outline stays readable.
+  let capped = pass3;
+  if (maxContentLines != null && maxContentLines > 0) {
+    const limited = [];
+    let kept = 0;
+    let inFence4 = false;
+    for (const line of pass3) {
+      if (/^```/.test(line)) {
+        inFence4 = !inFence4;
+        limited.push(line);
+        continue;
+      }
+      if (inFence4) { limited.push(line); continue; }
+      if (line.trim() === '') { limited.push(line); continue; }
+      if (kept >= maxContentLines) break;
+      limited.push(line);
+      kept += 1;
+    }
+    capped = dropEmptyHeadings(limited);
+  }
+
+  let result = capped.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (pointerPath) {
+    const pointer = `> For current detail: \`${pointerPath}\``;
+    result = result ? `${result}\n\n${pointer}` : pointer;
+  }
+  return result;
+}
+
 function generateProjectSection(cwd) {
   const projectPath = path.join(cwd, '.planning', 'PROJECT.md');
   const content = safeReadFile(projectPath);
@@ -307,32 +428,34 @@ function generateProjectSection(cwd) {
   return { content: parts.join('\n\n'), source: 'PROJECT.md', hasFallback: false };
 }
 
+// Hybrid shape: embedded sidecar sections are capped to a short summary and
+// include a pointer line so Claude knows where to Read the full sidecar when
+// it needs detail. Keeps CLAUDE.md lean on every turn.
+const SIDECAR_SUMMARY_LINES = 10;
+
 function generateStackSection(cwd) {
   const codebasePath = path.join(cwd, '.planning', 'codebase', 'STACK.md');
   const researchPath = path.join(cwd, '.planning', 'research', 'STACK.md');
   let content = safeReadFile(codebasePath);
   let source = 'codebase/STACK.md';
+  let pointerPath = '.planning/codebase/STACK.md';
   if (!content) {
     content = safeReadFile(researchPath);
     source = 'research/STACK.md';
+    pointerPath = '.planning/research/STACK.md';
   }
   if (!content) {
     return { content: CLAUDE_MD_FALLBACKS.stack, source: 'STACK.md', hasFallback: true };
   }
-  const lines = content.split('\n');
-  const summaryLines = [];
-  let inTable = false;
-  for (const line of lines) {
-    if (line.startsWith('#')) {
-      if (!line.startsWith('# ') || summaryLines.length > 0) summaryLines.push(line);
-      continue;
-    }
-    if (line.startsWith('|')) { inTable = true; summaryLines.push(line); continue; }
-    if (inTable && line.trim() === '') inTable = false;
-    if (line.startsWith('- ') || line.startsWith('* ')) summaryLines.push(line);
-  }
-  const summary = summaryLines.length > 0 ? summaryLines.join('\n') : content.trim();
-  return { content: summary, source, hasFallback: false };
+  const summary = summarizeSidecar(content, {
+    maxContentLines: SIDECAR_SUMMARY_LINES,
+    pointerPath,
+  });
+  return {
+    content: summary || content.trim(),
+    source,
+    hasFallback: false,
+  };
 }
 
 function generateConventionsSection(cwd) {
@@ -341,14 +464,15 @@ function generateConventionsSection(cwd) {
   if (!content) {
     return { content: CLAUDE_MD_FALLBACKS.conventions, source: 'CONVENTIONS.md', hasFallback: true };
   }
-  const lines = content.split('\n');
-  const summaryLines = [];
-  for (const line of lines) {
-    if (line.startsWith('#')) { if (!line.startsWith('# ')) summaryLines.push(line); continue; }
-    if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('|')) summaryLines.push(line);
-  }
-  const summary = summaryLines.length > 0 ? summaryLines.join('\n') : content.trim();
-  return { content: summary, source: 'CONVENTIONS.md', hasFallback: false };
+  const summary = summarizeSidecar(content, {
+    maxContentLines: SIDECAR_SUMMARY_LINES,
+    pointerPath: '.planning/codebase/CONVENTIONS.md',
+  });
+  return {
+    content: summary || content.trim(),
+    source: 'CONVENTIONS.md',
+    hasFallback: false,
+  };
 }
 
 function generateArchitectureSection(cwd) {
@@ -357,14 +481,15 @@ function generateArchitectureSection(cwd) {
   if (!content) {
     return { content: CLAUDE_MD_FALLBACKS.architecture, source: 'ARCHITECTURE.md', hasFallback: true };
   }
-  const lines = content.split('\n');
-  const summaryLines = [];
-  for (const line of lines) {
-    if (line.startsWith('#')) { if (!line.startsWith('# ')) summaryLines.push(line); continue; }
-    if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('|') || line.startsWith('```')) summaryLines.push(line);
-  }
-  const summary = summaryLines.length > 0 ? summaryLines.join('\n') : content.trim();
-  return { content: summary, source: 'ARCHITECTURE.md', hasFallback: false };
+  const summary = summarizeSidecar(content, {
+    maxContentLines: SIDECAR_SUMMARY_LINES,
+    pointerPath: '.planning/codebase/ARCHITECTURE.md',
+  });
+  return {
+    content: summary || content.trim(),
+    source: 'ARCHITECTURE.md',
+    hasFallback: false,
+  };
 }
 
 function generateWorkflowSection() {
@@ -947,6 +1072,7 @@ module.exports = {
   cmdGenerateDevPreferences,
   cmdGenerateClaudeProfile,
   cmdGenerateClaudeMd,
+  summarizeSidecar,
   PROFILING_QUESTIONS,
   CLAUDE_INSTRUCTIONS,
 };

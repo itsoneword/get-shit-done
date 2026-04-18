@@ -178,10 +178,28 @@ Wait for confirmation before continuing.
 If SECRETS_FOUND=false: continue to commit_codebase_map.
 </step>
 
+<step name="sync_claude_md">
+Refresh the GSD-managed sections of the project-root `CLAUDE.md` from the
+just-refreshed sidecars so always-loaded context doesn't drift. Only run when
+a root `CLAUDE.md` already exists — creating one is `/gsd2:new-project`'s job.
+`--auto` preserves manually-edited sections.
+
+```bash
+if [ -f CLAUDE.md ]; then
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" generate-claude-md --auto
+fi
+```
+
+Continue to commit_codebase_map.
+</step>
+
 <step name="commit_codebase_map">
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: map existing codebase" --files .planning/codebase/*.md
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: map existing codebase" --files .planning/codebase/*.md CLAUDE.md
 ```
+
+`commit` skips files that don't exist / aren't modified, so including `CLAUDE.md`
+is safe whether or not the sync step touched it.
 
 Continue to offer_next.
 </step>
@@ -231,5 +249,6 @@ Created .planning/codebase/:
 - Task available → 4 parallel gsd-codebase-mapper agents with run_in_background=true
 - Task unavailable → 4 sequential inline passes (NEVER browser_subagent)
 - Secrets scan passed before commit
+- If root CLAUDE.md exists, generate-claude-md --auto ran after mapping
 - Completion summary with line counts and next steps presented
 </success_criteria>

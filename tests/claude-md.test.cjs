@@ -80,3 +80,28 @@ describe('new-project workflow includes CLAUDE.md generation', () => {
     assert.ok(commandsContent.includes('`CLAUDE.md`'));
   });
 });
+
+describe('map-codebase workflow auto-syncs CLAUDE.md', () => {
+  const workflowPath = path.join(__dirname, '..', 'get-shit-done', 'workflows', 'map-codebase.md');
+
+  test('map-codebase invokes generate-claude-md --auto when CLAUDE.md exists', () => {
+    const content = fs.readFileSync(workflowPath, 'utf-8');
+    assert.ok(
+      content.includes('generate-claude-md --auto'),
+      'workflow should call generate-claude-md --auto after mapping'
+    );
+    // Guarded by existence check so fresh projects don't get CLAUDE.md implicitly.
+    assert.ok(
+      /if \[ -f CLAUDE\.md \]/.test(content),
+      'sync must be guarded by CLAUDE.md existence'
+    );
+  });
+
+  test('map-codebase commits CLAUDE.md alongside sidecars when it changed', () => {
+    const content = fs.readFileSync(workflowPath, 'utf-8');
+    assert.ok(
+      /commit "docs: map existing codebase" --files \.planning\/codebase\/\*\.md CLAUDE\.md/.test(content),
+      'commit step should include CLAUDE.md'
+    );
+  });
+});

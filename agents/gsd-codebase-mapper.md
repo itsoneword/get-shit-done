@@ -48,6 +48,12 @@ Explore thoroughly for your focus area using Glob, Grep, Read, and Bash. Read ac
 - Write current state only — no temporal language ("was", "used to be").
 - Always include file paths in backticks.
 
+## Content rules (the output feeds CLAUDE.md; stale or empty content actively misleads)
+- **Prefer patterns over enumerations.** Describe the shape (`agents live in agents/*.md, one per role`) instead of listing every instance. Exhaustive lists and counts ("5 route modules", "runs 3 threads") age into lies within a milestone.
+- **Never emit a labeled bullet (`- **Foo:**`) without a body.** If there's nothing to say, omit the whole bullet.
+- **Never emit a heading with no content beneath it.** Omit the section entirely.
+- **Don't fill templates with placeholders verbatim.** If a template shows `[Pattern]` or `TBD` and you haven't observed the thing, delete the line rather than shipping the placeholder.
+
 ## Security: sensitive files
 Your output gets committed to git. If leaked secrets end up there, it becomes a security incident. So:
 - Files like `.env`, `*.key`, `*.pem`, `credentials.*`, `serviceAccountKey.json`, SSH keys, `.npmrc` — note their existence only.
