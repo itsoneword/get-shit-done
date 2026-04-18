@@ -472,6 +472,20 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 
 **Phase ${PHASE}: [Name]** — [Goal from ROADMAP.md]
 
+{Branch on detected_domain:}
+
+{If detected_domain == "UI":}
+`/gsd2:ui-phase ${PHASE}` — generate UI design contract, then plan
+
+{If detected_domain == "Agentic":}
+`/gsd2:agent-spec-phase ${PHASE}` — generate agent system design contract, then plan
+
+{If detected_domain == "UI+Agentic":}
+`/gsd2:ui-phase ${PHASE}` — UI design contract
+`/gsd2:agent-spec-phase ${PHASE}` — agent system design contract
+(run both, then `/gsd2:plan-phase ${PHASE}`)
+
+{If detected_domain == "Generic":}
 `/gsd2:plan-phase ${PHASE}`
 
 <sub>`/clear` first for fresh context window</sub>
@@ -479,9 +493,8 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 ---
 
 **Also available:**
+- `/gsd2:plan-phase ${PHASE}` — skip design contract, plan directly
 - `/gsd2:plan-phase ${PHASE} --skip-research` — plan without research
-- `/gsd2:ui-phase ${PHASE}` — generate UI design contract (if frontend work)
-- `/gsd2:agent-spec-phase ${PHASE}` — generate agent system design contract (if agentic work)
 - Review/edit CONTEXT.md before continuing
 ```
 </step>
@@ -569,12 +582,24 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_c
 
 **If `--auto` OR `AUTO_CHAIN` true OR `AUTO_CFG` true:**
 
-Display auto-advance banner, then launch via Skill tool (avoids nested Task freezes per #686):
-```
-Skill(skill="gsd2:plan-phase", args="${PHASE} --auto")
-```
+Route by `detected_domain`:
 
-Handle return:
+- **detected_domain == "Generic"** → display auto-advance banner, launch via Skill tool (avoids nested Task freezes per #686):
+  ```
+  Skill(skill="gsd2:plan-phase", args="${PHASE} --auto")
+  ```
+
+- **detected_domain ∈ {"UI", "Agentic", "UI+Agentic"}** → design contract is required before planning, and ui-phase / agent-spec-phase do not currently honor `--auto`. Pause the auto chain:
+  ```bash
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+  ```
+  Display a pause notice, then fall through to confirm_creation (manual next steps) so the user sees the domain-branched commands. Example message:
+  ```
+  Auto chain paused — ${detected_domain} phase needs design contract first.
+  Run the command shown under "Next Up", then resume with: /gsd2:plan-phase ${PHASE} --auto
+  ```
+
+Handle return (Generic path only):
 - **PHASE COMPLETE** → show success, suggest `/gsd2:discuss-phase ${NEXT_PHASE} --auto` with `/clear` first
 - **PLANNING COMPLETE** → "Execution didn't finish. Continue: /gsd2:execute-phase ${PHASE}"
 - **PLANNING INCONCLUSIVE/CHECKPOINT** → "Planning needs input. Continue: /gsd2:plan-phase ${PHASE}"
