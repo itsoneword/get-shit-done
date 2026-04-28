@@ -2,6 +2,29 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.4.2] - 2026-04-28
+
+### Added
+- **`/gsd2:quick` command restored** — slim ad-hoc executor for small tasks that don't fit a full phase. Plans, executes, and atomically commits into `.planning/quick/YYMMDD-xxx-slug/`. Tracks completion in STATE.md, never touches ROADMAP.md.
+  - **Default suggest preview** — Claude shows a 4–8 line proposal (approach + files to touch) before planning, you confirm or redirect. One round-trip, no ceremony.
+  - **`--clarify` flag** — Claude asks 2–3 targeted questions about real uncertainties (not all gray areas). Decisions captured in `${quick_id}-CONTEXT.md`. Replaces the old multi-domain `--discuss` flow.
+  - **`--full` flag** — Adds plan-checker (max 2 revision loops) + post-execution verifier for higher-stakes ad-hoc work.
+- **`git.quick_branch_template` config key** re-added to `KNOWN_CONFIG_KEYS` so users opting into auto-branching for quick tasks no longer see "unknown key" warnings.
+
+### Changed
+- **`/gsd2:do` router rewired** — split the "todo" rule into capture vs. execute paths and added a fallback for ad-hoc work:
+  - *"Add a todo to refactor X"* / *"remember to update Y"* → `/gsd2:add-todo` (capture).
+  - *"Do todo 3"* / *"work on the auth todo"* → `/gsd2:check-todos` (select + work).
+  - Small ad-hoc work that doesn't fit a specific lifecycle command → `/gsd2:quick` (was previously dead-ending into `/gsd2:add-phase` or `/gsd2:add-todo`).
+- **`/gsd2:help`** — new "Ad-hoc Tasks" section documenting `/gsd2:quick`; smart-router blurb mentions the new fallback.
+
+### Removed (vs. pre-1.3.2 quick)
+- **`--research` flag** — gone. Run `/gsd2:research-phase` first if you genuinely need ecosystem research before a quick task; the old in-line `--research` was rarely used and added complexity.
+- **`--discuss` flag** — replaced by the lighter default suggest preview + the on-demand `--clarify` flag.
+
+### Why
+`/gsd2:do` was router-only, so freeform inputs like "do this small thing" dead-ended into either `/gsd2:add-phase` (overkill) or `/gsd2:add-todo` (which only captures). With `/gsd2:quick` restored as a real executor and `do` rewired to fall back to it, the freeform path now actually delivers work.
+
 ## [1.4.1] - 2026-04-18
 
 Milestone **v1.4 — Domain-Aware Planning**. Three phases: domain router, AGENT-SPEC for agentic systems, and an on-demand documentation agent.

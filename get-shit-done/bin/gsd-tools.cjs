@@ -122,6 +122,7 @@
  *   init plan-phase <phase>            All context for plan-phase workflow
  *   init new-project                   All context for new-project workflow
  *   init new-milestone                 All context for new-milestone workflow
+ *   init quick "<description>"         All context for quick (ad-hoc task) workflow
  *   init resume                        All context for resume-project workflow
  *   init verify-work <phase>           All context for verify-work workflow
  *   init phase-op <phase>              Generic phase operation context
@@ -590,6 +591,9 @@ async function main() {
         case 'new-milestone':
           init.cmdInitNewMilestone(cwd, raw);
           break;
+        case 'quick':
+          init.cmdInitQuick(cwd, args[2], raw);
+          break;
         case 'resume':
           init.cmdInitResume(cwd, raw);
           break;
@@ -615,7 +619,7 @@ async function main() {
           init.cmdInitDocument(cwd, raw);
           break;
         default:
-          error(`Unknown init workflow: ${workflow}\nAvailable: execute-phase, plan-phase, new-project, new-milestone, resume, verify-work, phase-op, todos, milestone-op, map-codebase, progress, document`);
+          error(`Unknown init workflow: ${workflow}\nAvailable: execute-phase, plan-phase, new-project, new-milestone, quick, resume, verify-work, phase-op, todos, milestone-op, map-codebase, progress, document`);
       }
       break;
     }

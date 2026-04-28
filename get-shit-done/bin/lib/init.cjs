@@ -314,6 +314,53 @@ function cmdInitNewMilestone(cwd, raw) {
   output(result, raw);
 }
 
+function cmdInitQuick(cwd, description, raw) {
+  const config = loadConfig(cwd);
+  const now = new Date();
+  const slug = description ? generateSlugInternal(description)?.substring(0, 40) : null;
+
+  // Quick task ID: YYMMDD-xxx where xxx is 2-second blocks since midnight in Base36.
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const dateStr = yy + mm + dd;
+  const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const timeEncoded = Math.floor(secondsSinceMidnight / 2).toString(36).padStart(3, '0');
+  const quickId = dateStr + '-' + timeEncoded;
+  const branchSlug = slug || 'quick';
+  const quickBranchName = config.quick_branch_template
+    ? config.quick_branch_template
+        .replace('{num}', quickId)
+        .replace('{quick}', quickId)
+        .replace('{slug}', branchSlug)
+    : null;
+
+  const result = {
+    planner_model: resolveModelInternal(cwd, 'gsd-planner'),
+    executor_model: resolveModelInternal(cwd, 'gsd-executor'),
+    checker_model: resolveModelInternal(cwd, 'gsd-plan-checker'),
+    verifier_model: resolveModelInternal(cwd, 'gsd-verifier'),
+
+    commit_docs: config.commit_docs,
+    branch_name: quickBranchName,
+
+    quick_id: quickId,
+    slug: slug,
+    description: description || null,
+
+    date: now.toISOString().split('T')[0],
+    timestamp: now.toISOString(),
+
+    quick_dir: '.planning/quick',
+    task_dir: slug ? `.planning/quick/${quickId}-${slug}` : null,
+
+    roadmap_exists: pathExistsInternal(cwd, '.planning/ROADMAP.md'),
+    planning_exists: pathExistsInternal(cwd, '.planning'),
+  };
+
+  output(result, raw);
+}
+
 function cmdInitResume(cwd, raw) {
   const config = loadConfig(cwd);
 
@@ -901,6 +948,7 @@ module.exports = {
   cmdInitPlanPhase,
   cmdInitNewProject,
   cmdInitNewMilestone,
+  cmdInitQuick,
   cmdInitResume,
   cmdInitVerifyWork,
   cmdInitPhaseOp,

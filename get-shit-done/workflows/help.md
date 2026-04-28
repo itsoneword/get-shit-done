@@ -124,11 +124,26 @@ Route freeform text to the right GSD command automatically.
 - Analyzes natural language input to find the best matching GSD command
 - Acts as a dispatcher — never does the work itself
 - Resolves ambiguity by asking you to pick between top matches
+- Falls back to `/gsd2:quick` for ad-hoc work that doesn't fit a specific lifecycle command
 - Use when you know what you want but don't know which `/gsd2:*` command to run
 
 Usage: `/gsd2:do fix the login button`
 Usage: `/gsd2:do refactor the auth system`
 Usage: `/gsd2:do I want to start a new milestone`
+
+### Ad-hoc Tasks
+
+**`/gsd2:quick [--clarify] [--full] <description>`**
+Run a small, ad-hoc task with GSD guarantees — atomic commit, STATE.md tracking, separate from planned phases.
+
+- Default: Claude shows a short proposed approach + file list, you confirm or redirect, then plan/execute/commit.
+- `--clarify`: Claude asks 2–3 targeted questions about real uncertainties before planning. Decisions land in `${task}-CONTEXT.md`.
+- `--full`: Adds plan-checker (max 2 revision loops) + post-execution verifier.
+- Lives in `.planning/quick/YYMMDD-xxx-slug/`, never modifies ROADMAP.md.
+
+Usage: `/gsd2:quick add a healthcheck endpoint to the API`
+Usage: `/gsd2:quick --clarify migrate the cache layer to Redis`
+Usage: `/gsd2:quick --full --clarify rewrite the rate limiter`
 
 ### Fixing Issues
 

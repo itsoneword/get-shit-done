@@ -49,12 +49,20 @@ Evaluate `$ARGUMENTS` against these routing rules. Apply the **first matching** 
 | A review or quality concern about existing work | `/gsd2:verify-work` | Needs verification |
 | Checking progress, status, "where am I" | `/gsd2:progress` | Status check |
 | Resuming work, "pick up where I left off" | `/gsd2:resume-work` | Session restoration |
-| A note, idea, or "remember to..." | `/gsd2:add-todo` | Capture for later |
+| Working on existing todos, "do todo N", "work on the X todo", "pick up a todo" | `/gsd2:check-todos` | Lists pending todos for selection |
+| Capturing an idea or "remember to...", "save this for later", "note that..." | `/gsd2:add-todo` | Capture only — no execution |
 | Adding tests, "write tests", "test coverage" | `/gsd2:add-tests` | Test generation |
 | Completing a milestone, shipping, releasing | `/gsd2:complete-milestone` | Milestone lifecycle |
 | Post-execution issues, bugs, broken behavior, things that need fixing | `/gsd2:fix` | Dependency-aware fixing |
+| **Fallback** — small ad-hoc work: "implement X", "add Y", "tweak Z", "do this thing"; doesn't fit a specific lifecycle command | `/gsd2:quick` | Slim plan-execute-commit, separate from phases |
 
-**Requires `.planning/` directory:** All routes except `/gsd2:new-project`, `/gsd2:map-codebase`, `/gsd2:help`, and `/gsd2:join-discord`. If the project doesn't exist and the route requires it, suggest `/gsd2:new-project` first.
+**Capture vs execute disambiguation (todos):** Verbs decide the route.
+- *"Add a todo to refactor X"* / *"remember to update Y"* → `/gsd2:add-todo` (capture)
+- *"Do todo 3"* / *"work on the auth todo"* / *"pick a todo to work on"* → `/gsd2:check-todos` (select + work)
+
+**Fallback semantics:** Reach for `/gsd2:quick` when the input is concrete work but smaller than a phase. If the work clearly spans multiple files / multiple commits / changes architecture, prefer `/gsd2:add-phase` instead.
+
+**Requires `.planning/` directory:** All routes except `/gsd2:new-project`, `/gsd2:map-codebase`, `/gsd2:help`, and `/gsd2:join-discord`. If the project doesn't exist and the route requires it, suggest `/gsd2:new-project` first. (`/gsd2:quick` specifically requires `ROADMAP.md`; if missing, surface that.)
 
 **Ambiguity handling:** If the text could reasonably match multiple routes, ask the user via AskUserQuestion with the top 2-3 options. For example:
 
