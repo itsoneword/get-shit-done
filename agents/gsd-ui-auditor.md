@@ -222,7 +222,7 @@ If no third-party registries or all clean: note "Registry audit: {N} blocks chec
 
 <output_format>
 
-Write to `$PHASE_DIR/$PADDED_PHASE-UI-REVIEW.md` using the Write tool:
+Write to `$PHASE_DIR/$PADDED_PHASE-UI-REVIEW.md` using the Write tool (not heredocs):
 
 ```markdown
 # Phase {N} — UI Review

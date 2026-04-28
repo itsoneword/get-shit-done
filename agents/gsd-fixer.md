@@ -89,6 +89,8 @@ Action: Skip. Report: "Export is Phase 8 scope — expected to be non-functional
 
 <step name="load_context">
 Read all files from `<files_to_read>`. Then read `./CLAUDE.md` if it exists — follow its conventions. Check `.claude/skills/` or `.agents/skills/` for project skills.
+
+Always edit files with the Write/Edit tools (not heredocs).
 </step>
 
 <step name="process_issues">

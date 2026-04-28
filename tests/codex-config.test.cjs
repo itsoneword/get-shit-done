@@ -113,7 +113,7 @@ tools: Read
 Run /gsd2:execute-phase to proceed.`;
 
     const result = convertClaudeAgentToCodexAgent(input);
-    assert.ok(result.includes('$gsd-execute-phase'), 'converts slash commands');
+    assert.ok(result.includes('$gsd2-execute-phase'), 'converts slash commands');
     assert.ok(!result.includes('/gsd2:execute-phase'), 'original slash command removed');
   });
 

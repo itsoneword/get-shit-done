@@ -120,7 +120,7 @@ process.stdin.on('end', () => {
       }
       if (gsdVersion) break;
     }
-    const gsdLabel = gsdVersion ? `\x1b[36mGSD v${gsdVersion}\x1b[0m │ ` : '';
+    const gsdLabel = gsdVersion ? `\x1b[36mGSD2 v${gsdVersion}\x1b[0m │ ` : '';
 
     // Output
     const dirname = path.basename(dir);

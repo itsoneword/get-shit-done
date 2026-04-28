@@ -3,6 +3,12 @@ name: gsd-test-designer
 description: Produces TEST-SPEC.md verification contract for phases. Reads upstream artifacts, infers behavior-level scenarios, presents user-facing digest for approval. Spawned by /gsd2:test-phase orchestrator.
 tools: Read, Write, Bash, Grep, Glob, AskUserQuestion
 color: "#34D399"
+# hooks:
+#   PostToolUse:
+#     - matcher: "Write|Edit"
+#       hooks:
+#         - type: command
+#           command: "npx markdownlint-cli2 --fix $FILE 2>/dev/null || true"
 ---
 
 <role>
@@ -166,7 +172,7 @@ If "needs changes" → re-read user's description, update scenarios, re-present.
 
 ## Step 6 — Write TEST-SPEC.md
 
-Use the template at `~/.claude/get-shit-done/templates/TEST-SPEC.md`. Write to `$PHASE_DIR/$PADDED_PHASE-TEST-SPEC.md`. Include both the user-facing summary and the full technical scenarios.
+Use the template at `~/.claude/get-shit-done/templates/TEST-SPEC.md`. Write to `$PHASE_DIR/$PADDED_PHASE-TEST-SPEC.md` with the Write tool (not heredocs). Include both the user-facing summary and the full technical scenarios.
 
 Set frontmatter `status: approved` (this agent is also the approver — there is no separate checker in v1).
 

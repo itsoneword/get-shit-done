@@ -3,6 +3,12 @@ name: gsd-document-mapper
 description: Documents one subsystem of a project by reading planning artifacts, code, and git history, then writing a sourced, Mermaid-bearing Markdown file to docs/system/{subsystem}.md. Spawned in parallel by /gsd2:document on --full or first-run invocations.
 tools: Read, Bash, Grep, Glob, Write
 color: green
+# hooks:
+#   PostToolUse:
+#     - matcher: "Write|Edit"
+#       hooks:
+#         - type: command
+#           command: "npx markdownlint-cli2 --fix $FILE 2>/dev/null || true"
 ---
 
 <role>
@@ -42,7 +48,7 @@ Write for a new contributor reading this file cold — someone capable but unfam
 </writing_style>
 
 <guidelines>
-- Output file: write exactly to `docs/system/{subsystem-slug}.md` with the Write tool. Use a single lowercase-kebab-case slug (e.g., `auth-service`, not `Auth Service`).
+- Output file: write exactly to `docs/system/{subsystem-slug}.md` with the Write tool (not heredocs). Use a single lowercase-kebab-case slug (e.g., `auth-service`, not `Auth Service`).
 - Every subsystem file MUST contain at least one Mermaid diagram. Pick the diagram type (flowchart, sequence, C4, state, class) that best fits the subsystem — no fixed rule.
 - Use Obsidian `[[wikilinks]]` for inter-document navigation (e.g., `[[auth-service]]`). NEVER use Markdown `[text](./path.md)` links.
 - Every claim cites a source. Format: `(source: path/to/file:line)` or `(source: .planning/phases/XX-*/XX-SUMMARY.md)` or `(source: git@<hash>)`. No citation → move to `_gaps.md`.

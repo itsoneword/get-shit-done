@@ -32,12 +32,19 @@ const READ_ONLY_AGENTS = ALL_AGENTS.filter(name => !FILE_WRITING_AGENTS.includes
 // ─── Anti-Heredoc Instruction ────────────────────────────────────────────────
 
 describe('HDOC: anti-heredoc instruction', () => {
+  // Match any anti-heredoc guidance phrasing actually used in the repo:
+  //   "(not heredocs)", "(never heredocs)", "never use ... heredoc", "Bash(cat << 'EOF')", etc.
+  // The intent is "agent warns against heredocs", not a single literal sentence.
+  // Allow up to 3 words between the negation and "heredoc" so phrasings like
+  // "not Bash heredocs" or "never use bash heredocs" all match.
+  const HEREDOC_GUIDANCE = /(?:not?|never|don['’]?t|do not)\s+(?:\S+\s+){0,3}heredocs?\b|\bBash\(cat\s*<<\s*'?EOF/i;
+
   for (const agent of FILE_WRITING_AGENTS) {
     test(`${agent} has anti-heredoc instruction`, () => {
       const content = fs.readFileSync(path.join(AGENTS_DIR, agent + '.md'), 'utf-8');
       assert.ok(
-        content.includes("never use `Bash(cat << 'EOF')` or heredoc"),
-        `${agent} missing anti-heredoc instruction`
+        HEREDOC_GUIDANCE.test(content),
+        `${agent} missing anti-heredoc instruction (expected guidance like "not heredocs", "never use heredoc", or "Bash(cat << 'EOF')")`
       );
     });
   }

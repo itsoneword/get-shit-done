@@ -25,6 +25,14 @@ Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done)
 ### Why
 `/gsd2:do` was router-only, so freeform inputs like "do this small thing" dead-ended into either `/gsd2:add-phase` (overkill) or `/gsd2:add-todo` (which only captures). With `/gsd2:quick` restored as a real executor and `do` rewired to fall back to it, the freeform path now actually delivers work.
 
+### Also fixed (test-suite drift accumulated in v1.3.5/v1.4.x)
+- **Copilot installer namespace conversion** — `gsd:foo` → `gsd2-foo` rename for Copilot/Cursor/Codex/Antigravity/OpenCode runtimes (those CLIs use dashes, not colons). Test counts now derive from the source tree so adding new commands/agents doesn't break tests.
+- **`gsd-agent-researcher` and `gsd-agent-checker` agents created** — `/gsd2:agent-spec-phase` workflow referenced these agents but their files were never shipped. Added concise role contracts that align with the embedded spawn prompts.
+- **Anti-heredoc instruction** added to nine file-writing agents (gsd-document-mapper, gsd-document-updater, gsd-fixer, gsd-planner, gsd-research-synthesizer, gsd-test-designer, gsd-ui-auditor, gsd-ui-researcher, gsd-verifier). Test loosened to match the canonical phrasings actually used in the repo (`(not heredocs)`, `(never heredocs)`, etc.) instead of one literal sentence.
+- **`# hooks:` frontmatter** added to four agents missing it (gsd-document-mapper, gsd-document-updater, gsd-test-designer, gsd-verifier) so post-write linter hooks can be opted in.
+- **Path normalization** — `commands/gsd2/document.md` and `get-shit-done/workflows/document.md` had absolute `/Users/itsoneword/...` paths instead of canonical `~/.claude` / `$HOME/.claude`. Both rewritten to match the rest of the source tree.
+- **Result:** test suite goes from 40 failures → 0 failures.
+
 ## [1.4.1] - 2026-04-18
 
 Milestone **v1.4 — Domain-Aware Planning**. Three phases: domain router, AGENT-SPEC for agentic systems, and an on-demand documentation agent.

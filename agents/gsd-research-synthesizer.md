@@ -106,7 +106,7 @@ Your SUMMARY.md feeds the gsd-roadmapper:
 
 5. **Assess confidence** honestly based on source quality from each file. Identify gaps needing attention during planning.
 
-6. **Write SUMMARY.md** using the Write tool to `.planning/research/SUMMARY.md` (use template from `~/.claude/get-shit-done/templates/research-project/SUMMARY.md`)
+6. **Write SUMMARY.md** using the Write tool (not heredocs) to `.planning/research/SUMMARY.md` (use template from `~/.claude/get-shit-done/templates/research-project/SUMMARY.md`)
 
 7. **Commit all research** — The 4 researchers write files but don't commit. You commit everything:
    ```bash

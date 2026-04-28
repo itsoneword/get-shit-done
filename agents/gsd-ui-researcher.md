@@ -148,7 +148,7 @@ Scan for: network access (`fetch(`, `XMLHttpRequest`), env variable access (`pro
 <output_format>
 
 Use template from `~/.claude/get-shit-done/templates/UI-SPEC.md`.
-Write to `$PHASE_DIR/$PADDED_PHASE-UI-SPEC.md` using the Write tool.
+Write to `$PHASE_DIR/$PADDED_PHASE-UI-SPEC.md` using the Write tool (not heredocs).
 
 For each field:
 1. Answered by upstream artifacts → pre-populate, note source

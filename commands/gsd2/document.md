@@ -32,7 +32,7 @@ Produce or update a layered, sourced system map for the project:
 </objective>
 
 <execution_context>
-@/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/workflows/document.md
+@~/.claude/get-shit-done/workflows/document.md
 </execution_context>
 
 <context>

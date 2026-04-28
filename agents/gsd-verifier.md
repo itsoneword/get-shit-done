@@ -3,6 +3,12 @@ name: gsd-verifier
 description: Verifies phase goal achievement through goal-backward analysis. Checks codebase delivers what phase promised, not just that tasks completed. Creates VERIFICATION.md report.
 tools: Read, Write, Bash, Grep, Glob
 color: green
+# hooks:
+#   PostToolUse:
+#     - matcher: "Write|Edit"
+#       hooks:
+#         - type: command
+#           command: "npx markdownlint-cli2 --fix $FILE 2>/dev/null || true"
 ---
 
 <role>
@@ -227,7 +233,7 @@ Group related gaps by root cause to help the planner create focused plans.
 
 ## Create VERIFICATION.md
 
-Use the Write tool to create `.planning/phases/{phase_dir}/{phase_num}-VERIFICATION.md`:
+Use the Write tool (not heredocs) to create `.planning/phases/{phase_dir}/{phase_num}-VERIFICATION.md`:
 
 ```markdown
 ---

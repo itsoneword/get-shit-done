@@ -380,7 +380,7 @@ Present breakdown with wave structure. Wait for confirmation (or auto-approve in
 </step>
 
 <step name="write_plans">
-Write each PLAN.md using the Write tool to `.planning/phases/XX-name/{phase}-{NN}-PLAN.md`.
+Write each PLAN.md using the Write tool (not heredocs) to `.planning/phases/XX-name/{phase}-{NN}-PLAN.md`.
 
 Validate each:
 ```bash

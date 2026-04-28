@@ -28,12 +28,12 @@ Test body
 </objective>
 `;
 
-    const result = convertClaudeCommandToCursorSkill(input, 'gsd-fix');
+    const result = convertClaudeCommandToCursorSkill(input, 'gsd2-fix');
     const nameMatch = result.match(/^name:\s*(.+)$/m);
 
     assert.ok(nameMatch, 'frontmatter contains name field');
-    assert.strictEqual(nameMatch[1], 'gsd-fix', 'skill name is plain scalar');
-    assert.ok(!result.includes('name: "gsd-fix"'), 'quoted skill name is not emitted');
+    assert.strictEqual(nameMatch[1], 'gsd2-fix', 'skill name is plain scalar');
+    assert.ok(!result.includes('name: "gsd2-fix"'), 'quoted skill name is not emitted');
   });
 
   test('preserves slash for slash commands in markdown body', () => {
@@ -44,16 +44,16 @@ description: Plan a phase
 
 Next:
 /gsd2:execute-phase 17
-/gsd-help
-gsd:progress
+/gsd2:help
+gsd2:progress
 `;
 
-    const result = convertClaudeCommandToCursorSkill(input, 'gsd-plan-phase');
+    const result = convertClaudeCommandToCursorSkill(input, 'gsd2-plan-phase');
 
-    assert.ok(result.includes('/gsd-execute-phase 17'), 'slash command remains slash-prefixed');
-    assert.ok(result.includes('/gsd-help'), 'existing slash command is preserved');
-    assert.ok(result.includes('gsd-progress'), 'non-slash gsd: references still normalize');
-    assert.ok(!result.includes('/gsd2:execute-phase'), 'legacy colon command form is removed');
+    assert.ok(result.includes('/gsd2-execute-phase 17'), 'slash command remains slash-prefixed');
+    assert.ok(result.includes('/gsd2-help'), 'existing slash command is preserved');
+    assert.ok(result.includes('gsd2-progress'), 'non-slash gsd: references still normalize');
+    assert.ok(!result.includes('gsd2:'), 'colon command form is fully converted');
   });
 });
 

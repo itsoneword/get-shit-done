@@ -6,7 +6,7 @@ Orchestrate the on-demand documentation agent: generate or update a layered, sou
 
 <step name="init_context" priority="first">
 ```bash
-INIT=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" init document)
+INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init document)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -247,7 +247,7 @@ Respect `commit_docs` from init:
 
 ```bash
 if [ "$commit_docs" = "true" ]; then
-  node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(system-map): $MODE update" --files docs/
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(system-map): $MODE update" --files docs/
 fi
 ```
 

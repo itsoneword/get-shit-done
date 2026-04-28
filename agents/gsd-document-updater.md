@@ -3,6 +3,12 @@ name: gsd-document-updater
 description: Performs incremental, surgical updates to an existing docs/SYSTEM-MAP.md and docs/system/*.md tree based on GSD activity since the last run. Two-pass flow — proposes a diff preview first, then applies on confirmation. Spawned by /gsd2:document in default (incremental) mode.
 tools: Read, Bash, Grep, Glob, Write, Edit
 color: yellow
+# hooks:
+#   PostToolUse:
+#     - matcher: "Write|Edit"
+#       hooks:
+#         - type: command
+#           command: "npx markdownlint-cli2 --fix $FILE 2>/dev/null || true"
 ---
 
 <role>
@@ -41,7 +47,7 @@ When you write or rewrite prose (new claims, revised sections), follow the same 
 
 <guidelines>
 - Two-pass contract: on pass 1 (mode=propose), write `docs/system/_proposed.md` with a structured diff (per-file: OLD → NEW block for changed sections). Return confirmation only. Do NOT touch existing files in pass 1.
-- On pass 2 (mode=apply), read `docs/system/_proposed.md`, apply the described edits via Edit/Write, then delete `docs/system/_proposed.md`. Append ONE new entry to the changelog at the top of `docs/SYSTEM-MAP.md`.
+- On pass 2 (mode=apply), read `docs/system/_proposed.md`, apply the described edits via Edit/Write (not heredocs), then delete `docs/system/_proposed.md`. Append ONE new entry to the changelog at the top of `docs/SYSTEM-MAP.md`.
 - Changelog is APPEND-ONLY. Never rewrite prior entries. Insert new entry at the top of the changelog list. Preserve all existing entries byte-for-byte.
 - Existing subsystem filenames are the source of truth for naming. Do not rename a subsystem unless the code/planning artifact rename makes it mandatory. If renaming: delete the old file, update every `[[wikilink]]` across docs/, and note the rename in the changelog entry.
 - Use Obsidian `[[wikilinks]]` for all inter-doc references. Never Markdown links.

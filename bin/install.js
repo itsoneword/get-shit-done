@@ -566,8 +566,8 @@ function convertClaudeToCopilotContent(content, isGlobal = false) {
   }
   c = c.replace(/\.\/\.claude\//g, './.github/');
   c = c.replace(/\.claude\//g, '.github/');
-  // CONV-07: Command name conversion (all gsd: references → gsd-)
-  c = c.replace(/gsd2:/g, 'gsd-');
+  // CONV-07: Command name conversion (all gsd: references → gsd2-)
+  c = c.replace(/gsd2:/g, 'gsd2-');
   // Runtime-neutral agent name replacement (#766)
   c = neutralizeAgentReferences(c, 'copilot-instructions.md');
   return c;
@@ -658,8 +658,8 @@ function convertClaudeToAntigravityContent(content, isGlobal = false) {
   }
   c = c.replace(/\.\/\.claude\//g, './.agent/');
   c = c.replace(/\.claude\//g, '.agent/');
-  // Command name conversion (all gsd: references → gsd-)
-  c = c.replace(/gsd2:/g, 'gsd-');
+  // Command name conversion (all gsd: references → gsd2-)
+  c = c.replace(/gsd2:/g, 'gsd2-');
   // Runtime-neutral agent name replacement (#766)
   c = neutralizeAgentReferences(c, 'GEMINI.md');
   return c;
@@ -772,8 +772,8 @@ function convertCursorToolName(claudeTool) {
 
 function convertSlashCommandsToCursorSkillMentions(content) {
   // Keep leading "/" for slash commands; only normalize gsd: -> gsd-.
-  // This preserves rendered "next step" commands like "/gsd-execute-phase 17".
-  return content.replace(/gsd2:/gi, 'gsd-');
+  // This preserves rendered "next step" commands like "/gsd2-execute-phase 17".
+  return content.replace(/gsd2:/gi, 'gsd2-');
 }
 
 function convertClaudeToCursorMarkdown(content) {
@@ -863,9 +863,9 @@ function convertClaudeAgentToCursorAgent(content) {
 
 function convertSlashCommandsToCodexSkillMentions(content) {
   let converted = content.replace(/\/gsd2:([a-z0-9-]+)/gi, (_, commandName) => {
-    return `$gsd-${String(commandName).toLowerCase()}`;
+    return `$gsd2-${String(commandName).toLowerCase()}`;
   });
-  converted = converted.replace(/\/gsd-help\b/g, '$gsd-help');
+  converted = converted.replace(/\/gsd-help\b/g, '$gsd2-help');
   return converted;
 }
 
@@ -1346,8 +1346,8 @@ function convertClaudeToOpencodeFrontmatter(content, { isAgent = false } = {}) {
   convertedContent = convertedContent.replace(/\bAskUserQuestion\b/g, 'question');
   convertedContent = convertedContent.replace(/\bSlashCommand\b/g, 'skill');
   convertedContent = convertedContent.replace(/\bTodoWrite\b/g, 'todowrite');
-  // Replace /gsd2:command with /gsd-command for opencode (flat command structure)
-  convertedContent = convertedContent.replace(/\/gsd2:/g, '/gsd-');
+  // Replace /gsd2:command with /gsd2-command for opencode (flat command structure)
+  convertedContent = convertedContent.replace(/\/gsd2:/g, '/gsd2-');
   // Replace ~/.claude and $HOME/.claude with OpenCode's config location
   convertedContent = convertedContent.replace(/~\/\.claude\b/g, '~/.config/opencode');
   convertedContent = convertedContent.replace(/\$HOME\/\.claude\b/g, '$HOME/.config/opencode');
@@ -1533,7 +1533,7 @@ function convertClaudeToGeminiToml(content) {
 
 /**
  * Copy commands to a flat structure for OpenCode
- * OpenCode expects: command/gsd-help.md (invoked as /gsd-help)
+ * OpenCode expects: command/gsd2-help.md (invoked as /gsd2-help)
  * Source structure: commands/gsd2/help.md
  * 
  * @param {string} srcDir - Source directory (e.g., commands/gsd2/)
@@ -1565,10 +1565,10 @@ function copyFlattenedCommands(srcDir, destDir, prefix, pathPrefix, runtime) {
     
     if (entry.isDirectory()) {
       // Recurse into subdirectories, adding to prefix
-      // e.g., commands/gsd2/debug/start.md -> command/gsd-debug-start.md
+      // e.g., commands/gsd2/debug/start.md -> command/gsd2-debug-start.md
       copyFlattenedCommands(srcPath, destDir, `${prefix}-${entry.name}`, pathPrefix, runtime);
     } else if (entry.name.endsWith('.md')) {
-      // Flatten: help.md -> gsd-help.md
+      // Flatten: help.md -> gsd2-help.md
       const baseName = entry.name.replace('.md', '');
       const destName = `${prefix}-${baseName}.md`;
       const destPath = path.join(destDir, destName);
@@ -1590,7 +1590,7 @@ function copyFlattenedCommands(srcDir, destDir, prefix, pathPrefix, runtime) {
   }
 }
 
-function listCodexSkillNames(skillsDir, prefix = 'gsd-') {
+function listCodexSkillNames(skillsDir, prefix = 'gsd2-') {
   if (!fs.existsSync(skillsDir)) return [];
   const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
   return entries
@@ -1898,7 +1898,7 @@ function copyWithPathReplacement(srcDir, destDir, pathPrefix, runtime, isCommand
     } else if (isCursor && (entry.name.endsWith('.cjs') || entry.name.endsWith('.js'))) {
       // For Cursor, also convert Claude references in JS/CJS utility scripts
       let jsContent = fs.readFileSync(srcPath, 'utf8');
-      jsContent = jsContent.replace(/gsd2:/gi, 'gsd-');
+      jsContent = jsContent.replace(/gsd2:/gi, 'gsd2-');
       jsContent = jsContent.replace(/\.claude\/skills\//g, '.cursor/skills/');
       jsContent = jsContent.replace(/CLAUDE\.md/g, '.cursor/rules/');
       jsContent = jsContent.replace(/\bClaude Code\b/g, 'Cursor');
@@ -2028,12 +2028,12 @@ function uninstall(isGlobal, runtime = 'claude') {
 
   // 1. Remove GSD commands/skills
   if (isOpencode) {
-    // OpenCode: remove command/gsd-*.md files
+    // OpenCode: remove command/gsd-*.md and command/gsd2-*.md files
     const commandDir = path.join(targetDir, 'command');
     if (fs.existsSync(commandDir)) {
       const files = fs.readdirSync(commandDir);
       for (const file of files) {
-        if (file.startsWith('gsd-') && file.endsWith('.md')) {
+        if ((file.startsWith('gsd-') || file.startsWith('gsd2-')) && file.endsWith('.md')) {
           fs.unlinkSync(path.join(commandDir, file));
           removedCount++;
         }
@@ -2041,13 +2041,13 @@ function uninstall(isGlobal, runtime = 'claude') {
       console.log(`  ${green}✓${reset} Removed GSD commands from command/`);
     }
   } else if (isCodex || isCursor) {
-    // Codex/Cursor: remove skills/gsd-*/SKILL.md skill directories
+    // Codex/Cursor: remove skills/gsd-*/SKILL.md and skills/gsd2-*/SKILL.md skill directories
     const skillsDir = path.join(targetDir, 'skills');
     if (fs.existsSync(skillsDir)) {
       let skillCount = 0;
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
+        if (entry.isDirectory() && (entry.name.startsWith('gsd-') || entry.name.startsWith('gsd2-'))) {
           fs.rmSync(path.join(skillsDir, entry.name), { recursive: true });
           skillCount++;
         }
@@ -2065,7 +2065,7 @@ function uninstall(isGlobal, runtime = 'claude') {
       const tomlFiles = fs.readdirSync(codexAgentsDir);
       let tomlCount = 0;
       for (const file of tomlFiles) {
-        if (file.startsWith('gsd-') && file.endsWith('.toml')) {
+        if ((file.startsWith('gsd-') || file.startsWith('gsd2-')) && file.endsWith('.toml')) {
           fs.unlinkSync(path.join(codexAgentsDir, file));
           tomlCount++;
         }
@@ -2094,13 +2094,13 @@ function uninstall(isGlobal, runtime = 'claude') {
     }
     }
   } else if (isCopilot) {
-    // Copilot: remove skills/gsd-*/ directories (same layout as Codex skills)
+    // Copilot: remove skills/gsd-*/ and skills/gsd2-*/ directories
     const skillsDir = path.join(targetDir, 'skills');
     if (fs.existsSync(skillsDir)) {
       let skillCount = 0;
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
+        if (entry.isDirectory() && (entry.name.startsWith('gsd-') || entry.name.startsWith('gsd2-'))) {
           fs.rmSync(path.join(skillsDir, entry.name), { recursive: true });
           skillCount++;
         }
@@ -2127,13 +2127,13 @@ function uninstall(isGlobal, runtime = 'claude') {
       }
     }
   } else if (isAntigravity) {
-    // Antigravity: remove skills/gsd-*/ directories (same layout as Copilot skills)
+    // Antigravity: remove skills/gsd-*/ and skills/gsd2-*/ directories
     const skillsDir = path.join(targetDir, 'skills');
     if (fs.existsSync(skillsDir)) {
       let skillCount = 0;
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
+        if (entry.isDirectory() && (entry.name.startsWith('gsd-') || entry.name.startsWith('gsd2-'))) {
           fs.rmSync(path.join(skillsDir, entry.name), { recursive: true });
           skillCount++;
         }
@@ -2144,13 +2144,13 @@ function uninstall(isGlobal, runtime = 'claude') {
       }
     }
   } else if (isCursor) {
-    // Cursor: remove skills/gsd-*/ directories (same layout as Codex skills)
+    // Cursor: remove skills/gsd-*/ and skills/gsd2-*/ directories
     const skillsDir = path.join(targetDir, 'skills');
     if (fs.existsSync(skillsDir)) {
       let skillCount = 0;
       const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isDirectory() && entry.name.startsWith('gsd-')) {
+        if (entry.isDirectory() && (entry.name.startsWith('gsd-') || entry.name.startsWith('gsd2-'))) {
           fs.rmSync(path.join(skillsDir, entry.name), { recursive: true });
           skillCount++;
         }
@@ -2680,11 +2680,11 @@ function reportLocalPatches(configDir, runtime = 'claude') {
 
   if (meta.files && meta.files.length > 0) {
     const reapplyCommand = (runtime === 'opencode' || runtime === 'copilot')
-      ? '/gsd-reapply-patches'
+      ? '/gsd2-reapply-patches'
       : runtime === 'codex'
-        ? '$gsd-reapply-patches'
+        ? '$gsd2-reapply-patches'
         : runtime === 'cursor'
-          ? 'gsd-reapply-patches (mention the skill name)'
+          ? 'gsd2-reapply-patches (mention the skill name)'
           : '/gsd2:reapply-patches';
     console.log('');
     console.log('  ' + yellow + 'Local patches detected' + reset + ' (from v' + meta.from_version + '):');
@@ -2753,64 +2753,64 @@ function install(isGlobal, runtime = 'claude') {
     const commandDir = path.join(targetDir, 'command');
     fs.mkdirSync(commandDir, { recursive: true });
     
-    // Copy commands/gsd2/*.md as command/gsd-*.md (flatten structure)
+    // Copy commands/gsd2/*.md as command/gsd2-*.md (flatten structure)
     const gsdSrc = path.join(src, 'commands', 'gsd2');
-    copyFlattenedCommands(gsdSrc, commandDir, 'gsd', pathPrefix, runtime);
-    if (verifyInstalled(commandDir, 'command/gsd-*')) {
-      const count = fs.readdirSync(commandDir).filter(f => f.startsWith('gsd-')).length;
+    copyFlattenedCommands(gsdSrc, commandDir, 'gsd2', pathPrefix, runtime);
+    if (verifyInstalled(commandDir, 'command/gsd2-*')) {
+      const count = fs.readdirSync(commandDir).filter(f => f.startsWith('gsd2-')).length;
       console.log(`  ${green}✓${reset} Installed ${count} commands to command/`);
     } else {
-      failures.push('command/gsd-*');
+      failures.push('command/gsd2-*');
     }
   } else if (isCodex) {
     const skillsDir = path.join(targetDir, 'skills');
     const gsdSrc = path.join(src, 'commands', 'gsd2');
-    copyCommandsAsCodexSkills(gsdSrc, skillsDir, 'gsd', pathPrefix, runtime);
+    copyCommandsAsCodexSkills(gsdSrc, skillsDir, 'gsd2', pathPrefix, runtime);
     const installedSkillNames = listCodexSkillNames(skillsDir);
     if (installedSkillNames.length > 0) {
       console.log(`  ${green}✓${reset} Installed ${installedSkillNames.length} skills to skills/`);
     } else {
-      failures.push('skills/gsd-*');
+      failures.push('skills/gsd2-*');
     }
   } else if (isCopilot) {
     const skillsDir = path.join(targetDir, 'skills');
     const gsdSrc = path.join(src, 'commands', 'gsd2');
-    copyCommandsAsCopilotSkills(gsdSrc, skillsDir, 'gsd', isGlobal);
+    copyCommandsAsCopilotSkills(gsdSrc, skillsDir, 'gsd2', isGlobal);
     if (fs.existsSync(skillsDir)) {
       const count = fs.readdirSync(skillsDir, { withFileTypes: true })
-        .filter(e => e.isDirectory() && e.name.startsWith('gsd-')).length;
+        .filter(e => e.isDirectory() && e.name.startsWith('gsd2-')).length;
       if (count > 0) {
         console.log(`  ${green}✓${reset} Installed ${count} skills to skills/`);
       } else {
-        failures.push('skills/gsd-*');
+        failures.push('skills/gsd2-*');
       }
     } else {
-      failures.push('skills/gsd-*');
+      failures.push('skills/gsd2-*');
     }
   } else if (isAntigravity) {
     const skillsDir = path.join(targetDir, 'skills');
     const gsdSrc = path.join(src, 'commands', 'gsd2');
-    copyCommandsAsAntigravitySkills(gsdSrc, skillsDir, 'gsd', isGlobal);
+    copyCommandsAsAntigravitySkills(gsdSrc, skillsDir, 'gsd2', isGlobal);
     if (fs.existsSync(skillsDir)) {
       const count = fs.readdirSync(skillsDir, { withFileTypes: true })
-        .filter(e => e.isDirectory() && e.name.startsWith('gsd-')).length;
+        .filter(e => e.isDirectory() && e.name.startsWith('gsd2-')).length;
       if (count > 0) {
         console.log(`  ${green}✓${reset} Installed ${count} skills to skills/`);
       } else {
-        failures.push('skills/gsd-*');
+        failures.push('skills/gsd2-*');
       }
     } else {
-      failures.push('skills/gsd-*');
+      failures.push('skills/gsd2-*');
     }
   } else if (isCursor) {
     const skillsDir = path.join(targetDir, 'skills');
     const gsdSrc = path.join(src, 'commands', 'gsd2');
-    copyCommandsAsCursorSkills(gsdSrc, skillsDir, 'gsd', pathPrefix, runtime);
+    copyCommandsAsCursorSkills(gsdSrc, skillsDir, 'gsd2', pathPrefix, runtime);
     const installedSkillNames = listCodexSkillNames(skillsDir); // reuse — same dir structure
     if (installedSkillNames.length > 0) {
       console.log(`  ${green}✓${reset} Installed ${installedSkillNames.length} skills to skills/`);
     } else {
-      failures.push('skills/gsd-*');
+      failures.push('skills/gsd2-*');
     }
   } else {
     // Claude Code & Gemini: nested structure in commands/ directory
@@ -3222,11 +3222,11 @@ function finishInstall(settingsPath, settings, statuslineCommand, shouldInstallS
   if (runtime === 'cursor') program = 'Cursor';
 
   let command = '/gsd2:new-project';
-  if (runtime === 'opencode') command = '/gsd-new-project';
-  if (runtime === 'codex') command = '$gsd-new-project';
-  if (runtime === 'copilot') command = '/gsd-new-project';
-  if (runtime === 'antigravity') command = '/gsd-new-project';
-  if (runtime === 'cursor') command = 'gsd-new-project (mention the skill name)';
+  if (runtime === 'opencode') command = '/gsd2-new-project';
+  if (runtime === 'codex') command = '$gsd2-new-project';
+  if (runtime === 'copilot') command = '/gsd2-new-project';
+  if (runtime === 'antigravity') command = '/gsd2-new-project';
+  if (runtime === 'cursor') command = 'gsd2-new-project (mention the skill name)';
   console.log(`
   ${green}Done!${reset} Open a blank directory in ${program} and run ${cyan}${command}${reset}.
 
