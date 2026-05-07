@@ -796,7 +796,8 @@ function cmdInitDocument(cwd, raw) {
   output(result, raw);
 }
 
-function cmdInitProgress(cwd, raw) {
+function cmdInitProgress(cwd, raw, opts = {}) {
+  const scoped = opts && opts.scoped === true;
   const config = loadConfig(cwd);
   const milestone = getMilestoneInfo(cwd);
 
@@ -897,6 +898,21 @@ function cmdInitProgress(cwd, raw) {
   // Re-sort phases by number after adding ROADMAP-only phases
   phases.sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10));
 
+  // Apply scoped trimming: keep current ±1 / next ±1 (≤4 entries)
+  let scopedPhases = phases;
+  if (scoped && phases.length > 0) {
+    // Anchor on currentPhase if present, else nextPhase, else first phase
+    const anchor = currentPhase || nextPhase || phases[0];
+    const anchorIdx = phases.findIndex(p => p.number === anchor.number);
+    if (anchorIdx !== -1) {
+      const start = Math.max(0, anchorIdx - 1);
+      const end = Math.min(phases.length, anchorIdx + 3); // anchor + 2 ahead
+      scopedPhases = phases.slice(start, end);
+    } else {
+      scopedPhases = phases.slice(0, 4);
+    }
+  }
+
   // Check for paused work
   let pausedAt = null;
   try {
@@ -918,7 +934,7 @@ function cmdInitProgress(cwd, raw) {
     milestone_name: milestone.name,
 
     // Phase overview
-    phases,
+    phases: scopedPhases,
     phase_count: phases.length,
     completed_count: phases.filter(p => p.status === 'complete').length,
     in_progress_count: phases.filter(p => p.status === 'in_progress').length,

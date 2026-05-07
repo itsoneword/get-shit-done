@@ -450,7 +450,8 @@ async function main() {
       if (subcommand === 'get-phase') {
         roadmap.cmdRoadmapGetPhase(cwd, args[2], raw);
       } else if (subcommand === 'analyze') {
-        roadmap.cmdRoadmapAnalyze(cwd, raw);
+        const scoped = args.includes('--scoped');
+        roadmap.cmdRoadmapAnalyze(cwd, raw, { scoped });
       } else if (subcommand === 'update-plan-progress') {
         roadmap.cmdRoadmapUpdatePlanProgress(cwd, args[2], raw);
       } else {
@@ -612,9 +613,11 @@ async function main() {
         case 'map-codebase':
           init.cmdInitMapCodebase(cwd, raw);
           break;
-        case 'progress':
-          init.cmdInitProgress(cwd, raw);
+        case 'progress': {
+          const scoped = args.includes('--scoped');
+          init.cmdInitProgress(cwd, raw, { scoped });
           break;
+        }
         case 'document':
           init.cmdInitDocument(cwd, raw);
           break;
