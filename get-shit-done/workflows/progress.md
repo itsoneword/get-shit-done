@@ -9,14 +9,23 @@ Read all files referenced by the invoking prompt's execution_context before star
 <process>
 
 <step name="init_context">
-Load progress context:
+Load all progress context in a single call:
 
 ```bash
-INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init progress)
+INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init progress --scoped)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
-Extract from init JSON: `project_exists`, `roadmap_exists`, `state_exists`, `phases`, `current_phase`, `next_phase`, `milestone_version`, `completed_count`, `phase_count`, `paused_at`, `state_path`, `roadmap_path`, `project_path`, `config_path`.
+Extract from $INIT JSON:
+- Existence: project_exists, roadmap_exists, state_exists, config_path
+- Paths: state_path, roadmap_path, project_path
+- Milestone: milestone_version, milestone_name, profile, commit_docs
+- Phases: phases[] (each with: number, name, status, plan_count, summary_count, has_research, has_context, goal, depends_on, roadmap_complete, directory)
+- Position: phase_count, completed_count, in_progress_count, current_phase, next_phase, paused_at, has_work_in_progress
+- Render: progress_bar, progress_percent
+- Activity: todo_count, debug_session_count, verification_debt {total_files, total_items}
+- History: recent_summaries[] (each: phase, plan, path, one_liner)
+- State: state {decisions[], blockers[], session, paused_at}
 
 Routing on missing structure:
 - No `.planning/` → print "No planning structure found. Run /gsd2:new-project to start a new project." and exit
@@ -25,77 +34,59 @@ Routing on missing structure:
 - Both ROADMAP.md and PROJECT.md missing → suggest `/gsd2:new-project`
 </step>
 
-<step name="load_and_analyze">
-Get structured data (minimizes context usage):
-
-```bash
-ROADMAP=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
-STATE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state-snapshot)
-```
-
-`$ROADMAP` returns JSON with: phases (disk status, goals, dependencies, plan/summary counts), aggregated stats (total plans, summaries, progress %), current/next phase.
-
-Gather recent work — find 2-3 most recent SUMMARY.md files:
-```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" summary-extract <path> --fields one_liner
-```
-</step>
-
 <step name="position">
-Parse current position from `$ROADMAP` and `$STATE`:
-- `current_phase`, `next_phase` from `$ROADMAP`
-- `paused_at` from `$STATE` if work was paused
-- Pending todos: `init todos` or `list-todos`
-- Active debug sessions: `ls .planning/debug/*.md 2>/dev/null | grep -v resolved | wc -l`
+Parse current position from `$INIT`:
+- `current_phase`, `next_phase` from `$INIT.current_phase` / `$INIT.next_phase`
+- `paused_at` from `$INIT.state.paused_at` (or `$INIT.paused_at`) if work was paused
+- Pending todos count: `$INIT.todo_count`
+- Active debug sessions: `$INIT.debug_session_count`
 </step>
 
 <step name="report">
-Generate progress bar and present status:
-
-```bash
-PROGRESS_BAR=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" progress bar --raw)
-```
+Generate progress report from `$INIT` fields:
 
 ```
 # [Project Name]
 
-**Progress:** {PROGRESS_BAR}
-**Profile:** [quality/balanced/budget/inherit]
+**Progress:** $INIT.progress_bar
+**Profile:** $INIT.profile
 
 ## Phases
 
 | # | Phase | Status | Description |
 |---|-------|--------|-------------|
-| [N] | [phase-name] | [status icon + label] | [goal from roadmap] |
+| [N] | [phase-name] | [status icon + label] | [phase.goal from $INIT.phases[]] |
 
 Status icons: ✓ complete | ▶ in progress | ○ planned | - not started
 Mark current phase with **bold**.
-Derive status per phase from `$ROADMAP.phases[]`: if summaries = plans > 0 → complete, if summaries > 0 but < plans → in progress, if plans > 0 but summaries = 0 → planned, else not started.
+Derive status per phase from $INIT.phases[].status:
+  complete → ✓, in_progress → ▶, researched/pending/not_started → ○ or -
 
 ## Recent Work
-- [Phase X, Plan Y]: [1-line from summary-extract]
-- [Phase X, Plan Z]: [1-line from summary-extract]
+- [Phase X, Plan Y]: [$INIT.recent_summaries[0].one_liner]
+- [Phase X, Plan Z]: [$INIT.recent_summaries[1].one_liner]
+(iterate $INIT.recent_summaries[] — skip if empty)
 
 ## Current Position
-Phase [N] of [total]: [phase-name]
+Phase [N] of [$INIT.phase_count]: [phase-name]
 Plan [M] of [phase-total]: [status]
-CONTEXT: [✓ if has_context | - if not]
+CONTEXT: [✓ if has_context | - if not] (from $INIT.phases[current].has_context)
 
 ## Key Decisions Made
-- [from $STATE.decisions[].decision]
+- [from $INIT.state.decisions[]]
 
 ## Blockers/Concerns
-- [from $STATE.blockers[].text]
+- [from $INIT.state.blockers[]]
 
 ## Pending Todos
-- [count] pending — /gsd2:check-todos to review
+- [$INIT.todo_count] pending — /gsd2:check-todos to review
 
 ## Active Debug Sessions
-- [count] active — /gsd2:debug to continue
-(Only show if count > 0)
+- [$INIT.debug_session_count] active — /gsd2:debug to continue
+(Only show if debug_session_count > 0)
 
 ## What's Next
-[Next phase/plan objective from roadmap analyze]
+[Next phase/plan objective from $INIT.phases[] / $INIT.next_phase.goal]
 ```
 </step>
 
@@ -119,25 +110,18 @@ Track: `uat_with_gaps` (diagnosed), `uat_partial` (partial).
 
 **Step 1.6: Cross-phase verification debt**
 
-```bash
-DEBT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" audit-uat --raw 2>/dev/null)
-```
+Use `$INIT.verification_debt.total_items` and `$INIT.verification_debt.total_files` (already loaded).
 
-Parse `summary.total_items` and `summary.total_files`. If `outstanding_debt > 0`, append warning to report between "What's Next" and route suggestion:
+If `total_items > 0`, append warning to report between "What's Next" and route suggestion:
 
 ```markdown
-## Verification Debt ({N} files across prior phases)
+## Verification Debt ($INIT.verification_debt.total_files files across prior phases)
 
-| Phase | File | Issue |
-|-------|------|-------|
-| {phase} | {filename} | {pending_count} pending, {skipped_count} skipped, {blocked_count} blocked |
-| {phase} | {filename} | human_needed — {count} items |
-
-Review: `/gsd2:audit-uat` — full cross-phase audit
+Review outstanding items: `/gsd2:audit-uat` — full cross-phase audit
 Resume testing: `/gsd2:verify-work {phase}` — retest specific phase
 ```
 
-Warning only — does not block routing.
+Warning only — does not block routing. For the full per-file detail table, the user should run `/gsd2:audit-uat` directly (init progress carries summary counts only, not per-file rows).
 
 **Step 2: Route based on counts**
 
@@ -168,13 +152,13 @@ Find first PLAN.md without matching SUMMARY.md. Read its `<objective>`.
 
 **Route B: Phase needs planning**
 
-Check if `{phase_num}-CONTEXT.md` exists.
+Check if `{phase_num}-CONTEXT.md` exists (use `$INIT.phases[current].has_context`).
 
 If CONTEXT.md exists:
 ```
 ---
 ## ▶ Next Up
-**Phase {N}: {Name}** — {Goal from ROADMAP.md}
+**Phase {N}: {Name}** — {Goal from $INIT.phases[current].goal}
 <sub>✓ Context gathered, ready to plan</sub>
 `/gsd2:plan-phase {phase-number}`
 <sub>`/clear` first → fresh context window</sub>
@@ -185,7 +169,7 @@ If no CONTEXT.md:
 ```
 ---
 ## ▶ Next Up
-**Phase {N}: {Name}** — {Goal from ROADMAP.md}
+**Phase {N}: {Name}** — {Goal from $INIT.phases[current].goal}
 `/gsd2:discuss-phase {phase}` — gather context and clarify approach
 <sub>`/clear` first → fresh context window</sub>
 ---
@@ -233,7 +217,7 @@ If no CONTEXT.md:
 
 **Step 3: Milestone status (only when phase complete)**
 
-Read ROADMAP.md — identify current phase number and highest phase in milestone.
+Use `$INIT.phases[]` to identify current phase number and highest phase in milestone.
 
 | Condition | Route |
 |-----------|-------|
@@ -248,7 +232,7 @@ Read ROADMAP.md — identify current phase number and highest phase in milestone
 ---
 ## ✓ Phase {Z} Complete
 ## ▶ Next Up
-**Phase {Z+1}: {Name}** — {Goal from ROADMAP.md}
+**Phase {Z+1}: {Name}** — {Goal from $INIT.phases[Z+1].goal}
 `/gsd2:discuss-phase {Z+1}` — gather context and clarify approach
 <sub>`/clear` first → fresh context window</sub>
 ---
