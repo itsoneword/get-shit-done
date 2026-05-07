@@ -175,3 +175,71 @@ Return a structured summary:
 </step>
 
 </execution_flow>
+
+## Loop Mode Process
+
+Triggered when input includes a `## ROOT CAUSE FOUND` block from the loop-investigator (gsd-debugger in `goal: find_root_cause_only` mode) and a `loop_iteration` field in the orchestrator message.
+
+Contract source of truth: `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` §Communication Contracts (`loop-orchestrator → loop-fixer` and `loop-fixer → loop-orchestrator`).
+
+In loop mode the fixer's tool surface is restricted: Bash usage is limited to `gsd-tools.cjs commit` only — no direct `git`, no shell-out for verification (verification is the verifier's job, not the fixer's). Read/Write/Edit/Grep/Glob remain available, scoped to `files_implicated` plus their direct dependencies found by grep.
+
+### Step LOOP-1 — Parse hypothesis
+
+Extract from the orchestrator message: `hypothesis`, `classification`, `files_implicated`, `suggested_fix_direction`, `plan_slice`, `recent_diff`, `iteration`, `trace_id`, `debug_file_path`.
+
+If `hypothesis` or `plan_slice` is missing, emit `## FIXES SKIPPED` with `reason: "missing hypothesis or plan_slice"` and return — never proceed with an empty hypothesis.
+
+### Step LOOP-2 — Validate classification
+
+The investigator returns one of four `classification` values (per AGENT-SPEC):
+
+- `current-phase` — bug in code authored by the current phase. **Proceed.**
+- `regression` — a fix broke previously-passing behavior. **Proceed.**
+- `not-yet-built` — feature not yet implemented in this phase. **Skip.**
+- `unrelated` — issue is outside this plan's scope. **Skip.**
+
+For `not-yet-built` or `unrelated`: emit `## FIXES SKIPPED (loop)` with `reason: "classification: <value>"` and return immediately. Do not edit files. The orchestrator will fire ceiling-reached handoff.
+
+### Step LOOP-3 — Apply minimal fix
+
+Edit ONLY files in `files_implicated` plus direct dependencies found by grep — same scoping rule as standalone mode. Do not refactor unrelated code.
+
+Read the `plan_slice.truth` and `suggested_fix_direction` fields; the fix should make the failing `verify:` command pass while preserving all other plan behavior.
+
+### Step LOOP-4 — Commit via gsd-tools
+
+Use:
+
+```bash
+node .claude/get-shit-done/bin/gsd-tools.cjs commit "verify-loop/fix/attempt-<iteration>: <one-line summary>" --files <file1> <file2> ...
+```
+
+Capture the commit hash from stdout. Use the `verify-loop/fix/` commit prefix so loop commits are searchable in git log and distinguishable from standalone fixer commits.
+
+If the commit subcommand returns non-zero (merge conflict, hook failure), emit `## FIXES COMPLETE (loop)` with `status: "partial"` and `commit_hash: null` — do not retry.
+
+### Step LOOP-5 — Emit FIXES COMPLETE block
+
+Output exactly one fenced JSON block:
+
+````
+## FIXES COMPLETE (loop)
+```json
+{
+  "status": "fixed | partial | skipped",
+  "commit_hash": "<sha or null>",
+  "files_changed": ["..."],
+  "fix_summary": "...",
+  "loop_iteration": <iteration>,
+  "iteration": <iteration>,
+  "trace_id": "<trace_id>"
+}
+```
+````
+
+`loop_iteration` and `iteration` are intentional duplicates: `iteration` matches the AGENT-SPEC contract field (the orchestrator parses this); `loop_iteration` is the auditability field that distinguishes loop commits from standalone in commit-message search and in the loop debug file.
+
+### Standalone preservation
+
+The standalone `## FIXES COMPLETE` (without `(loop)`) and `## FIXES PARTIAL` blocks above are preserved unchanged for non-loop callers (e.g., `/gsd2:fix`). Loop mode adds a parallel return path; it does not replace the standalone path.
