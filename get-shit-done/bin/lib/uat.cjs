@@ -10,10 +10,14 @@ const path = require('path');
 const { output, error, getMilestonePhaseFilter } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
 
-function cmdAuditUat(cwd, raw) {
+function auditUatInternal(cwd) {
   const phasesDir = path.join(cwd, '.planning', 'phases');
   if (!fs.existsSync(phasesDir)) {
-    error('No .planning/phases directory found');
+    // Return safe empty result — no phases dir is not a fatal error for callers
+    return {
+      results: [],
+      summary: { total_files: 0, total_items: 0, by_category: {}, by_phase: {} },
+    };
   }
 
   const isDirInMilestone = getMilestonePhaseFilter(cwd);
@@ -87,7 +91,16 @@ function cmdAuditUat(cwd, raw) {
     }
   }
 
-  output({ results, summary }, raw);
+  return { results, summary };
+}
+
+function cmdAuditUat(cwd, raw) {
+  const phasesDir = path.join(cwd, '.planning', 'phases');
+  if (!fs.existsSync(phasesDir)) {
+    error('No .planning/phases directory found');
+  }
+
+  output(auditUatInternal(cwd), raw);
 }
 
 function parseUatItems(content) {
@@ -186,4 +199,4 @@ function categorizeItem(result, reason, blockedBy) {
   return 'unknown';
 }
 
-module.exports = { cmdAuditUat };
+module.exports = { auditUatInternal, cmdAuditUat };

@@ -7,6 +7,9 @@ const path = require('path');
 const { execSync } = require('child_process');
 const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
+const { auditUatInternal } = require('./uat.cjs');
+const { stateSnapshotInternal } = require('./state.cjs');
+const { progressRenderInternal, listTodosInternal, summaryExtractInternal } = require('./commands.cjs');
 
 function getLatestCompletedMilestone(cwd) {
   const milestonesPath = path.join(cwd, '.planning', 'MILESTONES.md');
@@ -855,6 +858,10 @@ function cmdInitProgress(cwd, raw, opts = {}) {
   // Build set of phases defined in ROADMAP for the current milestone
   const roadmapPhaseNums = new Set();
   const roadmapPhaseNames = new Map();
+  // Per-phase metadata extracted from ROADMAP sections
+  const roadmapPhaseGoals = new Map();
+  const roadmapPhaseDependsOn = new Map();
+  const roadmapPhaseComplete = new Map(); // checkbox status
   try {
     const roadmapContent = extractCurrentMilestone(
       fs.readFileSync(path.join(cwd, '.planning', 'ROADMAP.md'), 'utf-8'), cwd
@@ -862,8 +869,32 @@ function cmdInitProgress(cwd, raw, opts = {}) {
     const headingPattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:\s*([^\n]+)/gi;
     let hm;
     while ((hm = headingPattern.exec(roadmapContent)) !== null) {
-      roadmapPhaseNums.add(hm[1]);
-      roadmapPhaseNames.set(hm[1], hm[2].replace(/\(INSERTED\)/i, '').trim());
+      const phaseNum = hm[1];
+      const phaseName = hm[2].replace(/\(INSERTED\)/i, '').trim();
+      roadmapPhaseNums.add(phaseNum);
+      roadmapPhaseNames.set(phaseNum, phaseName);
+
+      // Extract goal and depends_on from the section text
+      const sectionStart = hm.index;
+      const restOfContent = roadmapContent.slice(sectionStart);
+      const nextHeader = restOfContent.match(/\n#{2,4}\s+Phase\s+\d/i);
+      const sectionEnd = nextHeader ? sectionStart + nextHeader.index : roadmapContent.length;
+      const section = roadmapContent.slice(sectionStart, sectionEnd);
+
+      const goalMatch = section.match(/\*\*Goal(?::\*\*|\*\*:)\s*([^\n]+)/i);
+      if (goalMatch) roadmapPhaseGoals.set(phaseNum, goalMatch[1].trim());
+
+      const dependsMatch = section.match(/\*\*Depends on(?::\*\*|\*\*:)\s*([^\n]+)/i);
+      if (dependsMatch) roadmapPhaseDependsOn.set(phaseNum, dependsMatch[1].trim());
+    }
+
+    // Extract checkbox completion status per phase
+    const checkboxPattern = /-\s*\[(x| )\]\s*.*Phase\s+(\d+[A-Z]?(?:\.\d+)*)[:\s]/gi;
+    let cm;
+    while ((cm = checkboxPattern.exec(roadmapContent)) !== null) {
+      const isComplete = cm[1] === 'x';
+      const phaseNum = cm[2];
+      roadmapPhaseComplete.set(phaseNum, isComplete);
     }
   } catch { /* intentionally empty */ }
 
@@ -893,10 +924,14 @@ function cmdInitProgress(cwd, raw, opts = {}) {
       const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
       const summaries = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
       const hasResearch = phaseFiles.some(f => f.endsWith('-RESEARCH.md') || f === 'RESEARCH.md');
+      const hasContext = phaseFiles.some(f => f.endsWith('-CONTEXT.md') || f === 'CONTEXT.md');
 
       const status = summaries.length >= plans.length && plans.length > 0 ? 'complete' :
                      plans.length > 0 ? 'in_progress' :
                      hasResearch ? 'researched' : 'pending';
+
+      // Normalize phase number for map lookup (strip leading zeros)
+      const strippedNum = phaseNumber.replace(/^0+/, '') || '0';
 
       const phaseInfo = {
         number: phaseNumber,
@@ -906,6 +941,10 @@ function cmdInitProgress(cwd, raw, opts = {}) {
         plan_count: plans.length,
         summary_count: summaries.length,
         has_research: hasResearch,
+        has_context: hasContext,
+        goal: roadmapPhaseGoals.get(phaseNumber) || roadmapPhaseGoals.get(strippedNum) || null,
+        depends_on: roadmapPhaseDependsOn.get(phaseNumber) || roadmapPhaseDependsOn.get(strippedNum) || null,
+        roadmap_complete: roadmapPhaseComplete.get(phaseNumber) || roadmapPhaseComplete.get(strippedNum) || false,
       };
 
       phases.push(phaseInfo);
@@ -932,6 +971,10 @@ function cmdInitProgress(cwd, raw, opts = {}) {
         plan_count: 0,
         summary_count: 0,
         has_research: false,
+        has_context: false,
+        goal: roadmapPhaseGoals.get(num) || roadmapPhaseGoals.get(stripped) || null,
+        depends_on: roadmapPhaseDependsOn.get(num) || roadmapPhaseDependsOn.get(stripped) || null,
+        roadmap_complete: roadmapPhaseComplete.get(num) || roadmapPhaseComplete.get(stripped) || false,
       };
       phases.push(phaseInfo);
       if (!nextPhase && !currentPhase) {
@@ -966,6 +1009,83 @@ function cmdInitProgress(cwd, raw, opts = {}) {
     if (pauseMatch) pausedAt = pauseMatch[1].trim();
   } catch { /* intentionally empty */ }
 
+  // Gather enrichment data (non-emitting calls)
+  const progressRenderResult = (() => {
+    try { return progressRenderInternal(cwd, 'bar'); } catch { return { bar: '', percent: 0, completed: 0, total: 0 }; }
+  })();
+  const auditResult = (() => {
+    try { return auditUatInternal(cwd); } catch { return { summary: { total_files: 0, total_items: 0 } }; }
+  })();
+  const todoResult = (() => {
+    try { return listTodosInternal(cwd, null); } catch { return { count: 0 }; }
+  })();
+  const stateSnapshot = (() => {
+    try { return stateSnapshotInternal(cwd); } catch { return null; }
+  })();
+
+  // Count debug sessions: .planning/debug/*.md files not containing 'resolved' in basename
+  const debugSessionCount = (() => {
+    try {
+      const debugDir = path.join(cwd, '.planning', 'debug');
+      return fs.readdirSync(debugDir)
+        .filter(f => f.endsWith('.md') && !f.includes('resolved'))
+        .length;
+    } catch { return 0; }
+  })();
+
+  // Recent summaries: top-3 most-recently-modified *-SUMMARY.md across milestone phases
+  const recentSummaries = (() => {
+    try {
+      const phasesDir = path.join(cwd, '.planning', 'phases');
+      const isDirInMilestone = getMilestonePhaseFilter(cwd);
+      const summaryFiles = [];
+
+      const dirs = fs.readdirSync(phasesDir, { withFileTypes: true })
+        .filter(e => e.isDirectory())
+        .map(e => e.name)
+        .filter(isDirInMilestone);
+
+      for (const dir of dirs) {
+        const phaseMatch = dir.match(/^(\d+[A-Z]?(?:\.\d+)*)-?(.*)/i);
+        const phaseNum = phaseMatch ? phaseMatch[1] : dir;
+        const phaseDir = path.join(phasesDir, dir);
+        try {
+          const files = fs.readdirSync(phaseDir)
+            .filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+          for (const f of files) {
+            const fullPath = path.join(phaseDir, f);
+            try {
+              const mtimeMs = fs.statSync(fullPath).mtimeMs;
+              const relPath = '.planning/phases/' + dir + '/' + f;
+              // Extract plan number from filename (e.g. "04-01-SUMMARY.md" → "01")
+              const planMatch = f.match(/^(\d+[A-Z]?(?:\.\d+)*)-(\d+[A-Z]?)-SUMMARY\.md$/i);
+              summaryFiles.push({
+                phase: phaseNum,
+                plan: planMatch ? planMatch[2] : null,
+                path: relPath,
+                mtimeMs,
+              });
+            } catch { /* skip on stat error */ }
+          }
+        } catch { /* skip on readdir error */ }
+      }
+
+      // Sort by mtime descending, take top 3
+      summaryFiles.sort((a, b) => b.mtimeMs - a.mtimeMs);
+      const top3 = summaryFiles.slice(0, 3);
+
+      // Enrich with one_liner
+      return top3.map(s => {
+        let oneLiner = null;
+        try {
+          const extracted = summaryExtractInternal(cwd, s.path, ['one_liner']);
+          oneLiner = extracted ? extracted.one_liner : null;
+        } catch { /* skip */ }
+        return { phase: s.phase, plan: s.plan, path: s.path, one_liner: oneLiner };
+      });
+    } catch { return []; }
+  })();
+
   const result = {
     // Models
     executor_model: resolveModelInternal(cwd, 'gsd-executor'),
@@ -999,6 +1119,31 @@ function cmdInitProgress(cwd, raw, opts = {}) {
     roadmap_path: '.planning/ROADMAP.md',
     project_path: '.planning/PROJECT.md',
     config_path: '.planning/config.json',
+
+    // Enrichment: progress render
+    progress_bar: progressRenderResult.bar,
+    progress_percent: progressRenderResult.percent,
+
+    // Enrichment: verification debt summary
+    verification_debt: {
+      total_files: auditResult.summary.total_files,
+      total_items: auditResult.summary.total_items,
+    },
+
+    // Enrichment: todos
+    todo_count: todoResult.count,
+
+    // Enrichment: debug sessions
+    debug_session_count: debugSessionCount,
+
+    // Enrichment: recent summaries
+    recent_summaries: recentSummaries,
+
+    // Enrichment: model profile
+    profile: config.model_profile || 'balanced',
+
+    // Enrichment: full state snapshot (replaces separate state-snapshot CLI call)
+    state: stateSnapshot,
   };
 
   output(result, raw);

@@ -42,7 +42,7 @@ function cmdCurrentTimestamp(format, raw) {
   output({ timestamp: result }, raw, result);
 }
 
-function cmdListTodos(cwd, area, raw) {
+function listTodosInternal(cwd, area) {
   const pendingDir = path.join(cwd, '.planning', 'todos', 'pending');
 
   let count = 0;
@@ -75,8 +75,12 @@ function cmdListTodos(cwd, area, raw) {
     }
   } catch { /* intentionally empty */ }
 
-  const result = { count, todos };
-  output(result, raw, count.toString());
+  return { count, todos };
+}
+
+function cmdListTodos(cwd, area, raw) {
+  const result = listTodosInternal(cwd, area);
+  output(result, raw, result.count.toString());
 }
 
 function cmdVerifyPathExists(cwd, targetPath, raw) {
@@ -269,17 +273,12 @@ function cmdCommit(cwd, message, files, raw, amend, noVerify) {
   output(result, raw, hash || 'committed');
 }
 
-function cmdSummaryExtract(cwd, summaryPath, fields, raw) {
-  if (!summaryPath) {
-    error('summary-path required for summary-extract');
-  }
+function summaryExtractInternal(cwd, summaryPath, fields) {
+  if (!summaryPath) return null;
 
   const fullPath = path.join(cwd, summaryPath);
 
-  if (!fs.existsSync(fullPath)) {
-    output({ error: 'File not found', path: summaryPath }, raw);
-    return;
-  }
+  if (!fs.existsSync(fullPath)) return null;
 
   const content = fs.readFileSync(fullPath, 'utf-8');
   const fm = extractFrontmatter(content);
@@ -318,11 +317,25 @@ function cmdSummaryExtract(cwd, summaryPath, fields, raw) {
         filtered[field] = fullResult[field];
       }
     }
-    output(filtered, raw);
+    return filtered;
+  }
+
+  return fullResult;
+}
+
+function cmdSummaryExtract(cwd, summaryPath, fields, raw) {
+  if (!summaryPath) {
+    error('summary-path required for summary-extract');
+  }
+
+  const result = summaryExtractInternal(cwd, summaryPath, fields);
+
+  if (!result) {
+    output({ error: 'File not found', path: summaryPath }, raw);
     return;
   }
 
-  output(fullResult, raw);
+  output(result, raw);
 }
 
 async function cmdWebsearch(query, options, raw) {
@@ -387,9 +400,8 @@ async function cmdWebsearch(query, options, raw) {
   }
 }
 
-function cmdProgressRender(cwd, format, raw) {
+function progressRenderInternal(cwd, format) {
   const phasesDir = planningPaths(cwd).phases;
-  const roadmapPath = planningPaths(cwd).roadmap;
   const milestone = getMilestoneInfo(cwd);
 
   const phases = [];
@@ -424,7 +436,6 @@ function cmdProgressRender(cwd, format, raw) {
   const percent = totalPlans > 0 ? Math.min(100, Math.round((totalSummaries / totalPlans) * 100)) : 0;
 
   if (format === 'table') {
-    // Render markdown table
     const barWidth = 10;
     const filled = Math.round((percent / 100) * barWidth);
     const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(barWidth - filled);
@@ -435,23 +446,35 @@ function cmdProgressRender(cwd, format, raw) {
     for (const p of phases) {
       out += `| ${p.number} | ${p.name} | ${p.summaries}/${p.plans} | ${p.status} |\n`;
     }
-    output({ rendered: out }, raw, out);
+    return { rendered: out, percent, completed: totalSummaries, total: totalPlans };
   } else if (format === 'bar') {
     const barWidth = 20;
     const filled = Math.round((percent / 100) * barWidth);
     const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(barWidth - filled);
     const text = `[${bar}] ${totalSummaries}/${totalPlans} plans (${percent}%)`;
-    output({ bar: text, percent, completed: totalSummaries, total: totalPlans }, raw, text);
+    return { bar: text, percent, completed: totalSummaries, total: totalPlans };
   } else {
     // JSON format
-    output({
+    return {
       milestone_version: milestone.version,
       milestone_name: milestone.name,
       phases,
       total_plans: totalPlans,
       total_summaries: totalSummaries,
       percent,
-    }, raw);
+    };
+  }
+}
+
+function cmdProgressRender(cwd, format, raw) {
+  const result = progressRenderInternal(cwd, format);
+
+  if (format === 'table') {
+    output(result, raw, result.rendered);
+  } else if (format === 'bar') {
+    output(result, raw, result.bar);
+  } else {
+    output(result, raw);
   }
 }
 
@@ -824,6 +847,9 @@ function cmdStats(cwd, format, raw) {
 }
 
 module.exports = {
+  progressRenderInternal,
+  listTodosInternal,
+  summaryExtractInternal,
   cmdGenerateSlug,
   cmdCurrentTimestamp,
   cmdListTodos,

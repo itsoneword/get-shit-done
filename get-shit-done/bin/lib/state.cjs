@@ -477,12 +477,11 @@ function cmdStateRecordSession(cwd, options, raw) {
   }
 }
 
-function cmdStateSnapshot(cwd, raw) {
+function stateSnapshotInternal(cwd) {
   const statePath = planningPaths(cwd).state;
 
   if (!fs.existsSync(statePath)) {
-    output({ error: 'STATE.md not found' }, raw);
-    return;
+    return null;
   }
 
   const content = fs.readFileSync(statePath, 'utf-8');
@@ -522,9 +521,20 @@ function cmdStateSnapshot(cwd, raw) {
     }
   }
 
+  // Also extract bullet-list decisions (### Decisions section style used by GSD)
+  if (decisions.length === 0) {
+    const bulletDecisionsMatch = content.match(/###?\s*Decisions\b[^\n]*\n([\s\S]*?)(?=\n###?|\n##[^#]|$)/i);
+    if (bulletDecisionsMatch) {
+      const items = bulletDecisionsMatch[1].match(/^-\s+(.+)$/gm) || [];
+      for (const item of items) {
+        decisions.push({ text: item.replace(/^-\s+/, '').trim() });
+      }
+    }
+  }
+
   // Extract blockers list
   const blockers = [];
-  const blockersMatch = content.match(/##\s*Blockers\s*\n([\s\S]*?)(?=\n##|$)/i);
+  const blockersMatch = content.match(/###?\s*Blockers[^\n]*\n([\s\S]*?)(?=\n###?|\n##[^#]|$)/i);
   if (blockersMatch) {
     const blockersSection = blockersMatch[1];
     const items = blockersSection.match(/^-\s+(.+)$/gm) || [];
@@ -555,7 +565,21 @@ function cmdStateSnapshot(cwd, raw) {
     if (resumeFileMatch) session.resume_file = resumeFileMatch[1].trim();
   }
 
-  const result = {
+  // Also check Session Continuity section (GSD STATE.md format)
+  if (!session.last_date && !session.stopped_at) {
+    const continuityMatch = content.match(/##\s*Session Continuity\s*\n([\s\S]*?)(?=\n##|$)/i);
+    if (continuityMatch) {
+      const sec = continuityMatch[1];
+      const lastSessionMatch = sec.match(/^Last session:\s*(.+)$/im);
+      const stoppedAtMatch2 = sec.match(/^Stopped at:\s*(.+)$/im);
+      const resumeMatch2 = sec.match(/^Resume file:\s*(.+)$/im);
+      if (lastSessionMatch) session.last_date = lastSessionMatch[1].trim();
+      if (stoppedAtMatch2) session.stopped_at = stoppedAtMatch2[1].trim();
+      if (resumeMatch2) session.resume_file = resumeMatch2[1].trim();
+    }
+  }
+
+  return {
     current_phase: currentPhase,
     current_phase_name: currentPhaseName,
     total_phases: totalPhases,
@@ -570,8 +594,15 @@ function cmdStateSnapshot(cwd, raw) {
     paused_at: pausedAt,
     session,
   };
+}
 
-  output(result, raw);
+function cmdStateSnapshot(cwd, raw) {
+  const snapshot = stateSnapshotInternal(cwd);
+  if (!snapshot) {
+    output({ error: 'STATE.md not found' }, raw);
+    return;
+  }
+  output(snapshot, raw);
 }
 
 // ─── State Frontmatter Sync ──────────────────────────────────────────────────
@@ -907,6 +938,7 @@ module.exports = {
   stateExtractField,
   stateReplaceField,
   writeStateMd,
+  stateSnapshotInternal,
   cmdStateLoad,
   cmdStateGet,
   cmdStatePatch,
