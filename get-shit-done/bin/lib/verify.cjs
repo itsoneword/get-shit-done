@@ -5,9 +5,251 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execSync } = require('child_process');
 const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, output, error } = require('./core.cjs');
 const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
+
+// ─── Verify-loop primitives (Phase 4) ─────────────────────────────────────────
+
+const VERIFY_VALID_TYPES = new Set(['unit', 'integration', 'e2e', 'ui']);
+const VERIFY_ACTUAL_MAX_CHARS = 1024;
+const VERIFY_CMD_TIMEOUT_MS = 30 * 1000;
+
+/**
+ * Parse must_haves.truths[].verify[] entries from a PLAN.md frontmatter.
+ * Returns: [{ truth, cmd, expect, type }] — one entry per verify command,
+ * with the parent truth string carried for traceability.
+ *
+ * Why this is separate from parseMustHavesBlock:
+ *   parseMustHavesBlock only handles a single nesting level. The verify
+ *   sub-block is one level deeper (must_haves > truths > [{verify: [...]}]),
+ *   and changing parseMustHavesBlock risks breaking verify-artifacts and
+ *   verify-key-links callers.
+ */
+function parseVerifyCommands(content) {
+  const fmMatch = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
+  if (!fmMatch) return [];
+  const yaml = fmMatch[1];
+  const lines = yaml.split(/\r?\n/);
+
+  // Locate `truths:` block header. Indentation in real-world plans is
+  // 2-space (must_haves > truths). Tolerate any indent — we lock the
+  // truthsIndent at first sight and use it as the block boundary.
+  let truthsIdx = -1;
+  let truthsIndent = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(\s*)truths:\s*$/);
+    if (m) { truthsIdx = i; truthsIndent = m[1].length; break; }
+  }
+  if (truthsIdx === -1) return [];
+
+  const out = [];
+  let currentTruth = null;
+  let inVerifyBlock = false;
+  let pendingEntry = null;
+  let dashIndent = -1; // indent of the leading "- cmd:" dash inside a verify block
+
+  for (let i = truthsIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === '') continue;
+    const indent = (line.match(/^(\s*)/) || [''])[1].length;
+
+    // Any line indented <= the truths header ends the truths block
+    if (indent <= truthsIndent) break;
+
+    // New truth item: dash at truthsIndent + 2 (sibling level), starts with "- truth:"
+    // Use a permissive indent check (any "- truth:" deeper than truthsIndent counts).
+    const truthMatch = line.match(/^(\s*)-\s+truth:\s*(.*)$/);
+    if (truthMatch && truthMatch[1].length === truthsIndent + 2) {
+      if (pendingEntry) { out.push(pendingEntry); pendingEntry = null; }
+      let raw = truthMatch[2].trim();
+      raw = raw.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+      currentTruth = raw;
+      inVerifyBlock = false;
+      dashIndent = -1;
+      continue;
+    }
+
+    // `verify:` header — sibling of `artifacts:` under a truth (truthsIndent + 4)
+    const verifyHeader = line.match(/^(\s*)verify:\s*$/);
+    if (verifyHeader && verifyHeader[1].length === truthsIndent + 4) {
+      if (pendingEntry) { out.push(pendingEntry); pendingEntry = null; }
+      inVerifyBlock = true;
+      dashIndent = -1;
+      continue;
+    }
+
+    // Any other key at the same level as `verify:` ends a verify block
+    // (e.g., `      artifacts:`, `      contains:`)
+    if (line.match(/^(\s*)\w+:\s*$/) && indent === truthsIndent + 4) {
+      if (pendingEntry) { out.push(pendingEntry); pendingEntry = null; }
+      inVerifyBlock = false;
+      continue;
+    }
+
+    if (!inVerifyBlock || !currentTruth) continue;
+
+    // First dash inside a verify list — captures dash indent
+    if (line.trim().startsWith('- ')) {
+      const dashKv = line.match(/^(\s*)-\s+(\w+):\s*(.*)$/);
+      if (dashKv) {
+        const ind = dashKv[1].length;
+        if (dashIndent === -1) dashIndent = ind;
+        if (ind === dashIndent) {
+          if (pendingEntry) { out.push(pendingEntry); pendingEntry = null; }
+          pendingEntry = { truth: currentTruth };
+          let val = dashKv[3].trim();
+          val = val.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+          pendingEntry[dashKv[2]] = val;
+          continue;
+        }
+      }
+    }
+
+    // Continuation key (deeper than the dash)
+    if (pendingEntry && dashIndent !== -1 && indent > dashIndent) {
+      const kvMatch = line.match(/^\s*(\w+):\s*(.*)$/);
+      if (kvMatch) {
+        let val = kvMatch[2].trim();
+        val = val.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+        pendingEntry[kvMatch[1]] = val;
+      }
+    }
+  }
+  if (pendingEntry) out.push(pendingEntry);
+
+  return out.filter(e => e && e.cmd !== undefined);
+}
+
+/**
+ * Compare captured stdout against an `expect` value.
+ * - If expect is wrapped in /.../ → regex match against actual.
+ * - Else → string equality on trimmed actual.
+ * Returns { passed: bool, mode: 'regex'|'string' }.
+ */
+function matchExpect(actual, expect) {
+  if (typeof expect !== 'string') return { passed: false, mode: 'string' };
+  if (expect.length >= 2 && expect.startsWith('/') && expect.endsWith('/')) {
+    try {
+      const rx = new RegExp(expect.slice(1, -1));
+      return { passed: rx.test(actual), mode: 'regex' };
+    } catch {
+      return { passed: false, mode: 'regex' };
+    }
+  }
+  return { passed: actual.trim() === expect, mode: 'string' };
+}
+
+function cmdVerifyCommands(cwd, planFilePath, raw) {
+  if (!planFilePath) error('plan file path required');
+  const fullPath = path.isAbsolute(planFilePath) ? planFilePath : path.join(cwd, planFilePath);
+  const content = safeReadFile(fullPath);
+  if (!content) {
+    output({ error: 'File not found', path: planFilePath }, raw);
+    return;
+  }
+
+  const entries = parseVerifyCommands(content);
+  if (entries.length === 0) {
+    // Empty verify list — emit structured JSON in both raw and non-raw modes
+    // so callers (verifier loop, jq pipelines) get a consistent shape.
+    output({
+      all_passed: true,
+      passed: 0,
+      total: 0,
+      results: [],
+      note: 'No must_haves.truths[].verify[] entries found',
+    }, raw);
+    return;
+  }
+
+  const results = [];
+  for (const entry of entries) {
+    const row = {
+      truth: entry.truth || '',
+      cmd: entry.cmd || '',
+      expect: entry.expect !== undefined ? entry.expect : '',
+      type: entry.type || '',
+      actual: '',
+      passed: false,
+      reason: '',
+    };
+
+    // Validate type
+    if (!VERIFY_VALID_TYPES.has(row.type)) {
+      row.passed = false;
+      row.reason = `unknown type: ${row.type || '<missing>'}`;
+      results.push(row);
+      continue;
+    }
+
+    // Skip ui (deferred to v2 per template note)
+    if (row.type === 'ui') {
+      row.passed = false;
+      row.reason = 'type=ui deferred to v2';
+      results.push(row);
+      continue;
+    }
+
+    // Execute cmd, capture stdout
+    let actual = '';
+    let timedOut = false;
+    let exitErr = null;
+    try {
+      actual = execSync(row.cmd, {
+        cwd,
+        encoding: 'utf-8',
+        timeout: VERIFY_CMD_TIMEOUT_MS,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: '/bin/sh',
+      });
+    } catch (err) {
+      // execSync throws on non-zero exit OR timeout
+      if (err && err.signal === 'SIGTERM') timedOut = true;
+      if (err && err.code === 'ETIMEDOUT') timedOut = true;
+      // Capture stdout that was emitted before failure
+      if (err && err.stdout) actual = err.stdout.toString();
+      exitErr = err;
+    }
+
+    // Truncate actual to mitigate prompt injection / log bloat
+    if (actual.length > VERIFY_ACTUAL_MAX_CHARS) {
+      actual = actual.slice(0, VERIFY_ACTUAL_MAX_CHARS);
+    }
+    row.actual = actual;
+
+    if (timedOut) {
+      row.passed = false;
+      row.reason = 'timeout';
+      results.push(row);
+      continue;
+    }
+
+    const m = matchExpect(actual, row.expect);
+    row.passed = m.passed;
+    if (!m.passed) {
+      if (exitErr && typeof exitErr.status === 'number' && exitErr.status !== 0) {
+        row.reason = `exit code ${exitErr.status}`;
+      } else {
+        row.reason = 'output mismatch';
+      }
+    }
+    results.push(row);
+  }
+
+  const passed = results.filter(r => r.passed).length;
+  // Emit structured JSON in both raw and non-raw modes — the verifier loop
+  // and jq pipelines need parseable output regardless of --raw flag.
+  output({
+    all_passed: passed === results.length,
+    passed,
+    total: results.length,
+    results,
+  }, raw);
+}
+
+
 
 function cmdVerifySummary(cwd, summaryPath, checkFileCount, raw) {
   if (!summaryPath) {
@@ -845,6 +1087,9 @@ module.exports = {
   cmdVerifyCommits,
   cmdVerifyArtifacts,
   cmdVerifyKeyLinks,
+  cmdVerifyCommands,
   cmdValidateConsistency,
   cmdValidateHealth,
+  // Internal helpers exported for downstream tooling/tests
+  parseVerifyCommands,
 };
