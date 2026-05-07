@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 04-01-PLAN.md (context efficiency triage)
-last_updated: "2026-05-07T17:13:58.376Z"
+stopped_at: "Completed 04-03-PLAN.md (loop primitives — verifier/fixer loop modes, verify commands subcommand, must_haves verify: schema)"
+last_updated: "2026-05-07T17:28:06.195Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 ## Current Position
 
 Phase: 04 (verification-harness-and-context-efficiency) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Project Reference
 
@@ -65,6 +65,11 @@ Recent decisions affecting current work:
 - [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] Scoped phase slice anchors on currentPhase || nextPhase || phases[0] with [anchor-1, anchor+2] window
 - [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] Slug cap order: slice(0, 45) THEN strip trailing hyphen — handles edge cases where slice lands on a separator
 - [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] All edits mirrored in source (get-shit-done/, commands/) AND runtime (.claude/) — only source committed since runtime is gitignored
+- [Phase 04]: [Phase 04-03] gsd-debugger needed no source change — find_root_cause_only mode + symptoms_prefilled flag pre-existed; verified by grep, no commit
+- [Phase 04]: [Phase 04-03] verify expect: regex requires /pattern/ wrapping — bare strings treated as equality (matches plan template documentation)
+- [Phase 04]: [Phase 04-03] cmdVerifyCommands always emits JSON regardless of --raw — loop verifier and jq pipelines need parseable output unconditionally
+- [Phase 04]: [Phase 04-03] Loop verifier Step LOOP-1 calls 'verify commands <plan_path>' — plan file is source of truth; inline verify_commands in contract is redundancy/shape-validation only
+- [Phase 04]: [Phase 04-03] Wrote new parseVerifyCommands instead of extending parseMustHavesBlock — latter has latent 4-space-indent bug; reused by other verify subcommands; risk-isolated new helper
 
 ### Pending Todos
 
@@ -84,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T17:13:58.373Z
-Stopped at: Completed 04-01-PLAN.md (context efficiency triage)
+Last session: 2026-05-07T17:28:06.192Z
+Stopped at: Completed 04-03-PLAN.md (loop primitives — verifier/fixer loop modes, verify commands subcommand, must_haves verify: schema)
 Resume file: None
