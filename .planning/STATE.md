@@ -4,12 +4,12 @@ milestone: v1.4
 milestone_name: milestone
 status: unknown
 stopped_at: "Completed 04-03-PLAN.md (loop primitives — verifier/fixer loop modes, verify commands subcommand, must_haves verify: schema)"
-last_updated: "2026-05-07T17:28:06.195Z"
+last_updated: "2026-05-07T18:25:44.558Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 ## Current Position
@@ -70,6 +70,7 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04-03] cmdVerifyCommands always emits JSON regardless of --raw — loop verifier and jq pipelines need parseable output unconditionally
 - [Phase 04]: [Phase 04-03] Loop verifier Step LOOP-1 calls 'verify commands <plan_path>' — plan file is source of truth; inline verify_commands in contract is redundancy/shape-validation only
 - [Phase 04]: [Phase 04-03] Wrote new parseVerifyCommands instead of extending parseMustHavesBlock — latter has latent 4-space-indent bug; reused by other verify subcommands; risk-isolated new helper
+- [Phase 04]: Deferred Task 4 (manual harness dogfood) — GSD self-verification needs its own workflow design
 
 ### Pending Todos
 
@@ -81,7 +82,9 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-None yet.
+yet.
+
+- [Phase 04-03 discovery] parseMustHavesBlock in frontmatter.cjs uses 4-space-indent regex; real plans use 2-space; 'verify artifacts' and 'verify key-links' silently return 'no blocks found' for ALL current plans. Surfaced while implementing parseVerifyCommands. Out of 04-03 scope — fix in follow-up plan.
 
 ### Roadmap Evolution
 
