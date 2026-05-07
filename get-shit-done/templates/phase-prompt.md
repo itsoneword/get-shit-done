@@ -25,7 +25,13 @@ user_setup: []              # Human-required setup Claude cannot automate (see b
 
 # Goal-backward verification (derived during planning, verified after execution)
 must_haves:
-  truths: []                # Observable behaviors that must be true for goal achievement
+  truths:                   # Observable behaviors that must be true for goal achievement
+    - truth: "..."
+      artifacts: [path/to/file]
+      verify:               # Executable assertions — consumed by verify-loop primitives (Phase 4)
+        - cmd: "shell command"
+          expect: "expected stdout match (string or regex)"
+          type: unit          # unit | integration | e2e | ui (ui deferred to v2)
   artifacts: []             # Files that must exist with real implementation
   key_links: []             # Critical connections between artifacts
 ---
@@ -548,6 +554,8 @@ See `~/.claude/get-shit-done/templates/user-setup.md` for full schema and exampl
 
 The `must_haves` field defines what must be TRUE for the phase goal to be achieved. Derived during planning, verified after execution.
 
+> Phase 4 introduces the optional `verify:` sub-block under each truth — see §The verify: block below.
+
 **Structure:**
 
 ```yaml
@@ -597,6 +605,43 @@ must_haves:
 **Why this matters:**
 
 Task completion ≠ Goal achievement. A task "create chat component" can complete by creating a placeholder. The `must_haves` field captures what must actually work, enabling verification to catch gaps before they compound.
+
+### The verify: block (executable assertions)
+
+Each entry under `truths:` MAY include a `verify:` sub-block listing one or more executable assertions. This block is the input contract consumed by the verify-loop primitives introduced in Phase 4 (the loop-verifier agent and the `gsd-tools.cjs verify commands` subcommand).
+
+**Shape:**
+
+```yaml
+must_haves:
+  truths:
+    - truth: "API returns user data for valid ID"
+      artifacts: [src/api/users.ts]
+      verify:
+        - cmd: "curl -s http://localhost:3000/api/users/1 | jq '.id'"
+          expect: "1"
+          type: integration
+```
+
+**When to author verify: entries**
+
+Author a `verify:` block for any truth that can be checked by a shell command — most should. Truths that require human visual judgment (e.g., "UI looks correct") are exempt from `verify:` and remain as plain `truth:` strings; those flow into the standalone verifier's existing 3-level artifact check.
+
+**Field semantics:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `cmd` | yes | Shell-executable command. Author-time trusted (no runtime user input). Output captured to stdout. Run with a 30-second timeout. |
+| `expect` | yes | Expected stdout match. String equality by default. If the value is wrapped in `/.../` it is treated as a regex. The verify subcommand truncates captured `actual` output to 1024 chars before comparison (prompt-injection mitigation). |
+| `type` | yes | One of `unit`, `integration`, `e2e`, `ui`. The `ui` type is reserved for v2 — current verify-loop ignores entries marked `ui`. Unknown types are rejected at parse time. |
+
+**Backward compatibility:**
+
+Plans without any `verify:` blocks continue to work unchanged. The standalone verifier falls back to its existing 3-level artifact check (file existence, contains pattern, exports). The verify-loop only fires for tasks that opt in.
+
+**Companion task attribute (`verify_after`):**
+
+A task that produces work covered by a `verify:` block can opt into the loop with `<task type="auto" verify_after="true">`. After that task's task-level verification succeeds and the task is committed, the verify-loop fires (verifier → investigator → fixer → re-verify, ceiling 3) before the next task starts. Authoring details for `verify_after` are documented in Plan 04-04.
 
 **Verification flow:**
 
