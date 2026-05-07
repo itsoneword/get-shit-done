@@ -78,6 +78,15 @@ The handler exists but does nothing meaningful — a classic stub that Level 3 c
 
 <verification_process>
 
+## Invocation Modes
+
+This agent supports two invocation modes:
+
+- **standalone** (default): full goal-backward phase verification — Steps 0 → 10 + VERIFICATION.md.
+- **loop**: per-task verify-loop primitive — runs `must_haves.truths[].verify[]` cmds and emits a structured `## LOOP VERIFY RESULT` block. No VERIFICATION.md, no commits, no Steps 1–10.
+
+Loop mode is signaled by the presence of a `loop_input.json` path in the prompt or a `## LOOP MODE` block in the prompt provided by `<files_to_read>`. See **Step 0.5** below for detection logic.
+
 ## Step 0: Check for Previous Verification
 
 ```bash
@@ -88,7 +97,25 @@ If a previous verification exists with a `gaps:` section, enter **re-verificatio
 - Parse previous must-haves and gaps
 - Skip to Step 3: full verification on previously-failed items, quick regression check on passed items
 
-Otherwise, proceed with Step 1.
+Otherwise, proceed with Step 0.5.
+
+## Step 0.5 — Detect invocation mode
+
+If the prompt or `<files_to_read>` includes a `loop_input.json` path or a structured block matching:
+
+```json
+{
+  "plan_path": "...",
+  "task_id": "...",
+  "verify_commands": [...],
+  "iteration": 1,
+  "trace_id": "..."
+}
+```
+
+then enter **LOOP MODE** and skip to **Step LOOP-1** in the `## Loop Mode Process` section below. Do not run Steps 1–10. Do not write VERIFICATION.md. Do not commit.
+
+Otherwise continue with Step 1 (standalone).
 
 ## Step 1: Load Context
 
@@ -316,11 +343,71 @@ _Verified: {timestamp}_
 _Verifier: Claude (gsd-verifier)_
 ```
 
+## Loop Mode Process
+
+Contract source of truth: `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` §Communication Contracts.
+
+In loop mode, the orchestrator passes a structured input message containing `plan_path`, `task_id`, `verify_commands`, `iteration`, and `trace_id`. The inline `verify_commands` list is part of the contract, but the *source of truth* for assertions is the PLAN.md at `plan_path` — the verifier re-reads the file via the `verify commands` subcommand to guarantee assertions match the latest committed plan. Mismatch between the inline list and the parsed file is logged but does not block the run.
+
+### Step LOOP-1 — Run verify commands
+
+Invoke:
+
+```bash
+node .claude/get-shit-done/bin/gsd-tools.cjs verify commands <plan_path> --raw
+```
+
+Parse the returned JSON `{all_passed, passed, total, results: [{truth, cmd, expect, type, actual, passed, reason}]}`.
+
+### Step LOOP-2 — Build gaps array
+
+For every `result` with `passed: false`, construct a gap entry:
+
+```json
+{
+  "truth": "<from result.truth>",
+  "status": "failed",
+  "reason": "<result.reason or 'output mismatch'>",
+  "cmd": "<result.cmd>",
+  "actual_output": "<result.actual>",
+  "expected": "<result.expect>"
+}
+```
+
+For results with `passed: true`, do not emit a gap entry.
+
+### Step LOOP-3 — Emit LOOP VERIFY RESULT block
+
+Output exactly one fenced JSON block:
+
+````
+## LOOP VERIFY RESULT
+```json
+{
+  "status": "pass | fail",
+  "iteration": <iteration from input>,
+  "trace_id": "<trace_id from input>",
+  "score": <count of passed results>,
+  "total": <total result count>,
+  "gaps": [...]
+}
+```
+````
+
+`status` is `"pass"` if and only if `score === total`. Otherwise `"fail"`.
+
+Do **NOT** write a VERIFICATION.md file in loop mode (that is the standalone artifact).
+Do **NOT** commit anything in loop mode.
+Do **NOT** run Steps 1–10.
+
 ## Return to Orchestrator
 
 Do not commit — the orchestrator handles that.
 
-Return:
+**Standalone mode** returns the `## Verification Complete` block below.
+**Loop mode** returns the `## LOOP VERIFY RESULT` block defined in `## Loop Mode Process` (Step LOOP-3) — not the standalone block.
+
+Return (standalone):
 
 ```markdown
 ## Verification Complete
