@@ -2,6 +2,44 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.4.5] - 2026-05-07
+
+Phase 04 of milestone v1.4 — verifier-loop harness and `/gsd2:progress` token savings. Patch release; no breaking changes. Some items are wired but not yet dogfooded — see "Deferred" below.
+
+### Added
+
+- **Verifier-loop primitives** — three role-modes for the new auto-verify loop:
+  - `gsd-verifier` and `gsd-fixer` adapted with a "loop" invocation mode while preserving their standalone paths. Each verifier→fixer cycle uses fresh contexts and commits with a `verify-loop/fix:` prefix.
+  - `gsd-debugger` `find_root_cause_only` mode confirmed sufficient for the investigator role (no source change needed).
+- **`must_haves.verify:` schema** — plans can now declare per-truth assertion commands with `cmd:` / `expect:` / `type:` fields. `expect` supports `/regex/` mode (regex test) or bare-string mode (trim + equality). Static `artifacts.contains` checks still apply alongside.
+- **`gsd-tools verify commands {plan}` subcommand** — runs the verify block of a PLAN.md and returns structured pass/fail JSON.
+- **`verify_after` task attribute and `auto_verify` plan flag** — when a task completes, if marked `verify_after: true`, the orchestrator fires the verify loop (verifier → investigator → fixer) with a 3-iteration ceiling. Ceiling-reached returns a structured CHECKPOINT to the user.
+- **`<sub_flow name="verify_loop">` block in `execute-phase.md`** — splices the loop after the task spot-check and before failure handling. Documents fresh-context invariant per role and parallel-wave serialization rule.
+- **`verify_loop` config in `init execute-phase` JSON** — surfaces `default_enabled`, `max_iterations`, `debug_dir`, and per-plan `verify_after_tasks` parsed from PLAN frontmatter.
+- **Dependency graph artifact** for `.claude/get-shit-done/` — JSON + markdown maps of every caller/callee (22 agents, 51 workflows, 87 tool subcommands). Used by Plan 04-03 to confirm in-place adapter changes did not break standalone callers.
+
+### Changed
+
+- **`/gsd2:progress` token cost cut by ~13k per invocation:**
+  - `init progress` and `roadmap analyze` accept `--scoped` flag returning current ±1 / next ±1 phase slice.
+  - `generateSlugInternal` caps new phase slugs at 45 chars with no trailing hyphen.
+  - Removed duplicate `@-include` of `workflows/progress.md` from the `/gsd2:progress` command file (was being injected twice — once via the @-include, once via the Read tool).
+
+### Fixed
+
+- **`get-shit-done/workflows/execute-phase.md` path placeholders restored** — the verify-loop splice in 04-04 accidentally copied resolved absolute paths (`/Users/.../...`) from the runtime mirror back into the source tree (21 occurrences). Restored to `~/.claude/...` and `$HOME/.claude/...` placeholders so install-time path replacement substitutes per-user. Caught by `tests/path-replacement.test.cjs` in the regression gate.
+
+### Deferred (tracked, not in this release)
+
+- **Verifier-loop end-to-end dogfood** (TC-LOOP-PASS / TC-LOOP-CEILING / TC-LOOP-RECOVER). Harness is wired and statically verified; live-fire scenarios on a synthetic plan are intentionally deferred. Tracked in `.planning/phases/04-verification-harness-and-context-efficiency/04-HUMAN-UAT.md` (status: `deferred`). Will dogfood organically when a future phase authors a `verify_after: true` task. Reason: GSD's self-verification UX is itself an unsolved workflow problem — warrants a dedicated future phase that designs reusable harness fixtures rather than one-off manual runs.
+- **`workflows/document.md` does not pass `*-AGENT-SPEC.md` files to `gsd-document-mapper`** despite the persona's input contract declaring them as input (DOCS-04 partial wiring from milestone v1.4 audit). Fixable in <1 hour by extending `discover_subsystems` glob; postponed to v1.5.
+- **`verify.cjs` parser does not unescape YAML escape sequences** (`\"`, `\n`). Plans using `node -e "..."` cmds with embedded quotes cannot be expressed. Workaround: use string-equality `expect` (matcher trims) and avoid embedded-quote cmds.
+- **`verify.cjs` matcher regex mode does not trim trailing newlines** before `rx.test(actual)`. `^...$` regexes never match `cmd | jq ...` output. Workaround: use string-equality mode (which trims).
+
+### Process notes (visible in commits / planning artifacts)
+
+- Caught a recurring failure mode where the executor mirror-edits both the gitignored `.claude/` runtime tree and the tracked `get-shit-done/` source tree, allowing resolved absolute paths to leak from runtime back into source. Future executors should edit source first with placeholders and run `npm run dev` to refresh runtime — never copy runtime → source.
+
 ## [1.4.2] - 2026-04-28
 
 ### Added

@@ -11,8 +11,9 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 - Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Domain Router** - Automatic domain classification replaces hardcoded UI-SPEC trigger in discuss-phase (completed 2026-04-17)
-- [ ] **Phase 2: AGENT-SPEC** - Full agentic system spec template, questionnaire, checker, and plan-phase integration
-- [ ] **Phase 3: Documentation Agent** - `/gsd2:document` generates a sourced system map from artifacts, code, and git history
+- [x] **Phase 2: AGENT-SPEC** - Full agentic system spec template, questionnaire, checker, and plan-phase integration (completed 2026-04-17)
+- [x] **Phase 3: Documentation Agent** - `/gsd2:document` generates a sourced system map from artifacts, code, and git history (completed 2026-04-17, VERIFICATION.md outstanding)
+- [x] **Phase 4: Verification Harness and Context Efficiency** - /gsd2:progress token savings, verifier-loop primitives, verify_after task attribute (completed 2026-05-07, dogfood deferred)
 
 ## Phase Details
 
@@ -57,13 +58,14 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3
+**Execution Order:** 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Domain Router | 2/2 | Complete   | 2026-04-17 |
-| 2. AGENT-SPEC | 0/3 | Planning complete | - |
-| 3. Documentation Agent | 0/3 | Planning complete | - |
+| 1. Domain Router | 2/2 | Complete | 2026-04-17 |
+| 2. AGENT-SPEC | 3/3 | Complete (human_needed) | 2026-04-17 |
+| 3. Documentation Agent | 3/3 | Complete (VERIFICATION.md outstanding) | 2026-04-17 |
+| 4. Verification Harness | 4/4 | Complete (3/4 plans full; 04-04 Task 4 deferred) | 2026-05-07 |
 
 ### Phase 4: Verification harness and context efficiency
 **Goal**: Cut /gsd2:progress token cost by ~13k per call AND add a self-healing verifier→investigator→fixer loop (max 3 iterations, fresh contexts) that fires at planner-marked testable boundaries inside execute-phase
