@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-04-17T20:38:18.793Z"
+stopped_at: Completed 04-01-PLAN.md (context efficiency triage)
+last_updated: "2026-05-07T17:13:58.376Z"
 progress:
-  total_phases: 3
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 6
+  total_phases: 4
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 10
 ---
 
 ## Current Position
 
-Phase: 03 (documentation-agent) — EXECUTING
-Plan: 2 of 3
+Phase: 04 (verification-harness-and-context-efficiency) — EXECUTING
+Plan: 3 of 4
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 03 — documentation-agent
+**Current focus:** Phase 04 — verification-harness-and-context-efficiency
 
 ## Performance Metrics
 
@@ -56,17 +56,34 @@ Recent decisions affecting current work:
 - [Phase 02-agent-spec]: [Phase 02-03] Checker uses binary PASS/FLAG/FAIL criteria; Observability dimension treats TBD or standard logging as automatic FAIL
 - [Phase 02-agent-spec]: [Phase 02-03] discuss-phase change is additive one-line (agent-spec-phase shown alongside ui-phase, not replacing)
 - [Phase 03-documentation-agent]: [Phase 03-02] .claude/ runtime copy is gitignored; commit only commands/gsd2/*.md source — install.js propagates to runtime
+- [Phase 03-documentation-agent]: existing_subsystems filter excludes both _gaps.md and _proposed.md (updater scratch file)
+- [Phase 03-documentation-agent]: completed_phases_since returns all [x] phases (not date-filtered) — orchestrator diffs against prior map
+- [Phase 03-documentation-agent]: document-mapper/updater profile = sonnet/sonnet/haiku (higher balanced than codebase-mapper since narrative writing needs more reasoning)
+- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-02] File-level granularity (no line numbers) for the dependency graph — keeps it readable and stable across edits
+- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-02] Subcommand caller regex tolerates quoted absolute path (gsd-tools.cjs["]? <verb>) since workflows wrap paths in double quotes
+- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-02] Distinguish callers (any reference) from spawned_by (Task() invocations) so Risk Surface for 04-03 cleanly identifies what loop-mode adapter must preserve
+- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] Scoped phase slice anchors on currentPhase || nextPhase || phases[0] with [anchor-1, anchor+2] window
+- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] Slug cap order: slice(0, 45) THEN strip trailing hyphen — handles edge cases where slice lands on a separator
+- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] All edits mirrored in source (get-shit-done/, commands/) AND runtime (.claude/) — only source committed since runtime is gitignored
 
 ### Pending Todos
 
-None yet.
+3 pending (see `.planning/todos/pending/`):
+
+- Add user sync checkpoints to plan-phase subagent chains (workflows)
+- Update command should sync project-local hooks (tooling)
+- generate-claude-md cleanup + hybrid shape + sidecar staleness mitigation (tooling)
 
 ### Blockers/Concerns
 
 None yet.
 
+### Roadmap Evolution
+
+- Phase 4 added: Verification harness and context efficiency
+
 ## Session Continuity
 
-Last session: 2026-04-17T20:38:18.790Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-05-07T17:13:58.373Z
+Stopped at: Completed 04-01-PLAN.md (context efficiency triage)
 Resume file: None

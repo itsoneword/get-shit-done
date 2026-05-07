@@ -64,3 +64,17 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 | 1. Domain Router | 2/2 | Complete   | 2026-04-17 |
 | 2. AGENT-SPEC | 0/3 | Planning complete | - |
 | 3. Documentation Agent | 0/3 | Planning complete | - |
+
+### Phase 4: Verification harness and context efficiency
+**Goal**: Cut /gsd2:progress token cost by ~13k per call AND add a self-healing verifier→investigator→fixer loop (max 3 iterations, fresh contexts) that fires at planner-marked testable boundaries inside execute-phase
+**Depends on**: Phase 3
+**Requirements**: (none mapped — phase predates v1.4 requirement IDs; must_haves derived from CONTEXT Expected Outcome and AGENT-SPEC test contracts)
+**Discussion focus**: Loop architecture (3-agent fresh-context chain, iteration ceiling, ceiling-reached handoff), reuse vs. new agents, verify schema in must_haves, verify_after task marker, default-on with opt-out
+**Success Criteria** (what must be TRUE):
+  1. Running /gsd2:progress consumes ~13k fewer tokens per call (data scoping + slug cap + double-include removal)
+  2. Newly created phase slugs are bounded at ≤45 chars
+  3. Author marks tasks with verify_after: true and verify: commands inside must_haves; loop fires automatically when those tasks complete
+  4. Loop verifier/investigator/fixer each run in fresh contexts; loop respects max_iterations: 3
+  5. Ceiling-reached handoff renders as a CHECKPOINT REACHED block with chronological narrative; executor pauses for user
+  6. Standalone callers of gsd-verifier, gsd-debugger, gsd-fixer continue to work (no breaking changes)
+**Plans**: 04-01 (Wave 1: context efficiency fix), 04-02 (Wave 1: agent/workflow dependency graph — discovery), 04-03 (Wave 2: loop primitives — verifier/fixer adaptation + verify schema + verify commands subcommand), 04-04 (Wave 3: execute-phase integration + verify_after docs + init verify config)
