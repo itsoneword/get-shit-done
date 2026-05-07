@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error } = require('./core.cjs');
+const { extractFrontmatter } = require('./frontmatter.cjs');
 
 function getLatestCompletedMilestone(cwd) {
   const milestonesPath = path.join(cwd, '.planning', 'MILESTONES.md');
@@ -110,6 +111,50 @@ function cmdInitExecutePhase(cwd, phase, raw) {
       }
     } catch { /* intentionally empty */ }
   }
+
+  // Verify-loop config (Phase 4): per-plan auto_verify flag + verify_after task list.
+  // The loop fires when a task with verify_after="true" completes, unless the plan's
+  // frontmatter sets auto_verify: false. Default is on.
+  const perPlan = {};
+  if (phaseInfo?.directory && Array.isArray(phaseInfo.plans)) {
+    const phaseDirFull = path.join(cwd, phaseInfo.directory);
+    for (const planFile of phaseInfo.plans) {
+      const planId = planFile.replace('-PLAN.md', '').replace('PLAN.md', '');
+      let autoVerify = true;
+      const verifyAfterTasks = [];
+      try {
+        const planContent = fs.readFileSync(path.join(phaseDirFull, planFile), 'utf-8');
+        const fm = extractFrontmatter(planContent);
+        // extractFrontmatter returns string values; treat the literal "false" as opt-out.
+        if (fm && (fm.auto_verify === false || fm.auto_verify === 'false')) {
+          autoVerify = false;
+        }
+        // Scan plan body for <task ...verify_after="true"...>...</task> blocks.
+        const taskRe = /<task[^>]*verify_after\s*=\s*"true"[^>]*>([\s\S]*?)<\/task>/g;
+        let tm;
+        let idx = 0;
+        while ((tm = taskRe.exec(planContent)) !== null) {
+          idx += 1;
+          const body = tm[1];
+          const nameMatch = body.match(/<name>\s*([^<]+?)\s*<\/name>/);
+          verifyAfterTasks.push({
+            index: idx,
+            name: nameMatch ? nameMatch[1].trim() : `Task ${idx}`,
+          });
+        }
+      } catch { /* unreadable plan — record empty entry */ }
+      perPlan[planId] = {
+        auto_verify: autoVerify,
+        verify_after_tasks: verifyAfterTasks,
+      };
+    }
+  }
+  result.verify_loop = {
+    default_enabled: true,
+    max_iterations: 3,
+    debug_dir: '.planning/debug',
+    per_plan: perPlan,
+  };
 
   output(result, raw);
 }
