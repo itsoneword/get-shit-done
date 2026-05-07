@@ -42,7 +42,7 @@ Valid GSD subagent types registered in .claude/agents/ (or equivalent). Always u
 Load all context in one call:
 
 ```bash
-INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init execute-phase "${PHASE_ARG}")
+INIT=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" init execute-phase "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -63,7 +63,7 @@ Check if the current runtime is Copilot (test for `@gsd-executor` agent pattern 
 ```bash
 # Prevents stale auto-chain from previous --auto runs
 if [[ ! "$ARGUMENTS" =~ --auto ]]; then
-  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+  node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
 fi
 ```
 </step>
@@ -94,7 +94,7 @@ If present, switch to interactive execution mode — plans execute sequentially 
 
    b. If "Review first": display the full plan file, then ask: Execute, Modify, or Skip.
 
-   c. If "Execute": read and follow `~/.claude/get-shit-done/workflows/execute-plan.md` inline (no subagent). Execute tasks one at a time.
+   c. If "Execute": read and follow `/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/workflows/execute-plan.md` inline (no subagent). Execute tasks one at a time.
 
    d. After each task: pause briefly. If the user intervenes, address their feedback before continuing.
 
@@ -126,7 +126,7 @@ Report: "Found {plan_count} plans in {phase_dir} ({incomplete_count} incomplete)
 
 Update STATE.md for phase start:
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state begin-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
+node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" state begin-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
 ```
 This updates Status, Last Activity, Current focus, Current Position, and plan counts so STATE.md reflects the active phase immediately.
 </step>
@@ -135,7 +135,7 @@ This updates Status, Last Activity, Current focus, Current Position, and plan co
 Load plan inventory with wave grouping:
 
 ```bash
-PLAN_INDEX=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase-plan-index "${PHASE_NUMBER}")
+PLAN_INDEX=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" phase-plan-index "${PHASE_NUMBER}")
 ```
 
 Parse JSON for: `phase`, `plans[]` (each with `id`, `wave`, `autonomous`, `objective`, `files_modified`, `task_count`, `has_summary`), `waves` (map of wave number to plan IDs), `incomplete`, `has_checkpoints`.
@@ -157,6 +157,8 @@ Report:
 
 <step name="execute_waves">
 Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`, sequential if `false`.
+
+> Phase 4 adds an inline verify-loop sub-flow per task — see `<sub_flow name="verify_loop">` below. The contract source of truth is `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md`.
 
 **For each wave:**
 
@@ -198,10 +200,10 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
        </parallel_execution>
 
        <execution_context>
-       @~/.claude/get-shit-done/workflows/execute-plan.md
-       @~/.claude/get-shit-done/templates/summary.md
-       @~/.claude/get-shit-done/references/checkpoints.md
-       @~/.claude/get-shit-done/references/tdd.md
+       @/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/workflows/execute-plan.md
+       @/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/templates/summary.md
+       @/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/references/checkpoints.md
+       @/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/references/tdd.md
        </execution_context>
 
        <files_to_read>
@@ -281,6 +283,19 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
    - Weak: "Wave 2 complete. Proceeding to Wave 3."
    - Strong: "Terrain system complete — 3 biome types, height-based texturing, physics collision meshes. Vehicle physics (Wave 3) can now reference ground surfaces."
 
+   **Verify-loop trigger (Phase 4):**
+
+   After spot-checks pass for each plan in the wave:
+   - Read `verify_loop.per_plan["<plan-id>"]` from the init execute-phase JSON (already loaded into context in earlier steps).
+   - For each task name in `verify_after_tasks` that was just completed by the executor (cross-reference SUMMARY.md task list):
+     - Execute the `<sub_flow name="verify_loop">` defined below in a fresh context per spawned agent.
+   - If any verify_loop emitted `## CHECKPOINT REACHED type: ceiling-reached`: pause execution, do not advance to the next wave, surface the block to the user.
+   - If all verify_loops pass: continue to step 6 (handle failures, then next wave).
+
+   Loops within a single wave run sequentially (parallel-wave serialization rule). Concurrent loops would race on the loop debug file at `.planning/debug/{plan-slug}-verify-loop.md` and confuse iteration counting.
+
+   The contract source of truth is `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md`.
+
 6. **Handle failures:**
 
    **classifyHandoffIfNeeded bug:** If an agent reports "failed" with error containing `classifyHandoffIfNeeded is not defined`, this is a Claude Code runtime bug, not a GSD issue. The error fires in the completion handler after all tool calls finish. Run the same spot-checks — if they pass, treat as successful. If they fail, treat as real failure.
@@ -291,7 +306,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
     Before spawning wave N+1, verify cross-plan wiring:
     ```bash
-    node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links {phase_dir}/{plan}-PLAN.md
+    node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links {phase_dir}/{plan}-PLAN.md
     ```
 
     If any key-link from a prior wave's artifact fails verification:
@@ -315,6 +330,104 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 9. **Proceed to next wave.**
 </step>
 
+<sub_flow name="verify_loop">
+
+**Trigger:** any task with `verify_after="true"` in a PLAN.md whose plan frontmatter does NOT set `auto_verify: false`.
+
+**Source of truth for contracts:** `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` §Communication Contracts. Every JSON message shape below is reproduced from that spec — when in doubt, the spec wins, not this prose.
+
+**Pre-condition:** spot-check for the plan passed (existing step 5 in execute_waves).
+
+**Procedure:**
+
+1. **Setup:**
+   - Ensure `.planning/debug/` exists (`mkdir -p .planning/debug`).
+   - Compute `plan_slug = <phase>-<plan>` (e.g. `04-04`).
+   - Compute `debug_file = .planning/debug/{plan_slug}-verify-loop.md`.
+   - Initialize debug file with frontmatter:
+     ```yaml
+     status: verifying
+     iteration: 1
+     max_iterations: 3
+     trace_id: <uuid or timestamp+random>
+     created: <ISO ts>
+     ```
+   - Append `loop.start trace_id=<id> plan_slug=<slug>` log line to the debug file.
+
+2. **Iteration loop, max 3 (`iteration_count` starts at 1):**
+
+   a. **Spawn loop-verifier in a fresh context:** `Task()` with `subagent_type=gsd-verifier`. The orchestrator constructs `<files_to_read>` explicitly per role and never passes executor work logs to the verifier. The fresh-context invariant is: `<files_to_read>` MUST contain ONLY:
+      - `[plan_path, debug_file path if iteration > 1]`
+      Explicitly NOT executor SUMMARY.md, NOT task work logs.
+
+      Append a `## LOOP MODE` block to the prompt with the JSON input shape:
+      ```json
+      {"plan_path": "<>", "task_id": "<>", "verify_commands": [<from must_haves>], "must_haves_slice": [<>], "iteration": <N>, "trace_id": "<>", "debug_file_path": "<>"}
+      ```
+      Append `boundary.validate role=verifier iter=<N> trace_id=<>` log line to debug file.
+
+   b. **Parse `## LOOP VERIFY RESULT` block** from verifier output. Append `agent.return agent=verifier status=<> iter=<N> trace_id=<>` log line to debug file.
+
+   c. If `status == "pass"`: append `loop.end status=pass iterations=<N>` log line. Continue executor to next task. **Do NOT emit any user-visible block.** Skip to step 3 (cleanup).
+
+   d. If `status == "fail"` AND `iteration_count < 3`:
+
+      i. **Spawn loop-investigator in a fresh context:** `Task()` with `subagent_type=gsd-debugger`. Pass `goal: find_root_cause_only` and `symptoms_prefilled: true` flags. `<files_to_read>` MUST contain ONLY:
+         - `[verifier_failure_report (extracted gaps), files_implicated from prior_fix_attempts only, plan_path, debug_file path]`
+         Explicitly DO NOT pass executor SUMMARY.md, executor work logs, or the just-written code's diff in iteration 1. Construct the input message per §"loop-orchestrator → loop-investigator" contract including `prior_fix_attempts` array (empty on iteration 1).
+
+      ii. **Parse `## ROOT CAUSE FOUND` block** from investigator output. Append `agent.return agent=investigator classification=<> iter=<N>` log line.
+
+      iii. **If classification ∈ {`not-yet-built`, `unrelated`}:** fire ceiling-reached IMMEDIATELY (skip remaining iterations). Use the `chronological_narrative` shape from step 4 below with only the iterations actually run (e.g. `iterations_attempted: <current>`).
+
+      iv. **Spawn loop-fixer in a fresh context:** `Task()` with `subagent_type=gsd-fixer`. `<files_to_read>` MUST contain ONLY:
+         - `[investigator hypothesis ROOT CAUSE FOUND block, plan_slice, recent_diff via 'git diff HEAD~1 -- <files_implicated>', debug_file path]`
+         Construct input per §"loop-orchestrator → loop-fixer" contract including `loop_iteration: <N>`.
+
+      v. **Parse `## FIXES COMPLETE (loop)` block** from fixer output. Append `agent.return agent=fixer status=<> commit=<> iter=<N>` log line. Capture `commit_hash` for `prior_fix_attempts` on the next iteration.
+
+      vi. Increment `iteration_count`. Update debug file frontmatter `iteration: <new value>`. Loop back to step 2a.
+
+   e. If `status == "fail"` AND `iteration_count == 3`: fall through to step 4 (ceiling reached).
+
+3. **Cleanup on pass:** update debug file `status: resolved`. Append final log line `loop.end status=pass`. (Optionally archive — not required for v1.)
+
+4. **Ceiling-reached handoff:** emit a `## CHECKPOINT REACHED` block to the user with the shape per §"orchestrator → user (ceiling-reached)". Update debug file `status: ceiling_reached`. Pause executor. Block indefinitely — do NOT default-approve, do NOT default-deny, do NOT advance to the next wave.
+
+   ```
+   ## CHECKPOINT REACHED
+   type: ceiling-reached
+   task_id: <id>
+   plan_path: <path>
+   iterations_attempted: <1, 2, or 3>
+   debug_file_path: <path to .planning/debug/{plan-slug}-verify-loop.md>
+   chronological_narrative:
+     - iteration: 1
+       verifier_result: <one-line summary>
+       investigator_hypothesis: <one-line summary>
+       fixer_commit: <sha or null>
+       re_verify_result: <one-line summary or "(not run — ceiling)">
+     - iteration: 2
+       ...
+     - iteration: 3
+       ...
+   final_gaps:
+     - truth: <text>
+       reason: <text>
+   ```
+
+**Parallel-wave serialization (RESEARCH §2):** when multiple plans in a wave each have `verify_after` triggers, run their loop sub-flows sequentially after all spot-checks pass for the wave. Concurrent loops would race on the loop debug file and confuse iteration counting.
+
+**Permission scoping (AGENT-SPEC §Security):**
+- Verifier runs ONLY `verify_commands[*].cmd` from the plan — orchestrator validates this list before spawning.
+- Investigator is denied Bash via the agent definition itself; orchestrator must NOT attempt to override.
+- Fixer's only allowed Bash is `gsd-tools.cjs commit ...`; the agent definition enforces this.
+- `actual_output` from verifier is truncated to 1024 chars before being passed in any subsequent message (`cmdVerifyCommands` already truncates — orchestrator does not re-expand).
+
+**Opt-out:** if `init execute-phase` returned `verify_loop.per_plan["<plan-id>"].auto_verify == false`, do NOT execute this sub-flow for any task in that plan. Log `loop.skipped reason=auto_verify_false plan=<id>` to stdout (not the debug file — file is never created when skipped).
+
+</sub_flow>
+
 <checkpoint_handling>
 Plans with `autonomous: false` require user interaction.
 
@@ -322,8 +435,8 @@ Plans with `autonomous: false` require user interaction.
 
 Read auto-advance config:
 ```bash
-AUTO_CHAIN=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-AUTO_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+AUTO_CHAIN=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+AUTO_CFG=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
 ```
 
 When executor returns a checkpoint AND (`AUTO_CHAIN` or `AUTO_CFG` is `"true"`):
@@ -395,7 +508,7 @@ fi
 
 2. **Find parent UAT file:**
 ```bash
-PARENT_INFO=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PARENT_PHASE}" --raw)
+PARENT_INFO=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PARENT_PHASE}" --raw)
 # Extract directory from PARENT_INFO JSON, then find UAT file
 ```
 
@@ -413,7 +526,7 @@ mv .planning/debug/{slug}.md .planning/debug/resolved/
 
 6. **Commit updated artifacts:**
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
+node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
 ```
 </step>
 
@@ -537,7 +650,7 @@ blocked: 0
 
 Commit:
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): persist human verification items as UAT" --files "{phase_dir}/{phase_num}-HUMAN-UAT.md"
+node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): persist human verification items as UAT" --files "{phase_dir}/{phase_num}-HUMAN-UAT.md"
 ```
 
 Step B: Present to user:
@@ -585,7 +698,7 @@ Gap closure cycle: `/gsd2:plan-phase {X} --gaps` reads VERIFICATION.md, creates 
 Mark phase complete and update all tracking files:
 
 ```bash
-COMPLETION=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase complete "${PHASE_NUMBER}")
+COMPLETION=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" phase complete "${PHASE_NUMBER}")
 ```
 
 The CLI handles: marking phase checkbox `[x]` with date, updating Progress table, advancing STATE.md to next phase, updating REQUIREMENTS.md traceability, scanning for verification debt (returns `warnings` array).
@@ -602,7 +715,7 @@ These items are tracked and will appear in `/gsd2:progress` and `/gsd2:audit-uat
 ```
 
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): complete phase execution" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md {phase_dir}/*-VERIFICATION.md
+node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): complete phase execution" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md {phase_dir}/*-VERIFICATION.md
 ```
 </step>
 
@@ -618,7 +731,7 @@ Evolve PROJECT.md to reflect phase completion. Without this step, PROJECT.md dri
 4. Update the `Last updated:` footer to today's date
 5. Commit:
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): evolve PROJECT.md after phase completion" --files .planning/PROJECT.md
+node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): evolve PROJECT.md after phase completion" --files .planning/PROJECT.md
 ```
 
 Skip this step if `.planning/PROJECT.md` does not exist.
@@ -649,8 +762,8 @@ Check auto-advance:
 1. Parse `--auto` flag from $ARGUMENTS
 2. Read config:
    ```bash
-   AUTO_CHAIN=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true (and verification passed):**
@@ -660,7 +773,7 @@ AUTO-ADVANCING → TRANSITION
 Phase {X} verified, continuing chain
 ```
 
-Execute the transition workflow inline (orchestrator context is ~10-15%, transition needs phase completion data already in context): read and follow `~/.claude/get-shit-done/workflows/transition.md`, passing through the `--auto` flag so it propagates to the next phase.
+Execute the transition workflow inline (orchestrator context is ~10-15%, transition needs phase completion data already in context): read and follow `/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.claude/get-shit-done/workflows/transition.md`, passing through the `--auto` flag so it propagates to the next phase.
 
 **Otherwise, present options and wait:**
 
