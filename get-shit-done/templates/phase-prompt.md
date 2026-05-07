@@ -20,6 +20,7 @@ wave: N                     # Execution wave (1, 2, 3...). Pre-computed at plan 
 depends_on: []              # Plan IDs this plan requires (e.g., ["01-01"]).
 files_modified: []          # Files this plan modifies.
 autonomous: true            # false if plan has checkpoints requiring user interaction
+auto_verify: true           # OPTIONAL. Default true. Set to false to opt the entire plan out of the verify-loop (Phase 4) — no verify_after task fires the loop in this plan.
 requirements: []            # REQUIRED — Requirement IDs from ROADMAP this plan addresses. MUST NOT be empty.
 user_setup: []              # Human-required setup Claude cannot automate (see below)
 
@@ -303,6 +304,27 @@ See `~/.claude/get-shit-done/references/tdd.md` for TDD plan structure.
 - Orchestrator presents to user
 - User responds
 - Orchestrator resumes agent with `resume: agent_id`
+
+---
+
+### Task Attributes
+
+Attributes appear inside the opening `<task ...>` tag and modify how the task is executed.
+
+**`tdd="true"`** — task follows the TDD red/green/refactor flow. See `~/.claude/get-shit-done/references/tdd.md`.
+
+**`verify_after="true"`** — when this task completes successfully, fire the verify-loop (verifier → investigator → fixer, max 3 iterations) before advancing. The loop runs the `verify:` commands authored under each `must_haves.truths[].verify[]` entry. If all pass, execution continues silently. If any fail and the loop cannot resolve within 3 iterations, execution pauses with a `## CHECKPOINT REACHED` block of `type: ceiling-reached`. Default: not set (no automatic verification). Author this attribute on tasks whose completion can be checked by an automated command — e.g. an API responds, a CLI subcommand returns expected output, a file contains an expected string.
+
+```xml
+<task type="auto" verify_after="true">
+  <name>Task 3: Add /healthz endpoint</name>
+  ...
+</task>
+```
+
+**Plan-level opt-out:** `auto_verify: false` (plan frontmatter, optional) — opt out of the verify-loop for the entire plan. When absent (default behavior), the loop fires for any task with `verify_after="true"`. Use sparingly — silent skips are harder to spot than visible loop runs.
+
+See §The verify: block (executable assertions) for authoring `verify:` commands consumed by this loop.
 
 ---
 
