@@ -1,0 +1,1161 @@
+{
+  "agents": {
+    "gsd-agent-checker": {
+      "callers": [
+        ".claude/commands/gsd2/agent-spec-phase.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/AGENT-SPEC.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/agent-spec-phase.md"
+      ]
+    },
+    "gsd-agent-researcher": {
+      "callers": [
+        ".claude/agents/gsd-agent-checker.md",
+        ".claude/commands/gsd2/agent-spec-phase.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/AGENTIC-PATTERNS.md",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/AGENT-SPEC.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/agent-spec-phase.md"
+      ]
+    },
+    "gsd-codebase-mapper": {
+      "callers": [
+        ".claude/commands/gsd2/map-codebase.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/document.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/map-codebase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/document.md",
+        ".claude/get-shit-done/workflows/map-codebase.md"
+      ]
+    },
+    "gsd-debugger": {
+      "callers": [
+        ".claude/commands/gsd2/debug.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/debug-subagent-prompt.md",
+        ".claude/get-shit-done/workflows/diagnose-issues.md",
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/commands/gsd2/debug.md",
+        ".claude/get-shit-done/templates/debug-subagent-prompt.md",
+        ".claude/get-shit-done/workflows/diagnose-issues.md"
+      ]
+    },
+    "gsd-document-mapper": {
+      "callers": [
+        ".claude/agents/gsd-document-updater.md",
+        ".claude/commands/gsd2/document.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/document.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/document.md"
+      ]
+    },
+    "gsd-document-updater": {
+      "callers": [
+        ".claude/commands/gsd2/document.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/document.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/document.md"
+      ]
+    },
+    "gsd-executor": {
+      "callers": [
+        ".claude/agents/gsd-test-designer.md",
+        ".claude/agents/gsd-ui-researcher.md",
+        ".claude/commands/gsd2/quick.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/AGENTIC-PATTERNS.md",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/TEST-SPEC.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/quick.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/quick.md"
+      ]
+    },
+    "gsd-fixer": {
+      "callers": [
+        ".claude/commands/gsd2/fix.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs"
+      ],
+      "spawned_by": [
+        ".claude/commands/gsd2/fix.md"
+      ]
+    },
+    "gsd-integration-checker": {
+      "callers": [
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/audit-milestone.md",
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/audit-milestone.md"
+      ]
+    },
+    "gsd-nyquist-auditor": {
+      "callers": [
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/validate-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/validate-phase.md"
+      ]
+    },
+    "gsd-phase-researcher": {
+      "callers": [
+        ".claude/commands/gsd2/research-phase.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/context.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/research-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/commands/gsd2/research-phase.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/research-phase.md"
+      ]
+    },
+    "gsd-plan-checker": {
+      "callers": [
+        ".claude/commands/gsd2/plan-phase.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/quick.md",
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ]
+    },
+    "gsd-planner": {
+      "callers": [
+        ".claude/agents/gsd-agent-checker.md",
+        ".claude/agents/gsd-agent-researcher.md",
+        ".claude/agents/gsd-phase-researcher.md",
+        ".claude/agents/gsd-test-designer.md",
+        ".claude/agents/gsd-ui-researcher.md",
+        ".claude/commands/gsd2/plan-phase.md",
+        ".claude/commands/gsd2/quick.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profile-resolution.md",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/TEST-SPEC.md",
+        ".claude/get-shit-done/templates/context.md",
+        ".claude/get-shit-done/templates/phase-prompt.md",
+        ".claude/get-shit-done/templates/planner-subagent-prompt.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/quick.md",
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/references/model-profile-resolution.md",
+        ".claude/get-shit-done/templates/planner-subagent-prompt.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/quick.md",
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ]
+    },
+    "gsd-project-researcher": {
+      "callers": [
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ]
+    },
+    "gsd-research-synthesizer": {
+      "callers": [
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ]
+    },
+    "gsd-roadmapper": {
+      "callers": [
+        ".claude/agents/gsd-research-synthesizer.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ]
+    },
+    "gsd-test-designer": {
+      "callers": [
+        ".claude/commands/gsd2/test-phase.md",
+        ".claude/get-shit-done/templates/TEST-SPEC.md",
+        ".claude/get-shit-done/workflows/test-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/test-phase.md"
+      ]
+    },
+    "gsd-ui-auditor": {
+      "callers": [
+        ".claude/agents/gsd-ui-researcher.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/ui-review.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/ui-review.md"
+      ]
+    },
+    "gsd-ui-checker": {
+      "callers": [
+        ".claude/agents/gsd-ui-researcher.md",
+        ".claude/commands/gsd2/ui-phase.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/UI-SPEC.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ]
+    },
+    "gsd-ui-researcher": {
+      "callers": [
+        ".claude/agents/gsd-ui-checker.md",
+        ".claude/commands/gsd2/ui-phase.md",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/templates/UI-SPEC.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ]
+    },
+    "gsd-user-profiler": {
+      "callers": [
+        ".claude/get-shit-done/references/user-profiling.md",
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ],
+      "spawned_by": []
+    },
+    "gsd-verifier": {
+      "callers": [
+        ".claude/agents/gsd-plan-checker.md",
+        ".claude/get-shit-done/bin/lib/init.cjs",
+        ".claude/get-shit-done/bin/lib/model-profiles.cjs",
+        ".claude/get-shit-done/references/model-profiles.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/quick.md"
+      ],
+      "spawned_by": [
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/quick.md"
+      ]
+    }
+  },
+  "workflows": {
+    "add-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/add-phase.md"
+      ],
+      "includes": []
+    },
+    "add-tests.md": {
+      "callers": [
+        ".claude/commands/gsd2/add-tests.md"
+      ],
+      "includes": []
+    },
+    "add-todo.md": {
+      "callers": [
+        ".claude/commands/gsd2/add-todo.md"
+      ],
+      "includes": []
+    },
+    "agent-spec-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/agent-spec-phase.md"
+      ],
+      "includes": []
+    },
+    "audit-milestone.md": {
+      "callers": [
+        ".claude/commands/gsd2/audit-milestone.md"
+      ],
+      "includes": []
+    },
+    "audit-uat.md": {
+      "callers": [
+        ".claude/commands/gsd2/audit-uat.md"
+      ],
+      "includes": []
+    },
+    "autonomous.md": {
+      "callers": [
+        ".claude/commands/gsd2/autonomous.md"
+      ],
+      "includes": []
+    },
+    "check-todos.md": {
+      "callers": [
+        ".claude/commands/gsd2/check-todos.md"
+      ],
+      "includes": []
+    },
+    "cleanup.md": {
+      "callers": [
+        ".claude/commands/gsd2/cleanup.md"
+      ],
+      "includes": []
+    },
+    "complete-milestone.md": {
+      "callers": [
+        ".claude/commands/gsd2/complete-milestone.md",
+        ".claude/get-shit-done/templates/project.md"
+      ],
+      "includes": []
+    },
+    "diagnose-issues.md": {
+      "callers": [
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ],
+      "includes": []
+    },
+    "discovery-phase.md": {
+      "callers": [],
+      "includes": []
+    },
+    "discuss-phase.md": {
+      "callers": [
+        ".claude/agents/gsd-document-mapper.md",
+        ".claude/commands/gsd2/discuss-phase.md"
+      ],
+      "includes": []
+    },
+    "do.md": {
+      "callers": [
+        ".claude/commands/gsd2/do.md"
+      ],
+      "includes": []
+    },
+    "document.md": {
+      "callers": [
+        ".claude/commands/gsd2/document.md"
+      ],
+      "includes": []
+    },
+    "execute-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/execute-phase.md"
+      ],
+      "includes": [
+        "execute-plan.md"
+      ]
+    },
+    "execute-plan.md": {
+      "callers": [
+        ".claude/agents/gsd-planner.md",
+        ".claude/get-shit-done/templates/phase-prompt.md",
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ],
+      "includes": [
+        "node-repair.md"
+      ]
+    },
+    "health.md": {
+      "callers": [
+        ".claude/commands/gsd2/health.md"
+      ],
+      "includes": []
+    },
+    "help.md": {
+      "callers": [
+        ".claude/commands/gsd2/help.md"
+      ],
+      "includes": []
+    },
+    "insert-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/insert-phase.md"
+      ],
+      "includes": []
+    },
+    "list-phase-assumptions.md": {
+      "callers": [
+        ".claude/commands/gsd2/list-phase-assumptions.md"
+      ],
+      "includes": []
+    },
+    "map-codebase.md": {
+      "callers": [
+        ".claude/commands/gsd2/map-codebase.md"
+      ],
+      "includes": []
+    },
+    "new-milestone.md": {
+      "callers": [
+        ".claude/commands/gsd2/new-milestone.md"
+      ],
+      "includes": []
+    },
+    "new-project.md": {
+      "callers": [
+        ".claude/commands/gsd2/new-project.md"
+      ],
+      "includes": []
+    },
+    "next.md": {
+      "callers": [
+        ".claude/commands/gsd2/next.md"
+      ],
+      "includes": []
+    },
+    "node-repair.md": {
+      "callers": [
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ],
+      "includes": []
+    },
+    "note.md": {
+      "callers": [
+        ".claude/commands/gsd2/note.md"
+      ],
+      "includes": []
+    },
+    "pause-work.md": {
+      "callers": [
+        ".claude/commands/gsd2/pause-work.md"
+      ],
+      "includes": []
+    },
+    "plan-milestone-gaps.md": {
+      "callers": [
+        ".claude/commands/gsd2/plan-milestone-gaps.md"
+      ],
+      "includes": []
+    },
+    "plan-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/plan-phase.md"
+      ],
+      "includes": []
+    },
+    "plant-seed.md": {
+      "callers": [
+        ".claude/commands/gsd2/plant-seed.md"
+      ],
+      "includes": []
+    },
+    "pr-branch.md": {
+      "callers": [
+        ".claude/commands/gsd2/pr-branch.md"
+      ],
+      "includes": []
+    },
+    "profile-user.md": {
+      "callers": [
+        ".claude/commands/gsd2/profile-user.md"
+      ],
+      "includes": []
+    },
+    "progress.md": {
+      "callers": [
+        ".claude/commands/gsd2/progress.md"
+      ],
+      "includes": []
+    },
+    "quick.md": {
+      "callers": [
+        ".claude/commands/gsd2/quick.md"
+      ],
+      "includes": []
+    },
+    "remove-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/remove-phase.md"
+      ],
+      "includes": []
+    },
+    "research-phase.md": {
+      "callers": [],
+      "includes": []
+    },
+    "resume-project.md": {
+      "callers": [
+        ".claude/commands/gsd2/resume-work.md"
+      ],
+      "includes": []
+    },
+    "review.md": {
+      "callers": [
+        ".claude/commands/gsd2/review.md"
+      ],
+      "includes": []
+    },
+    "session-report.md": {
+      "callers": [
+        ".claude/commands/gsd2/session-report.md"
+      ],
+      "includes": []
+    },
+    "settings.md": {
+      "callers": [
+        ".claude/commands/gsd2/settings.md"
+      ],
+      "includes": []
+    },
+    "ship.md": {
+      "callers": [
+        ".claude/commands/gsd2/ship.md"
+      ],
+      "includes": []
+    },
+    "stats.md": {
+      "callers": [
+        ".claude/commands/gsd2/stats.md"
+      ],
+      "includes": []
+    },
+    "test-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/test-phase.md"
+      ],
+      "includes": []
+    },
+    "transition.md": {
+      "callers": [
+        ".claude/get-shit-done/templates/project.md",
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ],
+      "includes": []
+    },
+    "ui-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/ui-phase.md"
+      ],
+      "includes": []
+    },
+    "ui-review.md": {
+      "callers": [
+        ".claude/commands/gsd2/ui-review.md"
+      ],
+      "includes": []
+    },
+    "update.md": {
+      "callers": [
+        ".claude/commands/gsd2/update.md"
+      ],
+      "includes": []
+    },
+    "validate-phase.md": {
+      "callers": [
+        ".claude/commands/gsd2/validate-phase.md"
+      ],
+      "includes": []
+    },
+    "verify-phase.md": {
+      "callers": [
+        ".claude/get-shit-done/templates/phase-prompt.md"
+      ],
+      "includes": []
+    },
+    "verify-work.md": {
+      "callers": [
+        ".claude/commands/gsd2/verify-work.md"
+      ],
+      "includes": [
+        "diagnose-issues.md"
+      ]
+    }
+  },
+  "tools": {
+    "state load": {
+      "callers": [
+        ".claude/agents/gsd-debugger.md",
+        ".claude/commands/gsd2/debug.md",
+        ".claude/commands/gsd2/fix.md",
+        ".claude/get-shit-done/references/planning-config.md",
+        ".claude/get-shit-done/workflows/do.md",
+        ".claude/get-shit-done/workflows/settings.md",
+        ".claude/get-shit-done/workflows/ship.md"
+      ]
+    },
+    "state json": {
+      "callers": [
+        ".claude/get-shit-done/workflows/next.md"
+      ]
+    },
+    "state update": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/ship.md"
+      ]
+    },
+    "state get": {
+      "callers": []
+    },
+    "state patch": {
+      "callers": []
+    },
+    "state begin-phase": {
+      "callers": [
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ]
+    },
+    "state signal-waiting": {
+      "callers": []
+    },
+    "state signal-resume": {
+      "callers": []
+    },
+    "state advance-plan": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "state record-metric": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "state update-progress": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "state add-decision": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "state add-blocker": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "state resolve-blocker": {
+      "callers": []
+    },
+    "state record-session": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/test-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ]
+    },
+    "state snapshot": {
+      "callers": []
+    },
+    "resolve-model": {
+      "callers": [
+        ".claude/commands/gsd2/debug.md",
+        ".claude/commands/gsd2/fix.md",
+        ".claude/commands/gsd2/research-phase.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md",
+        ".claude/get-shit-done/workflows/audit-milestone.md",
+        ".claude/get-shit-done/workflows/test-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md",
+        ".claude/get-shit-done/workflows/ui-review.md",
+        ".claude/get-shit-done/workflows/validate-phase.md"
+      ]
+    },
+    "find-phase": {
+      "callers": [
+        ".claude/commands/gsd2/fix.md",
+        ".claude/get-shit-done/references/phase-argument-parsing.md",
+        ".claude/get-shit-done/workflows/audit-milestone.md",
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ]
+    },
+    "commit": {
+      "callers": [
+        ".claude/agents/gsd-debugger.md",
+        ".claude/agents/gsd-executor.md",
+        ".claude/agents/gsd-phase-researcher.md",
+        ".claude/agents/gsd-planner.md",
+        ".claude/agents/gsd-research-synthesizer.md",
+        ".claude/agents/gsd-test-designer.md",
+        ".claude/agents/gsd-ui-researcher.md",
+        ".claude/commands/gsd2/add-backlog.md",
+        ".claude/commands/gsd2/document.md",
+        ".claude/commands/gsd2/review-backlog.md",
+        ".claude/commands/gsd2/thread.md",
+        ".claude/get-shit-done/references/git-integration.md",
+        ".claude/get-shit-done/references/git-planning-commit.md",
+        ".claude/get-shit-done/references/planning-config.md",
+        ".claude/get-shit-done/workflows/add-todo.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md",
+        ".claude/get-shit-done/workflows/autonomous.md",
+        ".claude/get-shit-done/workflows/check-todos.md",
+        ".claude/get-shit-done/workflows/cleanup.md",
+        ".claude/get-shit-done/workflows/complete-milestone.md",
+        ".claude/get-shit-done/workflows/diagnose-issues.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/document.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/map-codebase.md",
+        ".claude/get-shit-done/workflows/new-milestone.md",
+        ".claude/get-shit-done/workflows/new-project.md",
+        ".claude/get-shit-done/workflows/pause-work.md",
+        ".claude/get-shit-done/workflows/plan-milestone-gaps.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/plant-seed.md",
+        ".claude/get-shit-done/workflows/quick.md",
+        ".claude/get-shit-done/workflows/remove-phase.md",
+        ".claude/get-shit-done/workflows/review.md",
+        ".claude/get-shit-done/workflows/ship.md",
+        ".claude/get-shit-done/workflows/test-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md",
+        ".claude/get-shit-done/workflows/ui-review.md",
+        ".claude/get-shit-done/workflows/validate-phase.md",
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ]
+    },
+    "verify-summary": {
+      "callers": []
+    },
+    "generate-slug": {
+      "callers": [
+        ".claude/commands/gsd2/add-backlog.md",
+        ".claude/commands/gsd2/thread.md",
+        ".claude/get-shit-done/references/decimal-phase-calculation.md",
+        ".claude/get-shit-done/workflows/add-todo.md"
+      ]
+    },
+    "current-timestamp": {
+      "callers": [
+        ".claude/get-shit-done/workflows/pause-work.md"
+      ]
+    },
+    "list-todos": {
+      "callers": []
+    },
+    "verify-path-exists": {
+      "callers": []
+    },
+    "history-digest": {
+      "callers": [
+        ".claude/agents/gsd-planner.md"
+      ]
+    },
+    "summary-extract": {
+      "callers": [
+        ".claude/agents/gsd-verifier.md",
+        ".claude/get-shit-done/workflows/audit-milestone.md",
+        ".claude/get-shit-done/workflows/complete-milestone.md",
+        ".claude/get-shit-done/workflows/progress.md"
+      ]
+    },
+    "phase-plan-index": {
+      "callers": [
+        ".claude/get-shit-done/workflows/execute-phase.md"
+      ]
+    },
+    "state-snapshot": {
+      "callers": [
+        ".claude/get-shit-done/workflows/add-tests.md",
+        ".claude/get-shit-done/workflows/progress.md"
+      ]
+    },
+    "config-ensure-section": {
+      "callers": [
+        ".claude/get-shit-done/workflows/settings.md"
+      ]
+    },
+    "config-set": {
+      "callers": [
+        ".claude/commands/gsd2/set-profile.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/new-project.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/transition.md"
+      ]
+    },
+    "config-set-model-profile": {
+      "callers": [
+        ".claude/commands/gsd2/set-profile.md"
+      ]
+    },
+    "config-get": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/test-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ]
+    },
+    "template select": {
+      "callers": []
+    },
+    "template fill": {
+      "callers": []
+    },
+    "frontmatter get": {
+      "callers": [
+        ".claude/agents/gsd-plan-checker.md",
+        ".claude/get-shit-done/workflows/verify-phase.md"
+      ]
+    },
+    "frontmatter set": {
+      "callers": []
+    },
+    "frontmatter merge": {
+      "callers": []
+    },
+    "frontmatter validate": {
+      "callers": [
+        ".claude/agents/gsd-planner.md"
+      ]
+    },
+    "verify plan-structure": {
+      "callers": [
+        ".claude/agents/gsd-plan-checker.md",
+        ".claude/agents/gsd-planner.md"
+      ]
+    },
+    "verify phase-completeness": {
+      "callers": []
+    },
+    "verify references": {
+      "callers": []
+    },
+    "verify commits": {
+      "callers": []
+    },
+    "verify artifacts": {
+      "callers": [
+        ".claude/agents/gsd-verifier.md",
+        ".claude/get-shit-done/workflows/verify-phase.md"
+      ]
+    },
+    "verify key-links": {
+      "callers": [
+        ".claude/agents/gsd-verifier.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/verify-phase.md"
+      ]
+    },
+    "phase next-decimal": {
+      "callers": [
+        ".claude/commands/gsd2/add-backlog.md",
+        ".claude/get-shit-done/references/decimal-phase-calculation.md"
+      ]
+    },
+    "phase add": {
+      "callers": [
+        ".claude/commands/gsd2/review-backlog.md",
+        ".claude/get-shit-done/workflows/add-phase.md"
+      ]
+    },
+    "phase insert": {
+      "callers": [
+        ".claude/get-shit-done/workflows/insert-phase.md"
+      ]
+    },
+    "phase remove": {
+      "callers": [
+        ".claude/get-shit-done/workflows/remove-phase.md"
+      ]
+    },
+    "phase complete": {
+      "callers": [
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/transition.md"
+      ]
+    },
+    "roadmap get-phase": {
+      "callers": [
+        ".claude/agents/gsd-plan-checker.md",
+        ".claude/agents/gsd-verifier.md",
+        ".claude/commands/gsd2/research-phase.md",
+        ".claude/get-shit-done/references/phase-argument-parsing.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md",
+        ".claude/get-shit-done/workflows/autonomous.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/research-phase.md",
+        ".claude/get-shit-done/workflows/test-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md",
+        ".claude/get-shit-done/workflows/verify-phase.md"
+      ]
+    },
+    "roadmap analyze": {
+      "callers": [
+        ".claude/commands/gsd2/autonomous.md",
+        ".claude/get-shit-done/workflows/autonomous.md",
+        ".claude/get-shit-done/workflows/complete-milestone.md",
+        ".claude/get-shit-done/workflows/progress.md",
+        ".claude/get-shit-done/workflows/transition.md"
+      ]
+    },
+    "roadmap update-plan-progress": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "requirements mark-complete": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "milestone complete": {
+      "callers": [
+        ".claude/get-shit-done/workflows/complete-milestone.md"
+      ]
+    },
+    "validate consistency": {
+      "callers": []
+    },
+    "validate health": {
+      "callers": [
+        ".claude/get-shit-done/workflows/health.md"
+      ]
+    },
+    "progress": {
+      "callers": [
+        ".claude/get-shit-done/workflows/progress.md",
+        ".claude/get-shit-done/workflows/transition.md"
+      ]
+    },
+    "audit-uat": {
+      "callers": [
+        ".claude/get-shit-done/workflows/audit-uat.md",
+        ".claude/get-shit-done/workflows/progress.md"
+      ]
+    },
+    "stats": {
+      "callers": []
+    },
+    "todo complete": {
+      "callers": []
+    },
+    "scaffold context": {
+      "callers": []
+    },
+    "scaffold uat": {
+      "callers": []
+    },
+    "scaffold verification": {
+      "callers": []
+    },
+    "scaffold phase-dir": {
+      "callers": []
+    },
+    "phases list": {
+      "callers": [
+        ".claude/get-shit-done/workflows/audit-milestone.md",
+        ".claude/get-shit-done/workflows/execute-plan.md",
+        ".claude/get-shit-done/workflows/plan-milestone-gaps.md"
+      ]
+    },
+    "websearch": {
+      "callers": [
+        ".claude/agents/gsd-phase-researcher.md",
+        ".claude/agents/gsd-project-researcher.md"
+      ]
+    },
+    "scan-sessions": {
+      "callers": [
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ]
+    },
+    "extract-messages": {
+      "callers": []
+    },
+    "profile-sample": {
+      "callers": [
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ]
+    },
+    "write-profile": {
+      "callers": [
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ]
+    },
+    "profile-questionnaire": {
+      "callers": [
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ]
+    },
+    "generate-dev-preferences": {
+      "callers": [
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ]
+    },
+    "generate-claude-profile": {
+      "callers": [
+        ".claude/get-shit-done/workflows/profile-user.md"
+      ]
+    },
+    "generate-claude-md": {
+      "callers": [
+        ".claude/get-shit-done/workflows/map-codebase.md",
+        ".claude/get-shit-done/workflows/new-project.md"
+      ]
+    },
+    "init execute-phase": {
+      "callers": [
+        ".claude/agents/gsd-executor.md",
+        ".claude/get-shit-done/references/planning-config.md",
+        ".claude/get-shit-done/workflows/complete-milestone.md",
+        ".claude/get-shit-done/workflows/execute-phase.md",
+        ".claude/get-shit-done/workflows/execute-plan.md"
+      ]
+    },
+    "init plan-phase": {
+      "callers": [
+        ".claude/agents/gsd-planner.md",
+        ".claude/get-shit-done/workflows/agent-spec-phase.md",
+        ".claude/get-shit-done/workflows/plan-phase.md",
+        ".claude/get-shit-done/workflows/test-phase.md",
+        ".claude/get-shit-done/workflows/ui-phase.md"
+      ]
+    },
+    "init new-project": {
+      "callers": [
+        ".claude/get-shit-done/workflows/new-project.md"
+      ]
+    },
+    "init new-milestone": {
+      "callers": [
+        ".claude/get-shit-done/workflows/new-milestone.md"
+      ]
+    },
+    "init quick": {
+      "callers": [
+        ".claude/get-shit-done/workflows/quick.md"
+      ]
+    },
+    "init resume": {
+      "callers": [
+        ".claude/get-shit-done/workflows/resume-project.md"
+      ]
+    },
+    "init verify-work": {
+      "callers": [
+        ".claude/get-shit-done/workflows/verify-work.md"
+      ]
+    },
+    "init phase-op": {
+      "callers": [
+        ".claude/agents/gsd-phase-researcher.md",
+        ".claude/agents/gsd-plan-checker.md",
+        ".claude/commands/gsd2/research-phase.md",
+        ".claude/get-shit-done/workflows/add-phase.md",
+        ".claude/get-shit-done/workflows/add-tests.md",
+        ".claude/get-shit-done/workflows/autonomous.md",
+        ".claude/get-shit-done/workflows/discuss-phase.md",
+        ".claude/get-shit-done/workflows/insert-phase.md",
+        ".claude/get-shit-done/workflows/remove-phase.md",
+        ".claude/get-shit-done/workflows/research-phase.md",
+        ".claude/get-shit-done/workflows/review.md",
+        ".claude/get-shit-done/workflows/ship.md",
+        ".claude/get-shit-done/workflows/ui-review.md",
+        ".claude/get-shit-done/workflows/validate-phase.md",
+        ".claude/get-shit-done/workflows/verify-phase.md"
+      ]
+    },
+    "init todos": {
+      "callers": [
+        ".claude/get-shit-done/workflows/add-todo.md",
+        ".claude/get-shit-done/workflows/check-todos.md"
+      ]
+    },
+    "init milestone-op": {
+      "callers": [
+        ".claude/commands/gsd2/autonomous.md",
+        ".claude/get-shit-done/workflows/audit-milestone.md",
+        ".claude/get-shit-done/workflows/autonomous.md"
+      ]
+    },
+    "init map-codebase": {
+      "callers": [
+        ".claude/get-shit-done/workflows/map-codebase.md"
+      ]
+    },
+    "init progress": {
+      "callers": [
+        ".claude/get-shit-done/workflows/progress.md"
+      ]
+    },
+    "init document": {
+      "callers": [
+        ".claude/commands/gsd2/document.md",
+        ".claude/get-shit-done/workflows/document.md"
+      ]
+    }
+  }
+}

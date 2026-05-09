@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: "Completed 04-03-PLAN.md (loop primitives — verifier/fixer loop modes, verify commands subcommand, must_haves verify: schema)"
-last_updated: "2026-05-07T18:43:20.183Z"
+stopped_at: Completed 260507-u0a-PLAN.md (consolidate gsd2 progress into single init progress --scoped call)
+last_updated: "2026-05-07T20:52:40.923Z"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -86,12 +86,19 @@ yet.
 
 - [Phase 04-03 discovery] parseMustHavesBlock in frontmatter.cjs uses 4-space-indent regex; real plans use 2-space; 'verify artifacts' and 'verify key-links' silently return 'no blocks found' for ALL current plans. Surfaced while implementing parseVerifyCommands. Out of 04-03 scope — fix in follow-up plan.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260507-u0a | Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag | 2026-05-07 | 8597abe | [260507-u0a-consolidate-gsd2-progress-into-single-in](./quick/260507-u0a-consolidate-gsd2-progress-into-single-in/) |
+
 ### Roadmap Evolution
 
 - Phase 4 added: Verification harness and context efficiency
 
 ## Session Continuity
 
-Last session: 2026-05-07T17:28:06.192Z
-Stopped at: Completed 04-03-PLAN.md (loop primitives — verifier/fixer loop modes, verify commands subcommand, must_haves verify: schema)
+Last session: 2026-05-07T20:55:00.000Z
+Last activity: 2026-05-07 - Completed quick task 260507-u0a: Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag
+Stopped at: Completed quick task 260507-u0a (progress consolidation + --scoped wiring)
 Resume file: None
