@@ -80,3 +80,13 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
   5. Ceiling-reached handoff renders as a CHECKPOINT REACHED block with chronological narrative; executor pauses for user
   6. Standalone callers of gsd-verifier, gsd-debugger, gsd-fixer continue to work (no breaking changes)
 **Plans**: 04-01 (Wave 1: context efficiency fix), 04-02 (Wave 1: agent/workflow dependency graph — discovery), 04-03 (Wave 2: loop primitives — verifier/fixer adaptation + verify schema + verify commands subcommand), 04-04 (Wave 3: execute-phase integration + verify_after docs + init verify config)
+
+### Phase 5: Milestone-versioned phase IDs
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd2:plan-phase 5 to break down)

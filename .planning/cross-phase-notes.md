@@ -25,3 +25,23 @@
 - Signal: [STRONG] — out-of-scope decision for Phase 4
 
 ---
+
+### From Phase 5 discussion (2026-05-10)
+
+**For Phase 6: Graph-based linking (new — add to roadmap)**
+- User framing: partitioning (Phase 5) is a workaround for the underlying "load too much context" problem. The structural fix is a graph linking decisions, phases, requirements, with weights/types — so commands can traverse only what's relevant instead of loading everything in scope.
+- Quote: "if we have the system allowing us to link things to each other in the right way, like a graph, when we could have some weights or tags... we already have something like this with all these tags for the verification of the process and criteria of success."
+- Signal: [STRONG] — user explicitly described the architecture and pointed at existing tag infrastructure as the seed
+- Context: came up while scoping Phase 5. User asked whether graph belongs inside Phase 5 or as a separate phase. Decision: separate (Phase 6) so Phase 5 can ship; but Phase 5's distillation artifact and decision-log format are designed graph-friendly (typed tags, explicit links) so Phase 6 indexes existing structure rather than retrofitting.
+- Substrate Phase 6 will consume: `MILESTONE-{version}-SUMMARY.md` distill artifacts, structured decision logs, requirement IDs, phase IDs (newly milestone-versioned).
+
+**For Phase 7: RAG / semantic retrieval (new — add to roadmap)**
+- User framing: even with graph (Phase 6), at large enough scale "we still come to the point where we need all these files" loaded. Then semantic search beats traversal — retrieve only the chunks actually relevant to the question.
+- Signal: [STRONG] — user explicitly named it as the long-tail solution after partition + graph
+- Context: same conversation as Phase 6 framing. Acknowledged as further-out than Phase 6 — only worth building once graph traversal hits its limits.
+
+**For any future workflow that loads multiple phases:**
+- Phase 5 is changing the layout to `.planning/{milestone}/phases/...`. After Phase 5 lands, do not iterate `.planning/phases/*` — go through `gsd-tools init` outputs (extended fields will include milestone partition root). Hardcoding old paths in workflows will break post-retrofit.
+- Signal: [STRONG] — directly implied by Phase 5 scope
+
+---
