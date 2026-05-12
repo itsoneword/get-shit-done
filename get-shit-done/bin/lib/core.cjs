@@ -327,6 +327,40 @@ function relPhasesPath(cwd) {
   return toPosixPath(rel);
 }
 
+/**
+ * Build the standard milestone-context fields emitted by every init command.
+ *
+ * Returned fields are additive — existing init JSON contract fields (phase_dir,
+ * phase_number, etc.) are unchanged. Downstream Plan 05-02 (migration) reads
+ * these to determine whether to perform a legacy-layout retrofit.
+ *
+ * @param {string} cwd
+ * @returns {{milestone_root: string|null, partition_root: string, legacy_layout_detected: boolean}}
+ */
+function buildMilestoneContext(cwd) {
+  let milestone = null;
+  try {
+    const statePath = path.join(cwd, '.planning', 'STATE.md');
+    if (fs.existsSync(statePath)) {
+      const stateRaw = fs.readFileSync(statePath, 'utf-8');
+      const m = stateRaw.match(/^milestone:\s*(.+)$/m);
+      if (m) milestone = m[1].trim();
+    }
+  } catch { /* fall through */ }
+  const legacyExists = fs.existsSync(path.join(cwd, '.planning', 'phases'));
+  const partitionedExists = milestone
+    ? fs.existsSync(path.join(cwd, '.planning', milestone, 'phases'))
+    : false;
+  const partitionAbs = milestone
+    ? path.join(cwd, '.planning', milestone)
+    : path.join(cwd, '.planning');
+  return {
+    milestone_root: milestone,
+    partition_root: toPosixPath(path.relative(cwd, partitionAbs)),
+    legacy_layout_detected: legacyExists && !partitionedExists,
+  };
+}
+
 // ─── Phase utilities ──────────────────────────────────────────────────────────
 
 function escapeRegex(value) {
@@ -865,4 +899,5 @@ module.exports = {
   planningPaths,
   phasesDir,
   relPhasesPath,
+  buildMilestoneContext,
 };

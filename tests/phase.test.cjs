@@ -6,7 +6,7 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
+const { runGsdTools, createTempProject, createPartitionedFixture, cleanup } = require('./helpers.cjs');
 
 describe('phases list command', () => {
   let tmpDir;
@@ -191,6 +191,21 @@ describe('phase next-decimal command', () => {
     const output = JSON.parse(result.output);
     assert.strictEqual(output.found, false, 'base phase not found');
     assert.strictEqual(output.next, '06.1', 'should still suggest 06.1');
+  });
+
+  // Phase 05: partition-aware decimal resolution
+  test('phase next-decimal works inside .planning/{milestone}/phases/ partition (decimal partition)', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '06-foo'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '06.1-bar'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '06.2-baz'), { recursive: true });
+    try {
+      const result = runGsdTools(['phase', 'next-decimal', '06'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.strictEqual(json.next, '06.3');
+      assert.deepStrictEqual(json.existing, ['06.1', '06.2']);
+    } finally { cleanup(tmp); }
   });
 });
 

@@ -6,7 +6,7 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
+const { runGsdTools, createTempProject, createLegacyLayoutFixture, createPartitionedFixture, withStateMilestone, cleanup } = require('./helpers.cjs');
 
 describe('init commands', () => {
   let tmpDir;
@@ -858,6 +858,154 @@ describe('cmdInitNewMilestone', () => {
     assert.strictEqual(output.phase_dir_count, 0);
     assert.strictEqual(output.phase_archive_path, null);
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 05 — partition-aware init JSON output
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Phase 05 partitioned-layout init', () => {
+
+  // ─── cmdInitPhaseOp ──────────────────────────────────────────────────────
+
+  test('cmdInitPhaseOp emits partitioned phase_dir when .planning/{milestone}/phases/ exists', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-foo'), { recursive: true });
+    // ROADMAP.md so phase resolution can derive phase_name from headings (optional)
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 1: foo\n**Goal:** test\n`);
+    try {
+      const result = runGsdTools(['init', 'phase-op', '01'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.match(json.phase_dir, /\.planning[\/\\]v1\.4[\/\\]phases[\/\\]01-foo/);
+      assert.strictEqual(json.milestone_root, 'v1.4');
+      assert.strictEqual(json.legacy_layout_detected, false);
+      assert.strictEqual(json.partition_root, '.planning/v1.4');
+    } finally { cleanup(tmp); }
+  });
+
+  test('cmdInitPhaseOp emits legacy phase_dir when only .planning/phases/ exists', () => {
+    const tmp = createLegacyLayoutFixture('v1.4');
+    fs.mkdirSync(path.join(tmp, '.planning', 'phases', '01-foo'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 1: foo\n**Goal:** test\n`);
+    try {
+      const result = runGsdTools(['init', 'phase-op', '01'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.match(json.phase_dir, /\.planning[\/\\]phases[\/\\]01-foo/);
+      assert.strictEqual(json.milestone_root, 'v1.4');
+      assert.strictEqual(json.legacy_layout_detected, true);
+    } finally { cleanup(tmp); }
+  });
+
+  // ─── cmdInitPlanPhase ────────────────────────────────────────────────────
+
+  test('cmdInitPlanPhase emits partitioned phase_dir + milestone_root in JSON output', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '02-bar'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 2: bar\n**Goal:** test\n`);
+    try {
+      const result = runGsdTools(['init', 'plan-phase', '02'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.match(json.phase_dir, /\.planning[\/\\]v1\.4[\/\\]phases[\/\\]02-bar/);
+      assert.strictEqual(json.milestone_root, 'v1.4');
+      assert.strictEqual(json.legacy_layout_detected, false);
+    } finally { cleanup(tmp); }
+  });
+
+  test('cmdInitPlanPhase emits legacy phase_dir when partitioned dir missing', () => {
+    const tmp = createLegacyLayoutFixture('v1.4');
+    fs.mkdirSync(path.join(tmp, '.planning', 'phases', '02-bar'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 2: bar\n**Goal:** test\n`);
+    try {
+      const result = runGsdTools(['init', 'plan-phase', '02'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.match(json.phase_dir, /\.planning[\/\\]phases[\/\\]02-bar/);
+      assert.strictEqual(json.milestone_root, 'v1.4');
+      assert.strictEqual(json.legacy_layout_detected, true);
+    } finally { cleanup(tmp); }
+  });
+
+  // ─── cmdInitProgress — partitioned phases[] ──────────────────────────────
+
+  test('cmdInitProgress lists phases from partitioned milestone dir', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-alpha'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 1: alpha\n**Goal:** test\n`);
+    try {
+      const result = runGsdTools(['init', 'progress'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.strictEqual(json.milestone_root, 'v1.4');
+      assert.strictEqual(json.legacy_layout_detected, false);
+      const dirs = (json.phases || []).map(p => p.directory || '');
+      assert.ok(dirs.some(d => d.includes('v1.4/phases/01-alpha')),
+        `expected partitioned directory in phases[]; got: ${JSON.stringify(dirs)}`);
+    } finally { cleanup(tmp); }
+  });
+
+  // ─── B-CROSS: cross-milestone exclusion (SC-6) ───────────────────────────
+
+  test('cross-milestone exclusion: cmdInitProgress phases[] omits phases from non-active milestone partitions', () => {
+    // Setup: TWO milestone partitions present on disk
+    const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gsd-test-cross-'));
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.3', 'phases', '01-foo'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-bar'), { recursive: true });
+    // STATE.md pins active milestone to v1.4
+    fs.writeFileSync(
+      path.join(tmp, '.planning', 'STATE.md'),
+      `---\nmilestone: v1.4\nmilestone_name: test\n---\n\n# State\n`
+    );
+    // Minimal ROADMAP.md so cmdInitProgress can derive a milestone filter
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 1: bar\n**Goal:** test\n`);
+    try {
+      const result = runGsdTools(['init', 'progress'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      const phaseDirs = (json.phases || []).map(p => p.directory || p.name || '');
+      const joined = phaseDirs.join('|');
+      // Active milestone phase IS present
+      assert.ok(/01-bar/.test(joined),
+        `expected 01-bar (active v1.4) in phases[], got: ${joined}`);
+      // Prior milestone phase NOT in phases[]
+      assert.ok(!/01-foo/.test(joined),
+        `prior milestone phase not in phases[] — got 01-foo: ${joined}`);
+      // milestone_root pinned to active
+      assert.strictEqual(json.milestone_root, 'v1.4');
+    } finally { cleanup(tmp); }
+  });
+
+  // ─── prior_milestones[] field ────────────────────────────────────────────
+
+  test('cmdInitProgress populates prior_milestones[] when closed-milestone SUMMARY.md exists', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    // Closed prior milestone with SUMMARY.md
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.3'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmp, '.planning', 'v1.3', 'SUMMARY.md'),
+      `# Milestone v1.3 Summary\n`
+    );
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 1: a\n`);
+    try {
+      const result = runGsdTools(['init', 'progress'], tmp);
+      assert.ok(result.success, `Command failed: ${result.error}`);
+      const json = JSON.parse(result.output);
+      assert.ok(Array.isArray(json.prior_milestones));
+      const found = json.prior_milestones.find(p => p.milestone === 'v1.3');
+      assert.ok(found, `expected v1.3 in prior_milestones[], got: ${JSON.stringify(json.prior_milestones)}`);
+      assert.match(found.summary_path, /\.planning\/v1\.3\/SUMMARY\.md/);
+    } finally { cleanup(tmp); }
+  });
+
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

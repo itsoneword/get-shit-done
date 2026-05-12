@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error, phasesDir, relPhasesPath } = require('./core.cjs');
+const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error, phasesDir, relPhasesPath, buildMilestoneContext } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
 const { auditUatInternal } = require('./uat.cjs');
 const { stateSnapshotInternal } = require('./state.cjs');
@@ -45,6 +45,9 @@ function cmdInitExecutePhase(cwd, phase, raw) {
   const phase_req_ids = (reqExtracted && reqExtracted !== 'TBD') ? reqExtracted : null;
 
   const result = {
+    // Milestone context (Phase 05 — additive fields)
+    ...buildMilestoneContext(cwd),
+
     // Models
     executor_model: resolveModelInternal(cwd, 'gsd-executor'),
     verifier_model: resolveModelInternal(cwd, 'gsd-verifier'),
@@ -178,6 +181,9 @@ function cmdInitPlanPhase(cwd, phase, raw) {
   const phase_req_ids = (reqExtracted && reqExtracted !== 'TBD') ? reqExtracted : null;
 
   const result = {
+    // Milestone context (Phase 05 — additive fields)
+    ...buildMilestoneContext(cwd),
+
     // Models
     researcher_model: resolveModelInternal(cwd, 'gsd-phase-researcher'),
     planner_model: resolveModelInternal(cwd, 'gsd-planner'),
@@ -519,6 +525,9 @@ function cmdInitPhaseOp(cwd, phase, raw) {
   }
 
   const result = {
+    // Milestone context (Phase 05 — additive fields)
+    ...buildMilestoneContext(cwd),
+
     // Config
     commit_docs: config.commit_docs,
     brave_search: config.brave_search,
@@ -666,6 +675,9 @@ function cmdInitMilestoneOp(cwd, raw) {
   } catch { /* intentionally empty */ }
 
   const result = {
+    // Milestone context (Phase 05 — additive fields)
+    ...buildMilestoneContext(cwd),
+
     // Config
     commit_docs: config.commit_docs,
 
@@ -813,6 +825,9 @@ function cmdInitDocument(cwd, raw) {
   }
 
   const result = {
+    // Milestone context (Phase 05 — additive fields)
+    ...buildMilestoneContext(cwd),
+
     // Models
     mapper_model: resolveModelInternal(cwd, 'gsd-document-mapper'),
     updater_model: resolveModelInternal(cwd, 'gsd-document-updater'),
@@ -1088,7 +1103,31 @@ function cmdInitProgress(cwd, raw, opts = {}) {
     } catch { return []; }
   })();
 
+  // Phase 05: collect prior-milestone summaries (closed milestones with .planning/{ver}/SUMMARY.md).
+  // Empty until Plan 05-03 produces summaries; populated automatically thereafter.
+  const priorMilestones = (() => {
+    const out = [];
+    const planning = path.join(cwd, '.planning');
+    if (!fs.existsSync(planning)) return out;
+    const ctx = buildMilestoneContext(cwd);
+    let entries = [];
+    try { entries = fs.readdirSync(planning, { withFileTypes: true }); } catch { return out; }
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (!/^v\d+(?:\.\d+)+$/.test(e.name)) continue;
+      if (e.name === ctx.milestone_root) continue;          // skip active
+      const summaryPath = path.join(planning, e.name, 'SUMMARY.md');
+      if (fs.existsSync(summaryPath)) {
+        out.push({ milestone: e.name, summary_path: toPosixPath(path.relative(cwd, summaryPath)) });
+      }
+    }
+    return out;
+  })();
+
   const result = {
+    // Milestone context (Phase 05 — additive fields)
+    ...buildMilestoneContext(cwd),
+
     // Models
     executor_model: resolveModelInternal(cwd, 'gsd-executor'),
     planner_model: resolveModelInternal(cwd, 'gsd-planner'),
@@ -1099,6 +1138,7 @@ function cmdInitProgress(cwd, raw, opts = {}) {
     // Milestone
     milestone_version: milestone.version,
     milestone_name: milestone.name,
+    prior_milestones: priorMilestones,
 
     // Phase overview
     phases: scopedPhases,
