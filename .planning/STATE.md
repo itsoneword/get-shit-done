@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 05-02-PLAN.md (migrate-to-milestone-partition subcommand)
-last_updated: "2026-05-12T14:38:09.633Z"
+stopped_at: Completed 05-03-PLAN.md (dogfood retrofit + distillation smoke test)
+last_updated: "2026-05-12T16:25:29.391Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 ## Current Position
@@ -79,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 05-02]: migration.cjs reuses buildMilestoneContext(cwd).milestone_root for STATE.md milestone lookup; also references extractCurrentMilestone — no third local parser (RESEARCH.md §3 anti-pattern)
 - [Phase 05-02]: Pre-flight clean-tree check scoped to .planning/ only (not full repo) — user may have unrelated WIP in src/
 - [Phase 05-02]: PATTERN_BARE swept only inside todos/ and quick/; root files (PROJECT/ROADMAP/STATE/cross-phase-notes) only get FULL_PATH rewrites — protects free prose like 'see phases 1-3'
+- [Phase 05]: W4: migration_hint is informational auto-detect at every init call; actual migration requires explicit --yes confirmation — auto-retrofit means detect+prompt not auto-mutate
+- [Phase 05]: Empty legacy phases/ dir left by git mv is auto-removed post-moves in migration.cjs via rmdirSync (best-effort)
 
 ### Pending Todos
 
@@ -101,6 +103,7 @@ yet.
 | 260507-u0a | Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag | 2026-05-07 | 8597abe | [260507-u0a-consolidate-gsd2-progress-into-single-in](./quick/260507-u0a-consolidate-gsd2-progress-into-single-in/) |
 | Phase 05-milestone-versioned-phase-ids P01 | 27 | 3 tasks | 11 files |
 | Phase 05-milestone-versioned-phase-ids P02 | 10min | 2 tasks | 4 files |
+| Phase 05 P03 | 0 | 3 tasks | 3 files |
 
 ### Roadmap Evolution
 
@@ -109,7 +112,7 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-05-12T14:38:09.629Z
+Last session: 2026-05-12T16:25:29.387Z
 Last activity: 2026-05-12
-Stopped at: Completed 05-02-PLAN.md (migrate-to-milestone-partition subcommand)
+Stopped at: Completed 05-03-PLAN.md (dogfood retrofit + distillation smoke test)
 Resume file: None
