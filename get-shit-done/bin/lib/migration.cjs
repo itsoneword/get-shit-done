@@ -354,6 +354,13 @@ async function cmdMigrateToMilestonePartition(cwd, options, _raw) {
     // Apply rewrites.
     applyRewrites(plan, milestone);
 
+    // Remove the now-empty legacy phases/ directory (git mv leaves it behind).
+    try {
+      if (fs.existsSync(legacy) && fs.readdirSync(legacy).length === 0) {
+        fs.rmdirSync(legacy);
+      }
+    } catch (_) { /* non-fatal: empty-dir cleanup best-effort */ }
+
     // Delete the manifest BEFORE staging — manifest is a recovery scratch file,
     // not a commit artifact. At this point all moves + rewrites are done; a crash
     // here means `git reset --hard HEAD` still restores the original tree.
