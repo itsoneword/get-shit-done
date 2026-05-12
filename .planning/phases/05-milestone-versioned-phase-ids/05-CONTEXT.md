@@ -1,7 +1,7 @@
 # Phase 5: Milestone-versioned phase IDs - Context
 
-**Gathered:** 2026-05-10
-**Status:** Discussion paused — open items remain (see "Open Items"). Resume on another workstation.
+**Gathered:** 2026-05-10 (initial); resumed 2026-05-12 (open items resolved)
+**Status:** Discussion complete. Ready for planning.
 
 <domain>
 ## Phase Boundary
@@ -60,6 +60,14 @@ This phase ships the *machinery*. It does NOT close milestone v1.4. Whether/when
 - Partitioning (this phase) is acknowledged as a workaround that ships immediate value; graph is the structural fix; RAG is the long-tail fix.
 - Cross-phase notes file captures both as Phase 6 / Phase 7 seeds.
 
+### Resolved 2026-05-12 (was Open Items 1–5)
+- **[Phase 05] ID shape:** Path-only. Filenames keep short IDs (`01`, `04-04`); milestone disambiguation lives entirely in the path (`.planning/v1.4/phases/...`). Commit prefix unchanged: `feat(04-04: ...)`. [STRONG]
+- **[Phase 05] Distillation artifact `MILESTONE-{version}-SUMMARY.md`:** Rich. Sections: `decisions[]` (typed, with `phase:` link), `requirements_validated[]`, `open_blockers[]` (carried into next milestone), `entry_points[]` (file:symbol), `public_api[]`. Machine-parseable typed tags (graph-friendly substrate for Phase 6). [STRONG]
+- **[Phase 05] Migration trigger UX:** One-time confirmation prompt. Print plan (`N dirs to move, M ref-rewrites in K files`) and require `[y/N]` before mutating committed files. `--dry-run` mode prints the plan without prompting and exits. [STRONG]
+- **[Phase 05] Reference rewrite scope:** Root files (`STATE.md`, `PROJECT.md`, `ROADMAP.md`, `cross-phase-notes.md`) always rewritten. Sweep `todos/**/*.md` and `quick/**/*.md` for **path-shaped** refs only (regex match on `.planning/phases/...` and bare `phases/NN-`). Free prose untouched. Commit message history untouched. [STRONG]
+- **[Phase 05] Active milestone source of truth:** STATE.md `milestone:` frontmatter (current value: `v1.4`). If missing/corrupt: refuse to migrate, exit with clear error prompting user to set it. No path-based guessing, no default. [STRONG]
+- **[Phase 05] Layout:** Only phase tree moves under `.planning/{milestone}/phases/`. PROJECT/ROADMAP/STATE/cross-phase-notes/todos/quick stay at `.planning/` root. ROADMAP resets when milestone transitions; closed milestones are summarized in `.planning/{milestone}/SUMMARY.md`. [STRONG]
+
 </decisions>
 
 <expected_outcome>
@@ -72,32 +80,44 @@ This phase ships the *machinery*. It does NOT close milestone v1.4. Whether/when
 </expected_outcome>
 
 <open_items>
-## Open Items (resume here next session)
+## Open Items — RESOLVED 2026-05-12
 
-These weren't drilled into before the session paused. Each needs a decision before planning starts.
+All 5 items resolved with the user before planning. Decisions appended to `<decisions>` below.
 
-1. **ID literal shape — bake milestone in, or keep in path only?**
-   - **(a) Milestone in path only** — `.planning/v1.4/phases/01-foo/01-PLAN.md`. ID inside files stays `01`. Cross-milestone refs use path. Cleaner short IDs, ambiguous when quoted in isolation.
-   - **(b) Milestone baked into ID** — `.planning/v1.4/phases/v1.4-01-foo/v1.4-01-PLAN.md` (or similar). ID is globally unique even out of context. Longer filenames, hits the 45-char slug cap faster.
-   - **Tied question:** commit-message convention — `feat(v1.4-04-04): ...` or stays `feat(04-04: ...)` (path-disambiguated)?
+1. **ID literal shape:** Path-only. `.planning/v1.4/phases/01-foo/01-PLAN.md`. ID inside files stays `01`. Commit prefix stays `feat(04-04: ...)`. [STRONG — user selected]
 
-2. **Distillation artifact contents.** What goes into `MILESTONE-{version}-SUMMARY.md` (or whatever it's named)?
-   - Decisions only? Decisions + Validated requirements? + key code entry points / public API surface? + open blockers carried forward?
-   - Format constraints (machine-parseable, typed tags) are locked; the *content set* isn't.
+2. **Distillation contents:** Rich. `MILESTONE-{version}-SUMMARY.md` carries `decisions[]` (typed, linked to phase IDs), `requirements_validated[]`, `open_blockers[]`, `entry_points[]` (file:symbol), `public_api[]`. Format: machine-parseable, typed tags (graph-friendly for Phase 6). [STRONG — user selected]
 
-3. **Migration trigger UX.** Auto-retrofit is locked. But:
-   - Silent (just print a summary after)?
-   - One-time confirmation prompt before rewriting committed planning files?
-   - Dry-run flag available?
-   - Default-on with opt-out flag (matches Phase 04 verify_after pattern)?
+3. **Migration UX:** One-time confirmation prompt before rewriting committed planning files. Print plan ("will move N dirs, rewrite refs in M files"), prompt `[y/N]`. Implicit `--dry-run` mode preview-only. [STRONG — user selected]
 
-4. **Reference rewrite scope.** Auto-retrofit must update references in committed planning files. Confirm during planning:
-   - Which files: STATE.md, PROJECT.md, cross-phase-notes.md, ROADMAP.md? Anything in commit-message history is left alone (that's git, not files).
-   - User-written notes in `todos/`, `quick/`, etc. — scan and rewrite, or skip?
+4. **Reference rewrite scope:** Root files (`STATE.md`, `PROJECT.md`, `ROADMAP.md`, `cross-phase-notes.md`) ALWAYS rewritten. PLUS sweep `todos/**/*.md` and `quick/**/*.md` for **path-shaped** refs only (regex matching `.planning/phases/...` and `phases/NN-...`). Free prose mentioning phase numbers left untouched. Commit history not touched. [STRONG — user confirmed after layout clarification]
 
-5. **Active milestone identifier source.** Where does GSD read "current milestone version" to pick the partition path?
-   - STATE.md `milestone:` field exists (`v1.4`). Is that the source of truth?
-   - What happens if it's missing (corrupt project)? Refuse, prompt, or fall back?
+5. **Active milestone source:** STATE.md `milestone:` frontmatter field is source of truth. If missing or corrupt: refuse to migrate, prompt user to set it explicitly. Do not guess from path or default. [STRONG — Claude pre-answered, user accepted]
+
+### Layout confirmed (post-retrofit)
+
+```
+.planning/
+  PROJECT.md            ← root, project-wide
+  ROADMAP.md            ← root, active milestone's phases (resets on milestone transition)
+  STATE.md              ← root
+  cross-phase-notes.md  ← root, project-wide
+  todos/                ← root
+  quick/                ← root
+  v1.4/
+    SUMMARY.md          ← distilled artifact (written by /gsd2:complete-milestone)
+    phases/
+      01-domain-router/
+      02-agent-spec/
+      03-documentation-agent/
+      04-verification-harness-and-context-efficiency/
+      05-milestone-versioned-phase-ids/
+  v1.5/
+    phases/
+      01-.../
+```
+
+Only the phase tree drops one level under the milestone partition. Everything else at `.planning/` root stays put.
 
 </open_items>
 

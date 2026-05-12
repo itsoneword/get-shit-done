@@ -82,11 +82,17 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 **Plans**: 04-01 (Wave 1: context efficiency fix), 04-02 (Wave 1: agent/workflow dependency graph — discovery), 04-03 (Wave 2: loop primitives — verifier/fixer adaptation + verify schema + verify commands subcommand), 04-04 (Wave 3: execute-phase integration + verify_after docs + init verify config)
 
 ### Phase 5: Milestone-versioned phase IDs
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 4
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd2:plan-phase 5 to break down)
+**Goal**: GSD partitions `.planning/` by milestone so each milestone is a self-contained phase tree (resets to 01, 02, 03…); closing a milestone produces a rich, graph-friendly distillation artifact (`MILESTONE-{version}-SUMMARY.md`); GSD running on an old-layout project auto-detects and retrofits with a one-time user confirmation prompt; default context for `/gsd2:progress` loads only active milestone phases + root docs + prior milestone summaries (not the entire phase tree)
+**Depends on**: Phase 4
+**Requirements**: TBD (must_haves derived from CONTEXT Expected Outcome — phase predates a fresh requirement-ID batch)
+**Discussion focus**: Layout (path-only milestone partitioning), distillation artifact contents (decisions + requirements + open blockers + entry_points + public_api), migration UX (one-time confirmation + dry-run), reference rewrite scope (root files + path-shaped refs in todos/quick), active milestone source (STATE.md `milestone:` field)
+**Success Criteria** (what must be TRUE):
+  1. After this phase lands, `.planning/v1.4/phases/...` is the canonical location for v1.4 phases; root-level files (PROJECT/ROADMAP/STATE/cross-phase-notes/todos/quick) remain at `.planning/` root
+  2. Running GSD on an old-layout project (with `.planning/phases/...` at root) prints a migration plan and prompts `[y/N]` before mutating anything; `--dry-run` mode prints the plan and exits without changes
+  3. After user accepts migration: `git mv` preserves history for moved phase directories; STATE.md, PROJECT.md, ROADMAP.md, cross-phase-notes.md and path-shaped refs in `todos/**/*.md` and `quick/**/*.md` are rewritten to use new paths
+  4. STATE.md `milestone:` frontmatter is the single source of truth for active milestone; missing/corrupt value causes a clear refusal-and-prompt error, not a path-guess fallback
+  5. `/gsd2:complete-milestone` produces `.planning/{milestone}/SUMMARY.md` with sections `decisions[]` (typed, linked to phase IDs), `requirements_validated[]`, `open_blockers[]`, `entry_points[]` (file:symbol), `public_api[]`; format is machine-parseable typed tags (graph-friendly for future Phase 06)
+  6. `/gsd2:progress` (and other context-loading commands) load active milestone phases + root docs + summaries of prior closed milestones — not the entire phase tree regardless of milestone count
+  7. Decimal-phase resolution (`2.1`, `1.1`) continues to work inside the new partitioned tree; existing workflow placeholders (`{padded_phase}`, `{phase_dir}`, `{phase_number}`) continue to resolve correctly via init.cjs (renaming is a non-breaking extension, not a contract break)
+  8. Retrofit of the current `.planning/` (v1.4) to the new layout is performed as the integration test for this phase, committed as part of phase work
+**Plans**: TBD (planner will break down)
