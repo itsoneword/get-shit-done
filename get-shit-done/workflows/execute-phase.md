@@ -194,10 +194,12 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
 2. **Spawn executor agents.** Pass paths only — executors read files themselves with their fresh context window. This keeps orchestrator context lean (~10-15% for 200k models). For 1M+ models (Opus 4.6, Sonnet 4.6), richer context can be passed directly.
 
+   **⚠ model= is REQUIRED.** Agent definitions carry no `model:` frontmatter; omitting this param causes the agent to inherit the orchestrator's model (which is often Opus), burning 5× the token cost. If `executor_model` is `"inherit"`, omit the param instead of passing the string — the Agent tool only accepts `sonnet|opus|haiku`.
+
    ```
    Task(
      subagent_type="gsd-executor",
-     model="{executor_model}",
+     model="{executor_model}",  # MUST pass — from init JSON executor_model field
      prompt="
        <objective>
        Execute plan {plan_number} of phase {phase_number}-{phase_name}.

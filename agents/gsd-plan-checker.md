@@ -3,6 +3,7 @@ name: gsd-plan-checker
 description: Verifies plans will achieve phase goal before execution. Goal-backward analysis of plan quality. Spawned by /gsd2:plan-phase orchestrator.
 tools: Read, Bash, Glob, Grep
 color: green
+model: sonnet
 ---
 
 <role>

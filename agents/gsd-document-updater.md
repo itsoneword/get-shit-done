@@ -3,6 +3,7 @@ name: gsd-document-updater
 description: Performs incremental, surgical updates to an existing docs/SYSTEM-MAP.md and docs/system/*.md tree based on GSD activity since the last run. Two-pass flow — proposes a diff preview first, then applies on confirmation. Spawned by /gsd2:document in default (incremental) mode.
 tools: Read, Bash, Grep, Glob, Write, Edit
 color: yellow
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

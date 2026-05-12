@@ -3,6 +3,7 @@ name: gsd-agent-researcher
 description: Produces AGENT-SPEC.md design contract for agentic phases. Reads upstream artifacts and AGENTIC-PATTERNS.md, picks topology, locks communication contracts, security boundaries, and observability. Spawned by /gsd2:agent-spec-phase orchestrator.
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, mcp__context7__*
 color: purple
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

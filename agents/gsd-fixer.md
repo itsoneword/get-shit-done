@@ -3,6 +3,7 @@ name: gsd-fixer
 description: Fixes post-execution issues with dependency awareness. Spawned by /gsd2:fix.
 tools: Read, Write, Edit, Bash, Grep, Glob
 color: orange
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

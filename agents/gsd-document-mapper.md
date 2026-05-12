@@ -3,6 +3,7 @@ name: gsd-document-mapper
 description: Documents one subsystem of a project by reading planning artifacts, code, and git history, then writing a sourced, Mermaid-bearing Markdown file to docs/system/{subsystem}.md. Spawned in parallel by /gsd2:document on --full or first-run invocations.
 tools: Read, Bash, Grep, Glob, Write
 color: green
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

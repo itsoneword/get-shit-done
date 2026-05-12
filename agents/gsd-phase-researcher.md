@@ -3,6 +3,7 @@ name: gsd-phase-researcher
 description: Researches how to implement a phase before planning. Produces RESEARCH.md consumed by gsd-planner. Spawned by /gsd2:plan-phase orchestrator or /gsd2:discuss-phase for micro-research.
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, mcp__context7__*
 color: cyan
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

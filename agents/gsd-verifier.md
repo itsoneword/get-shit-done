@@ -3,6 +3,7 @@ name: gsd-verifier
 description: Verifies phase goal achievement through goal-backward analysis. Checks codebase delivers what phase promised, not just that tasks completed. Creates VERIFICATION.md report.
 tools: Read, Write, Bash, Grep, Glob
 color: green
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

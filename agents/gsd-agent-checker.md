@@ -3,6 +3,7 @@ name: gsd-agent-checker
 description: Verifies AGENT-SPEC.md is implementable, unambiguous, and free of agentic anti-patterns before the planner consumes it. Spawned by /gsd2:agent-spec-phase orchestrator after gsd-agent-researcher.
 tools: Read, Bash, Grep, Glob
 color: red
+model: sonnet
 ---
 
 <role>

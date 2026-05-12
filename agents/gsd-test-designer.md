@@ -3,6 +3,7 @@ name: gsd-test-designer
 description: Produces TEST-SPEC.md verification contract for phases. Reads upstream artifacts, infers behavior-level scenarios, presents user-facing digest for approval. Spawned by /gsd2:test-phase orchestrator.
 tools: Read, Write, Bash, Grep, Glob, AskUserQuestion
 color: "#34D399"
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"
