@@ -53,6 +53,19 @@ Parse JSON for: `executor_model`, `verifier_model`, `commit_docs`, `parallelizat
 - `plan_count` is 0: no plans found in phase.
 - `state_exists` is false but `.planning/` exists: offer reconstruct or continue.
 
+**Legacy layout check (informational):**
+
+If `legacy_layout_detected` is `true` in the init JSON, print the `migration_hint` field to the user:
+
+> Detected legacy `.planning/phases/` layout. Migration is recommended before continuing.
+> Run: `node bin/gsd-tools.cjs migrate-to-milestone-partition --dry-run` (preview)
+> Then: `node bin/gsd-tools.cjs migrate-to-milestone-partition --yes` (execute, after [y/N] confirmation)
+> Continue with current workflow anyway? [y/N]
+
+If user declines migration, continue with the legacy layout (the CLI auto-falls-back). If user runs migration first, re-run this workflow afterward so paths resolve under the new partition.
+
+Note: this is an INFORMATIONAL prompt — the migration is never auto-executed. Per CONTEXT.md decision 3, the user must explicitly run `migrate-to-milestone-partition` with `[y/N]` confirmation.
+
 When `parallelization` is false, plans within a wave execute sequentially.
 
 **Copilot runtime detection:**

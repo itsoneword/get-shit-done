@@ -354,10 +354,19 @@ function buildMilestoneContext(cwd) {
   const partitionAbs = milestone
     ? path.join(cwd, '.planning', milestone)
     : path.join(cwd, '.planning');
+  const legacyDetected = legacyExists && !partitionedExists;
   return {
     milestone_root: milestone,
     partition_root: toPosixPath(path.relative(cwd, partitionAbs)),
-    legacy_layout_detected: legacyExists && !partitionedExists,
+    legacy_layout_detected: legacyDetected,
+    // migration_hint: human-readable hint for workflows to surface to the user
+    // when legacy layout is detected. Per CONTEXT.md decision 3, this is purely
+    // informational — actual migration is gated behind the user running the
+    // migrate-to-milestone-partition subcommand with [y/N] confirmation. Null
+    // when no migration is needed.
+    migration_hint: legacyDetected
+      ? 'Legacy .planning/phases/ layout detected. Run `node bin/gsd-tools.cjs migrate-to-milestone-partition --dry-run` to preview migration, then `--yes` to execute.'
+      : null,
   };
 }
 
