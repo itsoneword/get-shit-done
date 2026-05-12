@@ -3,27 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 05 context paused — 6 decisions locked, 5 open items remain (see 05-CONTEXT.md Open Items). Resume on second workstation.
-last_updated: "2026-05-10T13:48:47.438Z"
-last_activity: "2026-05-07 - Completed quick task 260507-u0a: Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag"
+stopped_at: Completed 05-01-PLAN.md (phasesDir helper + CLI partition-aware refactor)
+last_updated: "2026-05-12T14:22:18.542Z"
+last_activity: 2026-05-12
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
 ---
 
 ## Current Position
 
-Phase: 04 (verification-harness-and-context-efficiency) — EXECUTING
-Plan: 4 of 4
+Phase: 05 (milestone-versioned-phase-ids) — EXECUTING
+Plan: 2 of 3
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 04 — verification-harness-and-context-efficiency
+**Current focus:** Phase 05 — milestone-versioned-phase-ids
 
 ## Performance Metrics
 
@@ -72,6 +72,9 @@ Recent decisions affecting current work:
 - [Phase 04]: [Phase 04-03] Loop verifier Step LOOP-1 calls 'verify commands <plan_path>' — plan file is source of truth; inline verify_commands in contract is redundancy/shape-validation only
 - [Phase 04]: [Phase 04-03] Wrote new parseVerifyCommands instead of extending parseMustHavesBlock — latter has latent 4-space-indent bug; reused by other verify subcommands; risk-isolated new helper
 - [Phase 04]: Deferred Task 4 (manual harness dogfood) — GSD self-verification needs its own workflow design
+- [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] phasesDir(cwd) is the single chokepoint; planningPaths().phases is a getter that delegates to it, cascading partition-awareness to ~13 indirect callers
+- [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] phasesDir back-compat fallback: when STATE.md milestone is set but partitioned dir doesn't exist AND legacy dir exists, return legacy (lets retrofit migration run without breakage)
+- [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] Init JSON contract: milestone_root/partition_root/legacy_layout_detected/prior_milestones[] are additive fields spread into result objects — existing fields unchanged
 
 ### Pending Todos
 
@@ -92,6 +95,7 @@ yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260507-u0a | Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag | 2026-05-07 | 8597abe | [260507-u0a-consolidate-gsd2-progress-into-single-in](./quick/260507-u0a-consolidate-gsd2-progress-into-single-in/) |
+| Phase 05-milestone-versioned-phase-ids P01 | 27 | 3 tasks | 11 files |
 
 ### Roadmap Evolution
 
@@ -100,7 +104,7 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-05-10T13:48:47.429Z
-Last activity: 2026-05-07 - Completed quick task 260507-u0a: Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag
-Stopped at: Phase 05 context paused — 6 decisions locked, 5 open items remain (see 05-CONTEXT.md Open Items). Resume on second workstation.
-Resume file: .planning/phases/05-milestone-versioned-phase-ids/05-CONTEXT.md
+Last session: 2026-05-12T14:22:18.538Z
+Last activity: 2026-05-12
+Stopped at: Completed 05-01-PLAN.md (phasesDir helper + CLI partition-aware refactor)
+Resume file: None
