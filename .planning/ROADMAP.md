@@ -95,4 +95,4 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
   6. `/gsd2:progress` (and other context-loading commands) load active milestone phases + root docs + summaries of prior closed milestones — not the entire phase tree regardless of milestone count
   7. Decimal-phase resolution (`2.1`, `1.1`) continues to work inside the new partitioned tree; existing workflow placeholders (`{padded_phase}`, `{phase_dir}`, `{phase_number}`) continue to resolve correctly via init.cjs (renaming is a non-breaking extension, not a contract break)
   8. Retrofit of the current `.planning/` (v1.4) to the new layout is performed as the integration test for this phase, committed as part of phase work
-**Plans**: TBD (planner will break down)
+**Plans**: 05-01 (Wave 1: CLI partition-aware refactor + init JSON contract extension — SC-1, SC-6, SC-7), 05-02 (Wave 2: migrate-to-milestone-partition subcommand with manifest, dry-run, [y/N] gate, git mv, ref rewriter — SC-2, SC-3, SC-4), 05-03 (Wave 3: distillation artifact, auto-detect hook, workflow markdown refactor, dogfood retrofit on this repo — SC-5, SC-8)
