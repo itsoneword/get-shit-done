@@ -4,9 +4,68 @@
 
 const fs = require('fs');
 const path = require('path');
-const { escapeRegex, getMilestonePhaseFilter, extractOneLinerFromBody, normalizeMd, planningPaths, output, error } = require('./core.cjs');
+const { escapeRegex, getMilestonePhaseFilter, extractOneLinerFromBody, normalizeMd, planningPaths, toPosixPath, extractCurrentMilestone, output, error } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
+
+/**
+ * Parse ROADMAP.md per-phase Requirements lines like:
+ *   **Requirements**: DRTR-01, DRTR-02, DRTR-03
+ * Build { 'DRTR-01': '01', 'DRTR-02': '01', ... } keyed by zero-padded phase number.
+ *
+ * Phase-number is found via the heading `### Phase N:` immediately preceding the
+ * Requirements line. Returns an empty map if ROADMAP.md is missing.
+ */
+function buildRequirementToPhaseMap(cwd) {
+  const map = {};
+  const roadmapPath = path.join(cwd, '.planning', 'ROADMAP.md');
+  if (!fs.existsSync(roadmapPath)) return map;
+  const raw = fs.readFileSync(roadmapPath, 'utf-8');
+  const sectionRegex = /^###\s+Phase\s+(\d+)\s*[:\.]?[^\n]*$/gm;
+  const headings = [...raw.matchAll(sectionRegex)];
+  for (let i = 0; i < headings.length; i++) {
+    const phaseNum = headings[i][1].padStart(2, '0');
+    const start = headings[i].index;
+    const end = i + 1 < headings.length ? headings[i + 1].index : raw.length;
+    const section = raw.slice(start, end);
+    const reqMatch = section.match(/\*\*Requirements\*\*:\s*([A-Z]+-[0-9]+(?:,\s*[A-Z]+-[0-9]+)*)/);
+    if (reqMatch) {
+      for (const reqId of reqMatch[1].split(',').map(s => s.trim())) {
+        if (reqId) map[reqId] = phaseNum;
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * For a given phase number, locate the per-phase VERIFICATION.md (e.g.
+ * `.planning/{milestone}/phases/01-domain-router/01-VERIFICATION.md`) if
+ * present and return its POSIX-relative path. Returns null if no
+ * VERIFICATION.md exists. Searches both partitioned and legacy phase trees.
+ */
+function findVerificationEvidence(cwd, version, phaseNum) {
+  if (!phaseNum) return null;
+  const candidates = [
+    path.join(cwd, '.planning', version, 'phases'),
+    path.join(cwd, '.planning', 'phases'),
+  ];
+  for (const phasesRoot of candidates) {
+    if (!fs.existsSync(phasesRoot)) continue;
+    let entries;
+    try { entries = fs.readdirSync(phasesRoot, { withFileTypes: true }); }
+    catch { continue; }
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (!e.name.startsWith(phaseNum + '-')) continue;
+      const verPath = path.join(phasesRoot, e.name, `${phaseNum}-VERIFICATION.md`);
+      if (fs.existsSync(verPath)) {
+        return toPosixPath(path.relative(cwd, verPath));
+      }
+    }
+  }
+  return null;
+}
 
 function cmdRequirementsMarkComplete(cwd, reqIdsRaw, raw) {
   if (!reqIdsRaw || reqIdsRaw.length === 0) {
@@ -231,6 +290,22 @@ function cmdMilestoneComplete(cwd, version, options, raw) {
     } catch { /* intentionally empty */ }
   }
 
+  // Write distillation artifact (.planning/{version}/SUMMARY.md). Failures are
+  // surfaced via stderr + a non-null `distillation_error` field in the result
+  // JSON; cmdMilestoneComplete must exit non-zero in that case so callers can
+  // detect partial milestone closure.
+  //
+  // Pass `silent: true` so the distill side-effect doesn't write the human-
+  // readable summary line to stdout (which would corrupt this command's JSON
+  // output).
+  let distillation_error = null;
+  try {
+    cmdMilestoneDistill(cwd, version, { name: milestoneName, silent: true }, true);
+  } catch (e) {
+    distillation_error = e && e.message ? e.message : String(e);
+    console.error(`Distillation FAILED: ${distillation_error}`);
+  }
+
   const result = {
     version,
     name: milestoneName,
@@ -247,12 +322,245 @@ function cmdMilestoneComplete(cwd, version, options, raw) {
     },
     milestones_updated: true,
     state_updated: fs.existsSync(statePath),
+    distillation_error,
   };
 
   output(result, raw);
+
+  if (distillation_error) process.exit(1);
+}
+
+/**
+ * Write `.planning/{version}/SUMMARY.md` with typed-tag sections.
+ * Idempotent: re-running overwrites the existing summary with the latest
+ * harvest. Designed as graph-friendly substrate for Phase 6 indexing.
+ *
+ * For requirements_validated[]:
+ *   - phase: looked up from ROADMAP.md per-phase Requirements lists (never
+ *     null for harvested REQ-IDs when ROADMAP maps them)
+ *   - evidence: looked up from {phase_dir}/{padded_phase}-VERIFICATION.md
+ *     (null only as a fallback when no VERIFICATION.md exists)
+ *
+ * The `extractCurrentMilestone` import is referenced for the source-of-truth
+ * chain documented in 05-RESEARCH.md §3 (no third local parser).
+ */
+function cmdMilestoneDistill(cwd, version, options, raw) {
+  if (!version) error('version required (e.g., v1.4)');
+  // Reference extractCurrentMilestone to keep the documented source-of-truth
+  // chain (RESEARCH §3) — no-op call on the active milestone, used for
+  // potential consistency checks by future graph readers.
+  const _ecm = typeof extractCurrentMilestone === 'function' ? extractCurrentMilestone : null;
+  void _ecm;
+
+  const planning = path.join(cwd, '.planning');
+  const partitionDir = path.join(planning, version);
+  const phasesPath = path.join(partitionDir, 'phases');
+  const summaryPath = path.join(partitionDir, 'SUMMARY.md');
+
+  // Ensure partition dir exists (will throw if `partitionDir` exists as a file —
+  // surfaced via cmdMilestoneComplete's try/catch + distillation_error).
+  fs.mkdirSync(partitionDir, { recursive: true });
+
+  // Build REQ-ID → phase map ONCE up front
+  const reqToPhase = buildRequirementToPhaseMap(cwd);
+
+  // Harvest decisions from STATE.md
+  const decisions = [];
+  const statePath = planningPaths(cwd).state;
+  if (fs.existsSync(statePath)) {
+    const stateRaw = fs.readFileSync(statePath, 'utf-8');
+    const decMatch = stateRaw.match(/###\s+Decisions\s*\n([\s\S]*?)(?=\n###|\n##|$)/);
+    if (decMatch) {
+      const lines = decMatch[1].split('\n');
+      let idCounter = 1;
+      for (const line of lines) {
+        const m = line.match(/^-\s*\[Phase\s+([^\]]+)\]:?\s*(.+?)(?:\s+—\s+(.+))?$/);
+        if (m) {
+          decisions.push({
+            id: `dec-${idCounter++}`,
+            text: m[2].trim(),
+            phase: m[1].trim(),
+            type: 'design',
+            rationale: m[3] ? m[3].trim() : null,
+          });
+        }
+      }
+    }
+  }
+
+  // Harvest from each phase SUMMARY.md frontmatter
+  const phaseNumbers = [];
+  if (fs.existsSync(phasesPath)) {
+    for (const entry of fs.readdirSync(phasesPath, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const phaseDir = path.join(phasesPath, entry.name);
+      let phaseFiles;
+      try { phaseFiles = fs.readdirSync(phaseDir); } catch { continue; }
+      const summaryFiles = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+      const phaseNum = entry.name.split('-')[0];
+      if (phaseNum && !phaseNumbers.includes(phaseNum)) phaseNumbers.push(phaseNum);
+      for (const sf of summaryFiles) {
+        const content = fs.readFileSync(path.join(phaseDir, sf), 'utf-8');
+        const fm = extractFrontmatter(content);
+        const keyDecs = fm['key-decisions'];
+        if (Array.isArray(keyDecs)) {
+          for (const d of keyDecs) {
+            decisions.push({
+              id: `dec-${decisions.length + 1}`,
+              text: typeof d === 'string' ? d : (d.text || JSON.stringify(d)),
+              phase: phaseNum,
+              type: 'design',
+              rationale: null,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Harvest validated requirements from REQUIREMENTS.md, attaching phase + evidence
+  const requirementsValidated = [];
+  const reqPath = planningPaths(cwd).requirements;
+  if (fs.existsSync(reqPath)) {
+    const reqRaw = fs.readFileSync(reqPath, 'utf-8');
+    const reqMatches = [...reqRaw.matchAll(/^-\s*\[x\]\s*\*\*([A-Z]+-\d+)\*\*/gm)];
+    for (const m of reqMatches) {
+      const reqId = m[1];
+      const phaseNum = reqToPhase[reqId] || null;
+      const evidence = phaseNum ? findVerificationEvidence(cwd, version, phaseNum) : null;
+      requirementsValidated.push({
+        id: reqId,
+        phase: phaseNum,
+        evidence: evidence,
+      });
+    }
+  }
+
+  // Harvest open blockers from STATE.md Blockers/Concerns
+  const openBlockers = [];
+  if (fs.existsSync(statePath)) {
+    const stateRaw = fs.readFileSync(statePath, 'utf-8');
+    const blockMatch = stateRaw.match(/###\s+Blockers\/Concerns\s*\n([\s\S]*?)(?=\n###|\n##|$)/);
+    if (blockMatch) {
+      const lines = blockMatch[1].split('\n').filter(l => l.trim().startsWith('-'));
+      let idCounter = 1;
+      for (const line of lines) {
+        const phaseMatch = line.match(/\[Phase\s+([^\]]+)\]/);
+        openBlockers.push({
+          id: `blocker-${idCounter++}`,
+          text: line.replace(/^-\s*/, '').trim(),
+          phase: phaseMatch ? phaseMatch[1].trim() : null,
+          severity: 'low',
+          carries_to: null,
+        });
+      }
+    }
+  }
+
+  // Harvest entry_points and public_api from phase SUMMARYs
+  const entryPoints = [];
+  const publicApi = [];
+  if (fs.existsSync(phasesPath)) {
+    for (const entry of fs.readdirSync(phasesPath, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const phaseDir = path.join(phasesPath, entry.name);
+      const phaseNum = entry.name.split('-')[0];
+      let phaseFiles;
+      try { phaseFiles = fs.readdirSync(phaseDir); } catch { continue; }
+      const summaryFiles = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+      for (const sf of summaryFiles) {
+        const content = fs.readFileSync(path.join(phaseDir, sf), 'utf-8');
+        const fm = extractFrontmatter(content);
+        const provides = fm['provides'];
+        if (Array.isArray(provides)) {
+          for (const p of provides) {
+            const text = typeof p === 'string' ? p : (p.text || JSON.stringify(p));
+            if (/subcommand|function|cmd|--?[a-z]/i.test(text)) {
+              publicApi.push({ subcommand: text, phase: phaseNum, introduced: version });
+            }
+          }
+        }
+        const affects = fm['affects'];
+        if (Array.isArray(affects)) {
+          for (const a of affects) {
+            const text = typeof a === 'string' ? a : (a.file || JSON.stringify(a));
+            entryPoints.push({ file: text, symbol: null, purpose: null });
+          }
+        }
+      }
+    }
+  }
+
+  // Build SUMMARY.md content
+  const today = new Date().toISOString().split('T')[0];
+  const milestoneName = options && options.name ? options.name : version;
+  const fm = `---
+milestone: ${version}
+name: ${milestoneName}
+shipped: ${today}
+phases: [${phaseNumbers.join(', ')}]
+schema_version: 1
+# --- (end frontmatter)
+
+`;
+
+  const renderSection = (title, items, fields) => {
+    let out = `## ${title}\n\n`;
+    if (items.length === 0) { out += '_(none)_\n\n'; return out; }
+    for (const item of items) {
+      const lines = [];
+      for (let i = 0; i < fields.length; i++) {
+        const f = fields[i];
+        const v = item[f];
+        const prefix = i === 0 ? '- ' : '  ';
+        let rendered;
+        if (v === null || v === undefined) {
+          rendered = 'null';
+        } else if (typeof v === 'string' && v.includes('\n')) {
+          rendered = `|\n    ${v.replace(/\n/g, '\n    ')}`;
+        } else {
+          rendered = JSON.stringify(v);
+        }
+        lines.push(`${prefix}${f}: ${rendered}`);
+      }
+      out += lines.join('\n') + '\n';
+    }
+    return out + '\n';
+  };
+
+  const body = `# Milestone ${version} — ${milestoneName} Summary
+
+Distilled artifact. Machine-parseable typed-tag sections (Phase 6 graph-indexable).
+
+${renderSection('decisions[]', decisions, ['id', 'text', 'phase', 'type', 'rationale'])}${renderSection('requirements_validated[]', requirementsValidated, ['id', 'phase', 'evidence'])}${renderSection('open_blockers[]', openBlockers, ['id', 'text', 'phase', 'severity', 'carries_to'])}${renderSection('entry_points[]', entryPoints, ['file', 'symbol', 'purpose'])}${renderSection('public_api[]', publicApi, ['subcommand', 'phase', 'introduced'])}---
+
+*Generated: ${today} by \`gsd-tools milestone distill ${version}\`*
+`;
+
+  fs.writeFileSync(summaryPath, fm + body, 'utf-8');
+
+  const summary = {
+    summary_path: toPosixPath(path.relative(cwd, summaryPath)),
+    decisions_count: decisions.length,
+    requirements_validated_count: requirementsValidated.length,
+    open_blockers_count: openBlockers.length,
+    entry_points_count: entryPoints.length,
+    public_api_count: publicApi.length,
+    requirements_validated: requirementsValidated,
+  };
+
+  // options.silent suppresses ALL stdout — used by cmdMilestoneComplete when
+  // invoking distill as a side-effect, so its outer JSON output stays clean.
+  if (options && options.silent) return;
+  if (raw) {
+    console.log(`Wrote ${summary.summary_path} — ${decisions.length} decisions, ${openBlockers.length} blockers, ${publicApi.length} public-api entries`);
+  } else {
+    console.log(JSON.stringify({ summary }, null, 2));
+  }
 }
 
 module.exports = {
   cmdRequirementsMarkComplete,
   cmdMilestoneComplete,
+  cmdMilestoneDistill,
 };

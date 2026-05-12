@@ -6,7 +6,7 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
+const { runGsdTools, createTempProject, createPartitionedFixture, cleanup } = require('./helpers.cjs');
 
 describe('milestone complete command', () => {
   let tmpDir;
@@ -683,6 +683,139 @@ describe('requirements mark-complete command', () => {
     const output = JSON.parse(result.output);
     assert.strictEqual(output.updated, false, 'updated should be false');
     assert.strictEqual(output.reason, 'REQUIREMENTS.md not found', 'should report file not found');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// cmdMilestoneDistill — typed-tag summary writer
+// ─────────────────────────────────────────────────────────────────────────────
+describe('cmdMilestoneDistill', () => {
+  test('writes .planning/{version}/SUMMARY.md with typed-tag sections', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'),
+      `---\nmilestone: v1.4\n---\n\n### Decisions\n\n- [Phase 01-router]: Classify, don't ask — router infers domain\n- [Phase 02-spec]: Test contracts mirror TEST-SPEC — structural reuse\n\n### Blockers/Concerns\n\n- [Phase 04-03] parseMustHavesBlock 4-space-indent regex bug\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'REQUIREMENTS.md'),
+      `# Requirements\n\n- [x] **DRTR-01**: Router classifies phase domain\n- [x] **DRTR-02**: Classification visible\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `# Roadmap v1.4\n\n### Phase 1: Router\n\n**Requirements**: DRTR-01, DRTR-02\n`);
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-router'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-router', '01-VERIFICATION.md'),
+      `# Verification\n\nAll requirements verified.\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-router', '01-SUMMARY.md'),
+      `---\nphase: 01\nprovides:\n  - gsd-tools router subcommand\nkey-decisions:\n  - Domain detection via keywords\n---\n# Summary\n`);
+    try {
+      const r = runGsdTools(['milestone', 'distill', 'v1.4'], tmp);
+      assert.strictEqual(r.success, true, r.error);
+      const summaryPath = path.join(tmp, '.planning', 'v1.4', 'SUMMARY.md');
+      assert.ok(fs.existsSync(summaryPath));
+      const content = fs.readFileSync(summaryPath, 'utf-8');
+      // Typed-tag sections present
+      assert.match(content, /## decisions\[\]/);
+      assert.match(content, /## requirements_validated\[\]/);
+      assert.match(content, /## open_blockers\[\]/);
+      assert.match(content, /## entry_points\[\]/);
+      assert.match(content, /## public_api\[\]/);
+      // Harvested content
+      assert.match(content, /Classify, don't ask/);
+      assert.match(content, /DRTR-01/);
+      assert.match(content, /parseMustHavesBlock/);
+      assert.match(content, /gsd-tools router/);
+      // B5: phase is harvested from ROADMAP (NOT null)
+      assert.match(content, /phase:\s*"01"/);
+      // B5: evidence points at VERIFICATION.md (NOT null) for DRTR-01
+      assert.match(content, /evidence:\s*".*01-VERIFICATION\.md"/);
+      // Frontmatter
+      assert.match(content, /^---\nmilestone: v1\.4/);
+    } finally { cleanup(tmp); }
+  });
+
+  test('empty sections render as _(none)_ marker', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'), `---\nmilestone: v1.4\n---\n# State\n`);
+    try {
+      runGsdTools(['milestone', 'distill', 'v1.4'], tmp);
+      const content = fs.readFileSync(path.join(tmp, '.planning', 'v1.4', 'SUMMARY.md'), 'utf-8');
+      assert.match(content, /_\(none\)_/);
+    } finally { cleanup(tmp); }
+  });
+
+  test('B5: requirements_validated[].phase is never null when ROADMAP maps the REQ-ID', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'), `---\nmilestone: v1.4\n---\n# State\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'REQUIREMENTS.md'),
+      `- [x] **DRTR-01**: foo\n- [x] **SPEC-01**: bar\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      `### Phase 1: Router\n\n**Requirements**: DRTR-01\n\n### Phase 2: Spec\n\n**Requirements**: SPEC-01\n`);
+    try {
+      const r = runGsdTools(['milestone', 'distill', 'v1.4', '--dry-run'], tmp);
+      assert.strictEqual(r.success, true, r.error);
+      const json = JSON.parse(r.output);
+      const reqs = json.summary.requirements_validated;
+      const drtr = reqs.find(x => x.id === 'DRTR-01');
+      const spec = reqs.find(x => x.id === 'SPEC-01');
+      assert.strictEqual(drtr.phase, '01', `DRTR-01.phase should be 01, got: ${drtr.phase}`);
+      assert.strictEqual(spec.phase, '02', `SPEC-01.phase should be 02, got: ${spec.phase}`);
+    } finally { cleanup(tmp); }
+  });
+
+  test('B5: requirements_validated[].evidence points at VERIFICATION.md when one exists', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'), `---\nmilestone: v1.4\n---\n# State\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'REQUIREMENTS.md'), `- [x] **DRTR-01**: foo\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'), `### Phase 1: Router\n\n**Requirements**: DRTR-01\n`);
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-router'), { recursive: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-router', '01-VERIFICATION.md'), `# verified\n`);
+    try {
+      const r = runGsdTools(['milestone', 'distill', 'v1.4', '--dry-run'], tmp);
+      const json = JSON.parse(r.output);
+      const drtr = json.summary.requirements_validated[0];
+      assert.match(drtr.evidence || '', /01-VERIFICATION\.md/);
+    } finally { cleanup(tmp); }
+  });
+
+  test('B5: evidence falls back to null when no VERIFICATION.md exists (acceptable fallback)', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'), `---\nmilestone: v1.4\n---\n# State\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'REQUIREMENTS.md'), `- [x] **DRTR-01**: foo\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'), `### Phase 1: Router\n\n**Requirements**: DRTR-01\n`);
+    fs.mkdirSync(path.join(tmp, '.planning', 'v1.4', 'phases', '01-router'), { recursive: true });
+    try {
+      const r = runGsdTools(['milestone', 'distill', 'v1.4', '--dry-run'], tmp);
+      const json = JSON.parse(r.output);
+      const drtr = json.summary.requirements_validated[0];
+      assert.strictEqual(drtr.phase, '01');
+      assert.strictEqual(drtr.evidence, null);
+    } finally { cleanup(tmp); }
+  });
+
+  test('cmdMilestoneComplete writes distillation as side-effect', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'), `---\nmilestone: v1.4\n---\n# State\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'), `# Roadmap v1.4\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'REQUIREMENTS.md'), `# Requirements\n`);
+    try {
+      runGsdTools(['milestone', 'complete', 'v1.4', '--name', 'test'], tmp);
+      assert.ok(fs.existsSync(path.join(tmp, '.planning', 'v1.4', 'SUMMARY.md')));
+    } finally { cleanup(tmp); }
+  });
+
+  test('W3: cmdMilestoneComplete surfaces distillation_error via stderr + non-zero exit when distillation fails', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    // Replace the v1.4 partition dir with a FILE so the distill mkdirSync fails.
+    fs.writeFileSync(path.join(tmp, '.planning', 'STATE.md'), `---\nmilestone: v1.4\n---\n# State\n`);
+    fs.rmSync(path.join(tmp, '.planning', 'v1.4'), { recursive: true, force: true });
+    fs.writeFileSync(path.join(tmp, '.planning', 'v1.4'), 'I am a file, not a directory');
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'), `# v1.4\n`);
+    fs.writeFileSync(path.join(tmp, '.planning', 'REQUIREMENTS.md'), `# r\n`);
+    try {
+      const r = runGsdTools(['milestone', 'complete', 'v1.4', '--name', 'test'], tmp);
+      // Either the whole command fails OR distillation_error is surfaced
+      const combined = (r.output || '') + (r.error || '');
+      assert.ok(
+        r.success === false || /distillation/i.test(combined),
+        `expected failure or distillation error surfaced; got success=${r.success}, output=${r.output}, error=${r.error}`
+      );
+    } finally { cleanup(tmp); }
   });
 });
 

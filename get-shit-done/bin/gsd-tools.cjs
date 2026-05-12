@@ -51,8 +51,15 @@
  *
  * Milestone Operations:
  *   milestone complete <version>       Archive milestone, create MILESTONES.md
- *     [--name <name>]
- *     [--archive-phases]               Move phase dirs to milestones/vX.Y-phases/
+ *     [--name <name>]                   (also writes .planning/{version}/SUMMARY.md
+ *     [--archive-phases]                 distillation artifact as side-effect)
+ *                                       Move phase dirs to milestones/vX.Y-phases/
+ *
+ *   milestone distill <version>        Write .planning/{version}/SUMMARY.md with
+ *     [--name <name>]                   typed-tag sections: decisions[],
+ *     [--dry-run]                        requirements_validated[], open_blockers[],
+ *                                        entry_points[], public_api[] — graph-friendly
+ *                                        substrate for Phase 6 indexing.
  *
  *   migrate-to-milestone-partition     Retrofit legacy .planning/phases/ tree into
  *     [--dry-run]                       milestone-partitioned .planning/{milestone}/phases/
@@ -535,8 +542,24 @@ async function main() {
           milestoneName = nameArgs.join(' ') || null;
         }
         milestone.cmdMilestoneComplete(cwd, args[2], { name: milestoneName, archivePhases }, raw);
+      } else if (subcommand === 'distill') {
+        // milestone distill <version> [--name "Display Name"] [--dry-run]
+        // --dry-run does NOT skip the write (file is needed by callers); it
+        // forces JSON output even when --raw is set, so callers can inspect.
+        const nameIndex = args.indexOf('--name');
+        let milestoneName = null;
+        if (nameIndex !== -1) {
+          const nameArgs = [];
+          for (let i = nameIndex + 1; i < args.length; i++) {
+            if (args[i].startsWith('--')) break;
+            nameArgs.push(args[i]);
+          }
+          milestoneName = nameArgs.join(' ') || null;
+        }
+        const dryRun = args.includes('--dry-run');
+        milestone.cmdMilestoneDistill(cwd, args[2], { name: milestoneName, dryRun }, raw && !dryRun);
       } else {
-        error('Unknown milestone subcommand. Available: complete');
+        error('Unknown milestone subcommand. Available: complete, distill');
       }
       break;
     }
