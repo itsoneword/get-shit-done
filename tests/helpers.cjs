@@ -97,12 +97,69 @@ function createPartitionedFixture(milestone = 'v1.4') {
   return tmpDir;
 }
 
+// Create a temp project on the LEGACY layout WITH git history + a populated phase tree.
+// Used as the standard fixture for migrate-to-milestone-partition tests.
+function createLegacyGitFixture(milestone = 'v1.4', phaseSlugs = ['01-foo', '02-bar']) {
+  const tmpDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gsd-test-mig-'));
+  fs.mkdirSync(path.join(tmpDir, '.planning', 'phases'), { recursive: true });
+
+  execSync('git init', { cwd: tmpDir, stdio: 'pipe' });
+  execSync('git config user.email "test@test.com"', { cwd: tmpDir, stdio: 'pipe' });
+  execSync('git config user.name "Test"', { cwd: tmpDir, stdio: 'pipe' });
+  execSync('git config commit.gpgsign false', { cwd: tmpDir, stdio: 'pipe' });
+
+  fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'),
+    `---\nmilestone: ${milestone}\nstatus: active\n---\n\n# State\n\nSee .planning/phases/01-foo/01-PLAN.md\n`);
+  fs.writeFileSync(path.join(tmpDir, '.planning', 'PROJECT.md'),
+    `# Project\n\nRefs: .planning/phases/01-foo/ and .planning/phases/02-bar/\n`);
+  fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'),
+    `# Roadmap ${milestone}\n\nPhase 01: .planning/phases/01-foo\nPhase 02: .planning/phases/02-bar\n`);
+  fs.writeFileSync(path.join(tmpDir, '.planning', 'cross-phase-notes.md'),
+    `# Cross-phase notes\n\nNote: see .planning/phases/01-foo/01-SUMMARY.md\n`);
+
+  for (const slug of phaseSlugs) {
+    const dir = path.join(tmpDir, '.planning', 'phases', slug);
+    fs.mkdirSync(dir, { recursive: true });
+    const phaseNum = slug.split('-')[0];
+    fs.writeFileSync(path.join(dir, `${phaseNum}-PLAN.md`),
+      `# Plan ${phaseNum}\n\nSee .planning/phases/${slug}/${phaseNum}-PLAN.md\n`);
+  }
+
+  // todos and quick — path-shaped refs
+  fs.mkdirSync(path.join(tmpDir, '.planning', 'todos', 'pending'), { recursive: true });
+  fs.writeFileSync(path.join(tmpDir, '.planning', 'todos', 'pending', 'todo-1.md'),
+    `# TODO\n\nLinked from .planning/phases/01-foo. Also see phases/02-bar/02-PLAN.md for context.\nFree prose: see phases 1-3 for context.\n`);
+  fs.mkdirSync(path.join(tmpDir, '.planning', 'quick', '260507-u0a-test'), { recursive: true });
+  fs.writeFileSync(path.join(tmpDir, '.planning', 'quick', '260507-u0a-test', 'PLAN.md'),
+    `# Quick\n\nSee .planning/phases/01-foo for prior art.\n`);
+
+  execSync('git add -A', { cwd: tmpDir, stdio: 'pipe' });
+  execSync('git commit -m "initial"', { cwd: tmpDir, stdio: 'pipe' });
+  return tmpDir;
+}
+
+// Helper: feed stdin to runGsdTools by using a string input via spawnSync
+function runGsdToolsWithInput(args, cwd, stdinInput = '') {
+  const { spawnSync } = require('child_process');
+  const result = spawnSync(process.execPath, [TOOLS_PATH, ...args], {
+    cwd, input: stdinInput, encoding: 'utf-8',
+  });
+  return {
+    success: result.status === 0,
+    output: (result.stdout || '').trim(),
+    error: (result.stderr || '').trim(),
+    code: result.status,
+  };
+}
+
 module.exports = {
   runGsdTools,
   createTempProject,
   createTempGitProject,
   createLegacyLayoutFixture,
   createPartitionedFixture,
+  createLegacyGitFixture,
+  runGsdToolsWithInput,
   withStateMilestone,
   cleanup,
   TOOLS_PATH,
