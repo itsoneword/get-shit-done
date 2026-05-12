@@ -54,6 +54,12 @@
  *     [--name <name>]
  *     [--archive-phases]               Move phase dirs to milestones/vX.Y-phases/
  *
+ *   migrate-to-milestone-partition     Retrofit legacy .planning/phases/ tree into
+ *     [--dry-run]                       milestone-partitioned .planning/{milestone}/phases/
+ *     [--yes]                           layout. Prints plan, prompts [y/N], git mv preserves
+ *                                        history, single-commit transaction, manifest-driven
+ *                                        crash recovery.
+ *
  * Validation:
  *   validate consistency               Check phase numbering, disk/roadmap sync
  *   validate health [--repair]         Check .planning/ integrity, optionally repair
@@ -500,6 +506,16 @@ async function main() {
       } else {
         error('Unknown phase subcommand. Available: next-decimal, add, insert, remove, complete');
       }
+      break;
+    }
+
+    case 'migrate-to-milestone-partition': {
+      const migration = require('./lib/migration.cjs');
+      const opts = {
+        dryRun: args.includes('--dry-run'),
+        yes: args.includes('--yes'),
+      };
+      await migration.cmdMigrateToMilestonePartition(cwd, opts, raw);
       break;
     }
 
