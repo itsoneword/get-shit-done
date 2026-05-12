@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
-const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, output, error } = require('./core.cjs');
+const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, output, error, phasesDir, relPhasesPath } = require('./core.cjs');
 const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
 
@@ -639,7 +639,7 @@ function cmdVerifyKeyLinks(cwd, planFilePath, raw) {
 
 function cmdValidateConsistency(cwd, raw) {
   const roadmapPath = path.join(cwd, '.planning', 'ROADMAP.md');
-  const phasesDir = path.join(cwd, '.planning', 'phases');
+  const phasesRoot = phasesDir(cwd);
   const errors = [];
   const warnings = [];
 
@@ -664,7 +664,7 @@ function cmdValidateConsistency(cwd, raw) {
   // Get phases on disk
   const diskPhases = new Set();
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     const dirs = entries.filter(e => e.isDirectory()).map(e => e.name);
     for (const dir of dirs) {
       const dm = dir.match(/^(\d+[A-Z]?(?:\.\d+)*)/i);
@@ -704,11 +704,11 @@ function cmdValidateConsistency(cwd, raw) {
 
   // Check: plan numbering within phases
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     const dirs = entries.filter(e => e.isDirectory()).map(e => e.name).sort();
 
     for (const dir of dirs) {
-      const phaseFiles = fs.readdirSync(path.join(phasesDir, dir));
+      const phaseFiles = fs.readdirSync(path.join(phasesRoot, dir));
       const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md')).sort();
 
       // Extract plan numbers
@@ -739,15 +739,15 @@ function cmdValidateConsistency(cwd, raw) {
 
   // Check: frontmatter in plans has required fields
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     const dirs = entries.filter(e => e.isDirectory()).map(e => e.name);
 
     for (const dir of dirs) {
-      const phaseFiles = fs.readdirSync(path.join(phasesDir, dir));
+      const phaseFiles = fs.readdirSync(path.join(phasesRoot, dir));
       const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md'));
 
       for (const plan of plans) {
-        const content = fs.readFileSync(path.join(phasesDir, dir, plan), 'utf-8');
+        const content = fs.readFileSync(path.join(phasesRoot, dir, plan), 'utf-8');
         const fm = extractFrontmatter(content);
 
         if (!fm.wave) {
@@ -780,7 +780,7 @@ function cmdValidateHealth(cwd, options, raw) {
   const roadmapPath = path.join(planningDir, 'ROADMAP.md');
   const statePath = path.join(planningDir, 'STATE.md');
   const configPath = path.join(planningDir, 'config.json');
-  const phasesDir = path.join(planningDir, 'phases');
+  const phasesRoot = phasesDir(cwd);
 
   const errors = [];
   const warnings = [];
@@ -837,7 +837,7 @@ function cmdValidateHealth(cwd, options, raw) {
     // Get disk phases
     const diskPhases = new Set();
     try {
-      const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+      const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
       for (const e of entries) {
         if (e.isDirectory()) {
           const m = e.name.match(/^(\d+(?:\.\d+)*)/);
@@ -895,7 +895,7 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 6: Phase directory naming (NN-name format) ─────────────────────
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     for (const e of entries) {
       if (e.isDirectory() && !e.name.match(/^\d{2}(?:\.\d+)*-[\w-]+$/)) {
         addIssue('warning', 'W005', `Phase directory "${e.name}" doesn't follow NN-name format`, 'Rename to match pattern (e.g., 01-setup)');
@@ -905,10 +905,10 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 7: Orphaned plans (PLAN without SUMMARY) ───────────────────────
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     for (const e of entries) {
       if (!e.isDirectory()) continue;
-      const phaseFiles = fs.readdirSync(path.join(phasesDir, e.name));
+      const phaseFiles = fs.readdirSync(path.join(phasesRoot, e.name));
       const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
       const summaries = phaseFiles.filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
       const summaryBases = new Set(summaries.map(s => s.replace('-SUMMARY.md', '').replace('SUMMARY.md', '')));
@@ -924,15 +924,15 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 7b: Nyquist VALIDATION.md consistency ────────────────────────
   try {
-    const phaseEntries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const phaseEntries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     for (const e of phaseEntries) {
       if (!e.isDirectory()) continue;
-      const phaseFiles = fs.readdirSync(path.join(phasesDir, e.name));
+      const phaseFiles = fs.readdirSync(path.join(phasesRoot, e.name));
       const hasResearch = phaseFiles.some(f => f.endsWith('-RESEARCH.md'));
       const hasValidation = phaseFiles.some(f => f.endsWith('-VALIDATION.md'));
       if (hasResearch && !hasValidation) {
         const researchFile = phaseFiles.find(f => f.endsWith('-RESEARCH.md'));
-        const researchContent = fs.readFileSync(path.join(phasesDir, e.name, researchFile), 'utf-8');
+        const researchContent = fs.readFileSync(path.join(phasesRoot, e.name, researchFile), 'utf-8');
         if (researchContent.includes('## Validation Architecture')) {
           addIssue('warning', 'W009', `Phase ${e.name}: has Validation Architecture in RESEARCH.md but no VALIDATION.md`, 'Re-run /gsd2:plan-phase with --research to regenerate');
         }
@@ -954,7 +954,7 @@ function cmdValidateHealth(cwd, options, raw) {
 
     const diskPhases = new Set();
     try {
-      const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+      const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
       for (const e of entries) {
         if (e.isDirectory()) {
           const dm = e.name.match(/^(\d+[A-Z]?(?:\.\d+)*)/i);

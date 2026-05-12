@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error } = require('./core.cjs');
+const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, toPosixPath, output, error, phasesDir, relPhasesPath } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
 const { auditUatInternal } = require('./uat.cjs');
 const { stateSnapshotInternal } = require('./state.cjs');
@@ -319,12 +319,12 @@ function cmdInitNewMilestone(cwd, raw) {
   const config = loadConfig(cwd);
   const milestone = getMilestoneInfo(cwd);
   const latestCompleted = getLatestCompletedMilestone(cwd);
-  const phasesDir = path.join(cwd, '.planning', 'phases');
+  const phasesRoot = phasesDir(cwd);
   let phaseDirCount = 0;
 
   try {
-    if (fs.existsSync(phasesDir)) {
-      phaseDirCount = fs.readdirSync(phasesDir, { withFileTypes: true })
+    if (fs.existsSync(phasesRoot)) {
+      phaseDirCount = fs.readdirSync(phasesRoot, { withFileTypes: true })
         .filter(entry => entry.isDirectory())
         .length;
     }
@@ -640,16 +640,16 @@ function cmdInitMilestoneOp(cwd, raw) {
   // Count phases
   let phaseCount = 0;
   let completedPhases = 0;
-  const phasesDir = path.join(cwd, '.planning', 'phases');
+  const phasesRoot = phasesDir(cwd);
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     const dirs = entries.filter(e => e.isDirectory()).map(e => e.name);
     phaseCount = dirs.length;
 
     // Count phases with summaries (completed)
     for (const dir of dirs) {
       try {
-        const phaseFiles = fs.readdirSync(path.join(phasesDir, dir));
+        const phaseFiles = fs.readdirSync(path.join(phasesRoot, dir));
         const hasSummary = phaseFiles.some(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
         if (hasSummary) completedPhases++;
       } catch { /* intentionally empty */ }
@@ -688,7 +688,7 @@ function cmdInitMilestoneOp(cwd, raw) {
     roadmap_exists: pathExistsInternal(cwd, '.planning/ROADMAP.md'),
     state_exists: pathExistsInternal(cwd, '.planning/STATE.md'),
     archive_exists: pathExistsInternal(cwd, '.planning/archive'),
-    phases_dir_exists: pathExistsInternal(cwd, '.planning/phases'),
+    phases_dir_exists: pathExistsInternal(cwd, relPhasesPath(cwd)),
   };
 
   output(result, raw);
@@ -758,12 +758,12 @@ function cmdInitDocument(cwd, raw) {
     } catch { /* not a git repo or git error */ }
   }
 
-  // new_summaries: SUMMARY.md files under .planning/phases modified since last_run_iso
+  // new_summaries: SUMMARY.md files under phasesDir modified since last_run_iso
   let newSummaries = [];
   if (lastRunIso) {
     try {
       const lastRunMs = new Date(lastRunIso).getTime();
-      const phasesDir = path.join(cwd, '.planning', 'phases');
+      const phasesRoot = phasesDir(cwd);
       const walk = (dir) => {
         const out = [];
         const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -780,7 +780,7 @@ function cmdInitDocument(cwd, raw) {
         }
         return out;
       };
-      newSummaries = walk(phasesDir);
+      newSummaries = walk(phasesRoot);
     } catch { /* no phases dir */ }
   }
 
@@ -850,7 +850,8 @@ function cmdInitProgress(cwd, raw, opts = {}) {
   const milestone = getMilestoneInfo(cwd);
 
   // Analyze phases — filter to current milestone and include ROADMAP-only phases
-  const phasesDir = path.join(cwd, '.planning', 'phases');
+  const phasesRoot = phasesDir(cwd);
+  const phasesRelBase = relPhasesPath(cwd);
   const phases = [];
   let currentPhase = null;
   let nextPhase = null;
@@ -902,7 +903,7 @@ function cmdInitProgress(cwd, raw, opts = {}) {
   const seenPhaseNums = new Set();
 
   try {
-    const entries = fs.readdirSync(phasesDir, { withFileTypes: true });
+    const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
     const dirs = entries.filter(e => e.isDirectory()).map(e => e.name)
       .filter(isDirInMilestone)
       .sort((a, b) => {
@@ -918,7 +919,7 @@ function cmdInitProgress(cwd, raw, opts = {}) {
       const phaseName = match && match[2] ? match[2] : null;
       seenPhaseNums.add(phaseNumber.replace(/^0+/, '') || '0');
 
-      const phasePath = path.join(phasesDir, dir);
+      const phasePath = path.join(phasesRoot, dir);
       const phaseFiles = fs.readdirSync(phasePath);
 
       const plans = phaseFiles.filter(f => f.endsWith('-PLAN.md') || f === 'PLAN.md');
@@ -936,7 +937,7 @@ function cmdInitProgress(cwd, raw, opts = {}) {
       const phaseInfo = {
         number: phaseNumber,
         name: phaseName,
-        directory: '.planning/phases/' + dir,
+        directory: phasesRelBase + '/' + dir,
         status,
         plan_count: plans.length,
         summary_count: summaries.length,
@@ -1036,11 +1037,12 @@ function cmdInitProgress(cwd, raw, opts = {}) {
   // Recent summaries: top-3 most-recently-modified *-SUMMARY.md across milestone phases
   const recentSummaries = (() => {
     try {
-      const phasesDir = path.join(cwd, '.planning', 'phases');
+      const phasesRoot = phasesDir(cwd);
+      const phasesRel = relPhasesPath(cwd);
       const isDirInMilestone = getMilestonePhaseFilter(cwd);
       const summaryFiles = [];
 
-      const dirs = fs.readdirSync(phasesDir, { withFileTypes: true })
+      const dirs = fs.readdirSync(phasesRoot, { withFileTypes: true })
         .filter(e => e.isDirectory())
         .map(e => e.name)
         .filter(isDirInMilestone);
@@ -1048,7 +1050,7 @@ function cmdInitProgress(cwd, raw, opts = {}) {
       for (const dir of dirs) {
         const phaseMatch = dir.match(/^(\d+[A-Z]?(?:\.\d+)*)-?(.*)/i);
         const phaseNum = phaseMatch ? phaseMatch[1] : dir;
-        const phaseDir = path.join(phasesDir, dir);
+        const phaseDir = path.join(phasesRoot, dir);
         try {
           const files = fs.readdirSync(phaseDir)
             .filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
@@ -1056,7 +1058,7 @@ function cmdInitProgress(cwd, raw, opts = {}) {
             const fullPath = path.join(phaseDir, f);
             try {
               const mtimeMs = fs.statSync(fullPath).mtimeMs;
-              const relPath = '.planning/phases/' + dir + '/' + f;
+              const relPath = phasesRel + '/' + dir + '/' + f;
               // Extract plan number from filename (e.g. "04-01-SUMMARY.md" → "01")
               const planMatch = f.match(/^(\d+[A-Z]?(?:\.\d+)*)-(\d+[A-Z]?)-SUMMARY\.md$/i);
               summaryFiles.push({

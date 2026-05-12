@@ -7,12 +7,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const { output, error, getMilestonePhaseFilter } = require('./core.cjs');
+const { output, error, getMilestonePhaseFilter, phasesDir, relPhasesPath } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
 
 function auditUatInternal(cwd) {
-  const phasesDir = path.join(cwd, '.planning', 'phases');
-  if (!fs.existsSync(phasesDir)) {
+  const phasesRoot = phasesDir(cwd);
+  const phasesRel = relPhasesPath(cwd);
+  if (!fs.existsSync(phasesRoot)) {
     // Return safe empty result — no phases dir is not a fatal error for callers
     return {
       results: [],
@@ -24,7 +25,7 @@ function auditUatInternal(cwd) {
   const results = [];
 
   // Scan all phase directories
-  const dirs = fs.readdirSync(phasesDir, { withFileTypes: true })
+  const dirs = fs.readdirSync(phasesRoot, { withFileTypes: true })
     .filter(e => e.isDirectory())
     .map(e => e.name)
     .filter(isDirInMilestone)
@@ -33,7 +34,7 @@ function auditUatInternal(cwd) {
   for (const dir of dirs) {
     const phaseMatch = dir.match(/^(\d+[A-Z]?(?:\.\d+)*)/i);
     const phaseNum = phaseMatch ? phaseMatch[1] : dir;
-    const phaseDir = path.join(phasesDir, dir);
+    const phaseDir = path.join(phasesRoot, dir);
     const files = fs.readdirSync(phaseDir);
 
     // Process UAT files
@@ -45,7 +46,7 @@ function auditUatInternal(cwd) {
           phase: phaseNum,
           phase_dir: dir,
           file,
-          file_path: `.planning/phases/${dir}/${file}`,
+          file_path: `${phasesRel}/${dir}/${file}`,
           type: 'uat',
           status: (extractFrontmatter(content).status || 'unknown'),
           items,
@@ -64,7 +65,7 @@ function auditUatInternal(cwd) {
             phase: phaseNum,
             phase_dir: dir,
             file,
-            file_path: `.planning/phases/${dir}/${file}`,
+            file_path: `${phasesRel}/${dir}/${file}`,
             type: 'verification',
             status,
             items,
@@ -95,9 +96,9 @@ function auditUatInternal(cwd) {
 }
 
 function cmdAuditUat(cwd, raw) {
-  const phasesDir = path.join(cwd, '.planning', 'phases');
-  if (!fs.existsSync(phasesDir)) {
-    error('No .planning/phases directory found');
+  const phasesRoot = phasesDir(cwd);
+  if (!fs.existsSync(phasesRoot)) {
+    error(`No ${relPhasesPath(cwd)} directory found`);
   }
 
   output(auditUatInternal(cwd), raw);
