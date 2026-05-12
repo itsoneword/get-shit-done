@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 05-01-PLAN.md (phasesDir helper + CLI partition-aware refactor)
-last_updated: "2026-05-12T14:22:18.542Z"
+stopped_at: Completed 05-02-PLAN.md (migrate-to-milestone-partition subcommand)
+last_updated: "2026-05-12T14:38:09.633Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 ## Current Position
 
 Phase: 05 (milestone-versioned-phase-ids) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Project Reference
 
@@ -75,6 +75,10 @@ Recent decisions affecting current work:
 - [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] phasesDir(cwd) is the single chokepoint; planningPaths().phases is a getter that delegates to it, cascading partition-awareness to ~13 indirect callers
 - [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] phasesDir back-compat fallback: when STATE.md milestone is set but partitioned dir doesn't exist AND legacy dir exists, return legacy (lets retrofit migration run without breakage)
 - [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] Init JSON contract: milestone_root/partition_root/legacy_layout_detected/prior_milestones[] are additive fields spread into result objects — existing fields unchanged
+- [Phase 05-02]: Manifest deletion happens BEFORE git add — manifest is a recovery scratch file, not a commit artifact
+- [Phase 05-02]: migration.cjs reuses buildMilestoneContext(cwd).milestone_root for STATE.md milestone lookup; also references extractCurrentMilestone — no third local parser (RESEARCH.md §3 anti-pattern)
+- [Phase 05-02]: Pre-flight clean-tree check scoped to .planning/ only (not full repo) — user may have unrelated WIP in src/
+- [Phase 05-02]: PATTERN_BARE swept only inside todos/ and quick/; root files (PROJECT/ROADMAP/STATE/cross-phase-notes) only get FULL_PATH rewrites — protects free prose like 'see phases 1-3'
 
 ### Pending Todos
 
@@ -96,6 +100,7 @@ yet.
 |---|-------------|------|--------|-----------|
 | 260507-u0a | Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag | 2026-05-07 | 8597abe | [260507-u0a-consolidate-gsd2-progress-into-single-in](./quick/260507-u0a-consolidate-gsd2-progress-into-single-in/) |
 | Phase 05-milestone-versioned-phase-ids P01 | 27 | 3 tasks | 11 files |
+| Phase 05-milestone-versioned-phase-ids P02 | 10min | 2 tasks | 4 files |
 
 ### Roadmap Evolution
 
@@ -104,7 +109,7 @@ yet.
 
 ## Session Continuity
 
-Last session: 2026-05-12T14:22:18.538Z
+Last session: 2026-05-12T14:38:09.629Z
 Last activity: 2026-05-12
-Stopped at: Completed 05-01-PLAN.md (phasesDir helper + CLI partition-aware refactor)
+Stopped at: Completed 05-02-PLAN.md (migrate-to-milestone-partition subcommand)
 Resume file: None
