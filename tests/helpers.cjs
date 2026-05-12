@@ -72,4 +72,38 @@ function cleanup(tmpDir) {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
-module.exports = { runGsdTools, createTempProject, createTempGitProject, cleanup, TOOLS_PATH };
+// Write minimal STATE.md frontmatter with milestone: <version>
+function withStateMilestone(tmpDir, version) {
+  const statePath = path.join(tmpDir, '.planning', 'STATE.md');
+  const content = `---\nmilestone: ${version}\nmilestone_name: test\nstatus: unknown\n---\n\n# State\n`;
+  fs.writeFileSync(statePath, content, 'utf-8');
+  return statePath;
+}
+
+// Create temp project in LEGACY layout: .planning/phases/<NN-slug>/...
+// (i.e. pre-Phase-5 shape — no milestone partition)
+function createLegacyLayoutFixture(milestone = 'v1.0') {
+  const tmpDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gsd-test-'));
+  fs.mkdirSync(path.join(tmpDir, '.planning', 'phases'), { recursive: true });
+  withStateMilestone(tmpDir, milestone);
+  return tmpDir;
+}
+
+// Create temp project in PARTITIONED layout: .planning/<milestone>/phases/<NN-slug>/...
+function createPartitionedFixture(milestone = 'v1.4') {
+  const tmpDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'gsd-test-'));
+  fs.mkdirSync(path.join(tmpDir, '.planning', milestone, 'phases'), { recursive: true });
+  withStateMilestone(tmpDir, milestone);
+  return tmpDir;
+}
+
+module.exports = {
+  runGsdTools,
+  createTempProject,
+  createTempGitProject,
+  createLegacyLayoutFixture,
+  createPartitionedFixture,
+  withStateMilestone,
+  cleanup,
+  TOOLS_PATH,
+};

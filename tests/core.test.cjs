@@ -10,7 +10,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { createTempProject, cleanup } = require('./helpers.cjs');
+const { createTempProject, createLegacyLayoutFixture, createPartitionedFixture, withStateMilestone, cleanup } = require('./helpers.cjs');
 
 const {
   loadConfig,
@@ -27,6 +27,9 @@ const {
   getRoadmapPhaseInternal,
   searchPhaseInDir,
   findPhaseInternal,
+  phasesDir,
+  relPhasesPath,
+  planningPaths,
 } = require('../get-shit-done/bin/lib/core.cjs');
 
 // ─── loadConfig ────────────────────────────────────────────────────────────────
@@ -896,5 +899,68 @@ describe('stale hook filter', () => {
 
     assert.ok(!filtered.includes('guard-edits-outside-project.js'), 'must not include user hooks');
     assert.ok(!filtered.includes('my-custom-hook.js'), 'must not include non-gsd hooks');
+  });
+});
+
+// ─── phasesDir partition-aware resolution (Phase 05) ──────────────────────────
+
+describe('phasesDir partition-aware resolution', () => {
+  test('returns partitioned path when .planning/{milestone}/phases/ exists', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    try {
+      const dir = phasesDir(tmp);
+      assert.strictEqual(dir, path.join(tmp, '.planning', 'v1.4', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
+  test('falls back to legacy .planning/phases/ when partitioned dir missing', () => {
+    const tmp = createLegacyLayoutFixture('v1.4');
+    try {
+      const dir = phasesDir(tmp);
+      assert.strictEqual(dir, path.join(tmp, '.planning', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
+  test('returns partitioned path when neither dir exists but milestone is set', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-test-'));
+    fs.mkdirSync(path.join(tmp, '.planning'), { recursive: true });
+    withStateMilestone(tmp, 'v2.0');
+    try {
+      const dir = phasesDir(tmp);
+      assert.strictEqual(dir, path.join(tmp, '.planning', 'v2.0', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
+  test('returns legacy path when STATE.md missing entirely', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-test-'));
+    fs.mkdirSync(path.join(tmp, '.planning', 'phases'), { recursive: true });
+    try {
+      const dir = phasesDir(tmp);
+      assert.strictEqual(dir, path.join(tmp, '.planning', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
+  test('planningPaths(cwd).phases is partition-aware (getter)', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    try {
+      const paths = planningPaths(tmp);
+      assert.strictEqual(paths.phases, path.join(tmp, '.planning', 'v1.4', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
+  test('relPhasesPath returns posix-style partitioned relative path', () => {
+    const tmp = createPartitionedFixture('v1.4');
+    try {
+      const rel = relPhasesPath(tmp);
+      assert.strictEqual(rel, '.planning/v1.4/phases');
+    } finally { cleanup(tmp); }
+  });
+
+  test('relPhasesPath returns legacy relative path when only legacy exists', () => {
+    const tmp = createLegacyLayoutFixture('v1.4');
+    try {
+      const rel = relPhasesPath(tmp);
+      assert.strictEqual(rel, '.planning/phases');
+    } finally { cleanup(tmp); }
   });
 });

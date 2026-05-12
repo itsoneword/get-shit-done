@@ -274,9 +274,57 @@ function planningPaths(cwd) {
     roadmap: path.join(base, 'ROADMAP.md'),
     project: path.join(base, 'PROJECT.md'),
     config: path.join(base, 'config.json'),
-    phases: path.join(base, 'phases'),
+    get phases() { return phasesDir(cwd); },
     requirements: path.join(base, 'REQUIREMENTS.md'),
   };
+}
+
+/**
+ * Return the resolved phases directory for the project.
+ *
+ * Resolution order:
+ *   1. If STATE.md frontmatter has `milestone: vX.Y` AND `.planning/{milestone}/phases/` exists → return that.
+ *   2. Else if legacy `.planning/phases/` exists → return legacy path (back-compat).
+ *   3. Else if milestone is set (but partitioned dir not yet created) → return the partitioned path anyway (writers create it).
+ *   4. Else → return legacy `.planning/phases/` (writers create it; pre-Phase-5 default).
+ *
+ * @param {string} cwd
+ * @returns {string} absolute path to phases dir
+ */
+function phasesDir(cwd) {
+  const planning = path.join(cwd, '.planning');
+  const legacy = path.join(planning, 'phases');
+  let milestone = null;
+  try {
+    const statePath = path.join(planning, 'STATE.md');
+    if (fs.existsSync(statePath)) {
+      const stateRaw = fs.readFileSync(statePath, 'utf-8');
+      const m = stateRaw.match(/^milestone:\s*(.+)$/m);
+      if (m) milestone = m[1].trim();
+    }
+  } catch { /* fall through */ }
+  if (milestone) {
+    const partitioned = path.join(planning, milestone, 'phases');
+    if (fs.existsSync(partitioned)) return partitioned;
+    // Partitioned dir missing — legacy fallback if legacy tree exists
+    if (fs.existsSync(legacy)) return legacy;
+    // Neither exists → return partitioned (writer-creates)
+    return partitioned;
+  }
+  return legacy;
+}
+
+/**
+ * Return the POSIX-style relative path corresponding to phasesDir(cwd).
+ * Used when emitting JSON output like `directory: '.planning/phases/01-foo'`.
+ *
+ * @param {string} cwd
+ * @returns {string} e.g. '.planning/v1.4/phases' or '.planning/phases'
+ */
+function relPhasesPath(cwd) {
+  const abs = phasesDir(cwd);
+  const rel = path.relative(cwd, abs);
+  return toPosixPath(rel);
 }
 
 // ─── Phase utilities ──────────────────────────────────────────────────────────
@@ -385,11 +433,12 @@ function searchPhaseInDir(baseDir, relBase, normalized) {
 function findPhaseInternal(cwd, phase) {
   if (!phase) return null;
 
-  const phasesDir = path.join(cwd, '.planning', 'phases');
+  const dir = phasesDir(cwd);
+  const relBase = relPhasesPath(cwd);
   const normalized = normalizePhaseName(phase);
 
   // Search current phases first
-  const current = searchPhaseInDir(phasesDir, '.planning/phases', normalized);
+  const current = searchPhaseInDir(dir, relBase, normalized);
   if (current) return current;
 
   // Search archived milestone phases (newest first)
@@ -814,4 +863,6 @@ module.exports = {
   MODEL_ALIAS_MAP,
   planningDir,
   planningPaths,
+  phasesDir,
+  relPhasesPath,
 };
