@@ -352,7 +352,8 @@ Create CONTEXT.md. Use `phase_dir`, `phase_slug`, `padded_phase` from init.
 
 If `phase_dir` is null:
 ```bash
-mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
+# partition_root is partition-aware (`.planning/{milestone}` or legacy `.planning`)
+mkdir -p "${partition_root}/phases/${padded_phase}-${phase_slug}"
 ```
 
 **File:** `${phase_dir}/${padded_phase}-CONTEXT.md`
@@ -466,7 +467,7 @@ Write file.
 Present summary and next steps:
 
 ```
-Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
+Created: ${phase_dir}/${PADDED_PHASE}-CONTEXT.md  (partition-aware path)
 
 ## Decisions Captured
 

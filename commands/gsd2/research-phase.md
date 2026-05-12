@@ -56,7 +56,7 @@ PHASE_INFO=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-ph
 ## 2. Check Existing Research
 
 ```bash
-ls .planning/phases/${PHASE}-*/RESEARCH.md 2>/dev/null
+ls .planning/**/phases/${PHASE}-*/RESEARCH.md 2>/dev/null
 ```
 
 **If exists:** Offer: 1) Update research, 2) View existing, 3) Skip. Wait for response.
@@ -130,7 +130,7 @@ Before declaring complete, verify:
 </quality_gate>
 
 <output>
-Write to: .planning/phases/${PHASE}-{slug}/${PHASE}-RESEARCH.md
+Write to: ${phase_dir}/${PHASE}-RESEARCH.md  (resolved partition-aware via init JSON)
 </output>
 ```
 
@@ -160,7 +160,7 @@ Continue research for Phase {phase_number}: {phase_name}
 
 <prior_state>
 <files_to_read>
-- .planning/phases/${PHASE}-{slug}/${PHASE}-RESEARCH.md (Existing research)
+- ${phase_dir}/${PHASE}-RESEARCH.md (Existing research; phase_dir is partition-aware from init JSON)
 </files_to_read>
 </prior_state>
 

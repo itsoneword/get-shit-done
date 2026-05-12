@@ -102,7 +102,7 @@ Add diagnosis fields to each gap in UAT.md:
 
 Update frontmatter status to "diagnosed". Commit:
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs({phase_num}): add root causes from diagnosis" --files ".planning/phases/XX-name/{phase_num}-UAT.md"
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs({phase_num}): add root causes from diagnosis" --files "${phase_dir}/{phase_num}-UAT.md"
 ```
 </step>
 

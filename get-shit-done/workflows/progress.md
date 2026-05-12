@@ -94,16 +94,18 @@ CONTEXT: [✓ if has_context | - if not] (from $INIT.phases[current].has_context
 **Step 1: Count plans, summaries, and issues in current phase**
 
 ```bash
-ls -1 .planning/phases/[current-phase-dir]/*-PLAN.md 2>/dev/null | wc -l
-ls -1 .planning/phases/[current-phase-dir]/*-SUMMARY.md 2>/dev/null | wc -l
-ls -1 .planning/phases/[current-phase-dir]/*-UAT.md 2>/dev/null | wc -l
+# ${phase_dir} resolves to `.planning/{milestone}/phases/{current-phase-dir}` (partitioned)
+# or `.planning/phases/{current-phase-dir}` (legacy fallback) — comes from init JSON.
+ls -1 ${phase_dir}/*-PLAN.md 2>/dev/null | wc -l
+ls -1 ${phase_dir}/*-SUMMARY.md 2>/dev/null | wc -l
+ls -1 ${phase_dir}/*-UAT.md 2>/dev/null | wc -l
 ```
 
 **Step 1.5: Check UAT status**
 
 ```bash
 # diagnosed = gaps needing fixes; partial = incomplete testing
-grep -l "status: diagnosed\|status: partial" .planning/phases/[current-phase-dir]/*-UAT.md 2>/dev/null
+grep -l "status: diagnosed\|status: partial" ${phase_dir}/*-UAT.md 2>/dev/null
 ```
 
 Track: `uat_with_gaps` (diagnosed), `uat_partial` (partial).

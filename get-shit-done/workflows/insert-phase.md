@@ -56,7 +56,7 @@ The CLI handles:
 - Verifying target phase exists in ROADMAP.md
 - Calculating next decimal phase number (checking existing decimals on disk)
 - Generating slug from description
-- Creating the phase directory (`.planning/phases/{N.M}-{slug}/`)
+- Creating the phase directory (`${partition_root}/phases/{N.M}-{slug}/` — partition-aware; legacy fallback `.planning/phases/{N.M}-{slug}/`)
 - Inserting the phase entry into ROADMAP.md after the target phase with (INSERTED) marker
 
 Extract from result: `phase_number`, `after_phase`, `name`, `slug`, `directory`.
@@ -80,7 +80,7 @@ Present completion summary:
 ```
 Phase {decimal_phase} inserted after Phase {after_phase}:
 - Description: {description}
-- Directory: .planning/phases/{decimal-phase}-{slug}/
+- Directory: ${partition_root}/phases/{decimal-phase}-{slug}/  (legacy fallback: .planning/phases/{decimal-phase}-{slug}/)
 - Status: Not planned yet
 - Marker: (INSERTED) - indicates urgent work
 

@@ -111,7 +111,7 @@ WHY: Catches race conditions and silent seed failures that pass against warm sta
 mkdir -p "$PHASE_DIR"
 ```
 
-Build test list from extracted deliverables. Write to `.planning/phases/XX-name/{phase_num}-UAT.md`:
+Build test list from extracted deliverables. Write to `${phase_dir}/{phase_num}-UAT.md` (partition-aware path resolved via init):
 
 ```markdown
 ---
@@ -266,7 +266,7 @@ else:
 Update frontmatter status/updated. Clear Current Test to `[testing complete]`.
 
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): complete UAT - {passed} passed, {issues} issues" --files ".planning/phases/XX-name/{phase_num}-UAT.md"
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "test({phase_num}): complete UAT - {passed} passed, {issues} issues" --files "${phase_dir}/{phase_num}-UAT.md"
 ```
 
 ```

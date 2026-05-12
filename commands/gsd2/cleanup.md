@@ -5,7 +5,7 @@ description: Archive accumulated phase directories from completed milestones
 <objective>
 Archive phase directories from completed milestones into `.planning/milestones/v{X.Y}-phases/`.
 
-Use when `.planning/phases/` has accumulated directories from past milestones.
+Use when the phases tree (legacy `.planning/**/phases/` or partitioned `.planning/{milestone}/phases/`) has accumulated directories from past milestones.
 </objective>
 
 <execution_context>

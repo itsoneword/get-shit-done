@@ -127,7 +127,7 @@ Build a preliminary list of candidate subsystems from these sources (agent-assis
 
 1. `.planning/codebase/STRUCTURE.md` if present — extract top-level modules.
 2. Top-level code directories — e.g., `src/`, `bin/`, `workflows/`, `agents/`, `commands/`, `hooks/`, `tests/`.
-3. Completed phases in `.planning/phases/` — each phase with a `SUMMARY.md` may seed one subsystem named after the phase slug.
+3. Completed phases under `.planning/**/phases/` (legacy fallback `.planning/phases/`) — each phase with a `SUMMARY.md` may seed one subsystem named after the phase slug.
 
 Deduplicate and produce an array `DISCOVERED_SUBSYSTEMS` of objects:
 ```
@@ -272,7 +272,7 @@ Do NOT present a "next up" suggestion — `/gsd2:document` is an on-demand comma
 
 <anti_patterns>
 
-The following anti-patterns are drawn from `.planning/phases/03-documentation-agent/03-RESEARCH.md` (Pitfalls 1-6). Each is a "do not" rule with the guard that prevents it.
+The following anti-patterns are drawn from the documentation-agent phase RESEARCH.md under `.planning/**/phases/03-documentation-agent/03-RESEARCH.md` (Pitfalls 1-6). Each is a "do not" rule with the guard that prevents it.
 
 1. **Do not allow ambiguous wikilinks.** Mapper and updater prompts require full subsystem slugs in wikilinks (`[[auth-service]]`, not `[[auth]]`); slugs must be globally unique within `docs/system/`. The `discover_subsystems` step dedupes and appends a numeric suffix on collision. [Pitfall 1]
 

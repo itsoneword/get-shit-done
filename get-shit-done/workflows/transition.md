@@ -37,8 +37,8 @@ Parse current position to verify correct phase. Note accumulated context needing
 <step name="verify_completion">
 
 ```bash
-ls .planning/phases/XX-current/*-PLAN.md 2>/dev/null | sort
-ls .planning/phases/XX-current/*-SUMMARY.md 2>/dev/null | sort
+ls .planning/**/phases/XX-current/*-PLAN.md 2>/dev/null | sort
+ls .planning/**/phases/XX-current/*-SUMMARY.md 2>/dev/null | sort
 ```
 
 If PLAN count == SUMMARY count → all complete. Otherwise → incomplete.
@@ -55,7 +55,7 @@ Check for verification debt:
 
 ```bash
 OUTSTANDING=""
-for f in .planning/phases/XX-current/*-UAT.md .planning/phases/XX-current/*-VERIFICATION.md; do
+for f in .planning/**/phases/XX-current/*-UAT.md .planning/**/phases/XX-current/*-VERIFICATION.md; do
   [ -f "$f" ] || continue
   grep -q "result: pending\|result: blocked\|status: partial\|status: human_needed\|status: diagnosed" "$f" && OUTSTANDING="$OUTSTANDING\n$(basename $f)"
 done
@@ -118,7 +118,7 @@ Wait for user decision.
 <step name="cleanup_handoff">
 
 ```bash
-ls .planning/phases/XX-current/.continue-here*.md 2>/dev/null
+ls .planning/**/phases/XX-current/.continue-here*.md 2>/dev/null
 ```
 
 If found, delete them — phase complete, handoffs are stale.
@@ -148,7 +148,7 @@ Generated prompts stay in place. The `completed/` subfolder pattern handles arch
 Read phase summaries and evolve PROJECT.md:
 
 ```bash
-cat .planning/phases/XX-current/*-SUMMARY.md
+cat .planning/**/phases/XX-current/*-SUMMARY.md
 ```
 
 Assess and update:
@@ -235,7 +235,7 @@ ROADMAP=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 **Route A: More phases remain**
 
 ```bash
-ls .planning/phases/*[X+1]*/*-CONTEXT.md 2>/dev/null
+ls .planning/**/phases/*[X+1]*/*-CONTEXT.md 2>/dev/null
 ```
 
 <if mode="yolo">

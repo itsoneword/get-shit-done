@@ -66,7 +66,7 @@ Present removal summary and confirm:
 Removing Phase {target}: {Name}
 
 This will:
-- Delete: .planning/phases/{target}-{slug}/
+- Delete: ${partition_root}/phases/{target}-{slug}/  (legacy fallback: .planning/phases/{target}-{slug}/)
 - Renumber all subsequent phases
 - Update: ROADMAP.md, STATE.md
 
@@ -116,7 +116,7 @@ Present completion summary:
 Phase {target} ({original-name}) removed.
 
 Changes:
-- Deleted: .planning/phases/{target}-{slug}/
+- Deleted: ${partition_root}/phases/{target}-{slug}/  (legacy fallback: .planning/phases/{target}-{slug}/)
 - Renumbered: {N} directories and {M} files
 - Updated: ROADMAP.md, STATE.md
 - Committed: chore: remove phase {target} ({original-name})

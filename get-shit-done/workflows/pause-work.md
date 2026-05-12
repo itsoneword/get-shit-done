@@ -13,7 +13,7 @@ Find current phase directory from most recently modified files:
 
 ```bash
 # Find most recent phase directory with work
-ls -lt .planning/phases/*/PLAN.md 2>/dev/null | head -1 | grep -oP 'phases/\K[^/]+'
+ls -lt .planning/**/phases/*/PLAN.md 2>/dev/null | head -1 | grep -oP 'phases/\K[^/]+'
 ```
 
 If no active phase detected, ask user which phase they're pausing work on.
@@ -36,7 +36,7 @@ Ask user for clarifications if needed via conversational questions.
 **Also inspect SUMMARY.md files for false completions:**
 ```bash
 # Check for placeholder content in existing summaries
-grep -l "To be filled\|placeholder\|TBD" .planning/phases/*/*.md 2>/dev/null
+grep -l "To be filled\|placeholder\|TBD" .planning/**/phases/*/*.md 2>/dev/null
 ```
 Report any summaries with placeholder content as incomplete items.
 </step>
@@ -85,7 +85,7 @@ timestamp=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" current-timesta
 </step>
 
 <step name="write">
-**Write handoff to `.planning/phases/XX-name/.continue-here.md`:**
+**Write handoff to `${phase_dir}/.continue-here.md` (partition-aware; legacy fallback `.planning/phases/XX-name/.continue-here.md`):**
 
 ```markdown
 ---
@@ -143,7 +143,7 @@ timestamp=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" current-timesta
 
 <step name="commit">
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "wip: [phase-name] paused at task [X]/[Y]" --files .planning/phases/*/.continue-here.md .planning/HANDOFF.json
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "wip: [phase-name] paused at task [X]/[Y]" --files .planning/**/phases/*/.continue-here.md .planning/HANDOFF.json
 ```
 </step>
 
@@ -151,7 +151,7 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "wip: [phase-name] p
 ```
 ✓ Handoff created:
   - .planning/HANDOFF.json (structured, machine-readable)
-  - .planning/phases/[XX-name]/.continue-here.md (human-readable)
+  - ${phase_dir}/.continue-here.md (human-readable; legacy fallback path .planning/phases/[XX-name]/.continue-here.md)
 
 Current state:
 

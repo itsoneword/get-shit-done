@@ -43,9 +43,9 @@ Extract from PROJECT.md: what this is, requirements (validated/active/out-of-sco
 ```bash
 cat .planning/HANDOFF.json 2>/dev/null
 
-ls .planning/phases/*/.continue-here*.md 2>/dev/null
+ls .planning/**/phases/*/.continue-here*.md 2>/dev/null
 
-for plan in .planning/phases/*/*-PLAN.md; do
+for plan in .planning/**/phases/*/*-PLAN.md; do
   summary="${plan/PLAN/SUMMARY}"
   [ ! -f "$summary" ] && echo "Incomplete: $plan"
 done 2>/dev/null
@@ -124,7 +124,7 @@ elif phase ready to exec  → execute next plan | review plan first
 <step name="offer_options">
 Check CONTEXT.md before offering phase planning:
 ```bash
-ls .planning/phases/XX-name/*-CONTEXT.md 2>/dev/null
+ls .planning/**/phases/XX-name/*-CONTEXT.md 2>/dev/null
 ```
 
 ```

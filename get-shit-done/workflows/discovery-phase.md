@@ -54,7 +54,7 @@ For: Choosing between options, new external integration. (15-30 min)
 6. Create DISCOVERY.md per ~/.claude/get-shit-done/templates/discovery.md: summary+recommendation, key findings, code examples, confidence (target MEDIUM-HIGH).
 7. Return to plan-phase.md.
 
-Output: `.planning/phases/XX-name/DISCOVERY.md`
+Output: `${phase_dir}/DISCOVERY.md`
 </step>
 
 <step name="level_3_deep_dive">
@@ -69,7 +69,7 @@ For: Architectural decisions, novel problems, high-risk choices. (1+ hour)
 7. Confidence gate: if overall confidence is LOW → present options before proceeding (see confidence_gate step).
 8. Return to plan-phase.md.
 
-Output: `.planning/phases/XX-name/DISCOVERY.md` (comprehensive)
+Output: `${phase_dir}/DISCOVERY.md` (comprehensive)
 </step>
 
 <step name="confidence_gate">
@@ -98,7 +98,7 @@ if open_questions present:
 
 <step name="offer_next">
 ```
-Discovery complete: .planning/phases/XX-name/DISCOVERY.md
+Discovery complete: ${phase_dir}/DISCOVERY.md
 Recommendation: [one-liner]
 Confidence: [level]
 

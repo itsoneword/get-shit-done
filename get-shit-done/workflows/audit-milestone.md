@@ -79,7 +79,7 @@ For each phase's VERIFICATION.md extract: Requirement | Source Plan | Descriptio
 ### 5c. Extract SUMMARY.md Frontmatter
 
 ```bash
-for summary in .planning/phases/*-*/*-SUMMARY.md; do
+for summary in .planning/**/phases/*-*/*-SUMMARY.md; do
   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" summary-extract "$summary" --fields requirements_completed | jq -r '.requirements_completed'
 done
 ```

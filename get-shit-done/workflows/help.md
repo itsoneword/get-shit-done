@@ -94,13 +94,13 @@ Usage: `/gsd2:list-phase-assumptions 3`
 **`/gsd2:plan-phase <number>`**
 Create detailed execution plan for a specific phase.
 
-- Generates `.planning/phases/XX-phase-name/XX-YY-PLAN.md`
+- Generates `.planning/{milestone}/phases/XX-phase-name/XX-YY-PLAN.md` (legacy fallback: `.planning/phases/...`)
 - Breaks phase into concrete, actionable tasks
 - Includes verification criteria and success measures
 - Multiple plans per phase supported (XX-01, XX-02, etc.)
 
 Usage: `/gsd2:plan-phase 1`
-Result: Creates `.planning/phases/01-foundation/01-01-PLAN.md`
+Result: Creates `.planning/{milestone}/phases/01-foundation/01-01-PLAN.md` (legacy fallback `.planning/phases/01-foundation/01-01-PLAN.md`)
 
 **PRD Express Path:** Pass `--prd path/to/requirements.md` to skip discuss-phase entirely. Your PRD becomes locked decisions in CONTEXT.md. Useful when you already have clear acceptance criteria.
 
@@ -425,10 +425,10 @@ Usage: `/gsd2:set-profile budget`
 **`/gsd2:cleanup`**
 Archive accumulated phase directories from completed milestones.
 
-- Identifies phases from completed milestones still in `.planning/phases/`
+- Identifies phases from completed milestones still under `.planning/**/phases/` (legacy fallback `.planning/phases/`)
 - Shows dry-run summary before moving anything
 - Moves phase dirs to `.planning/milestones/v{X.Y}-phases/`
-- Use after multiple milestones to reduce `.planning/phases/` clutter
+- Use after multiple milestones to reduce phase-tree clutter (legacy fallback path: `.planning/phases/`)
 
 Usage: `/gsd2:cleanup`
 

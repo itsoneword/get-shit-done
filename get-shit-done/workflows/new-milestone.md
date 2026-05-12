@@ -114,10 +114,11 @@ If `phase_dir_count > 0` and `phase_archive_path` available:
 
 ```bash
 mkdir -p "${phase_archive_path}"
-find .planning/phases -mindepth 1 -maxdepth 1 -type d -exec mv {} "${phase_archive_path}/" \;
+# Partition-aware: ${partition_root}/phases is `.planning/{milestone}/phases` (partitioned) or `.planning/phases` (legacy fallback).
+find "${partition_root}/phases" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${phase_archive_path}/" \;
 ```
 
-Verify `.planning/phases/` is clear before continuing.
+Verify `${partition_root}/phases` (legacy: `.planning/phases`) is clear before continuing.
 
 If `phase_dir_count > 0` but `phase_archive_path` missing: Stop — tell user to complete/archive previous milestone first, then rerun with `--reset-phase-numbers`.
 

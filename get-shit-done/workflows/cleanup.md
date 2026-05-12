@@ -2,13 +2,15 @@
 
 Archive accumulated phase directories from completed milestones into `.planning/milestones/v{X.Y}-phases/`. Identifies which phases belong to each completed milestone, shows a dry-run summary, and moves directories on confirmation.
 
+> **Note (v1.4.5+):** This workflow targets the legacy `.planning/phases/` tree. Once a project is migrated to the milestone-partition layout, cleanup operates on `.planning/{milestone}/phases/` via the CLI's partition-aware helpers. Paths below resolve to either layout via `**` globs or the `${partition_root}` placeholder.
+
 </purpose>
 
 <required_reading>
 
 1. `.planning/MILESTONES.md`
 2. `.planning/milestones/` directory listing
-3. `.planning/phases/` directory listing
+3. legacy fallback phase tree: `.planning/**/phases/` directory listing
 
 </required_reading>
 
@@ -52,13 +54,13 @@ cat .planning/milestones/v{X.Y}-ROADMAP.md
 
 Extract phase numbers and names from the archived roadmap (e.g., Phase 1: Foundation, Phase 2: Auth).
 
-Check which of those phase directories still exist in `.planning/phases/`:
+Check which of those phase directories still exist under `.planning/**/phases/` (legacy fallback `.planning/phases/`):
 
 ```bash
-ls -d .planning/phases/*/ 2>/dev/null
+ls -d .planning/**/phases/*/ 2>/dev/null
 ```
 
-Match phase directories to milestone membership. Only include directories that still exist in `.planning/phases/`.
+Match phase directories to milestone membership. Only include directories that still exist under `.planning/**/phases/` (legacy fallback path).
 
 </step>
 
@@ -110,7 +112,7 @@ mkdir -p .planning/milestones/v{X.Y}-phases
 For each phase directory belonging to this milestone:
 
 ```bash
-mv .planning/phases/{dir} .planning/milestones/v{X.Y}-phases/
+mv "${partition_root}/phases/{dir}" .planning/milestones/v{X.Y}-phases/  # legacy fallback path: .planning/phases/{dir}
 ```
 
 Repeat for all milestones in the cleanup set.
@@ -122,7 +124,7 @@ Repeat for all milestones in the cleanup set.
 Commit the changes:
 
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "chore: archive phase directories from completed milestones" --files .planning/milestones/ .planning/phases/
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "chore: archive phase directories from completed milestones" --files .planning/milestones/ .planning/**/phases/
 ```
 
 </step>
@@ -134,7 +136,7 @@ Archived:
 {For each milestone}
 - v{X.Y}: {N} phase directories → .planning/milestones/v{X.Y}-phases/
 
-.planning/phases/ cleaned up.
+phase tree under .planning/**/phases/ cleaned up (legacy fallback path: .planning/phases/).
 ```
 
 </step>

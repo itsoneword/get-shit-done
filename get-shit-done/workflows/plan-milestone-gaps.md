@@ -101,7 +101,7 @@ grep -c "Pending" .planning/REQUIREMENTS.md
 ## 8. Create Phase Directories
 
 ```bash
-mkdir -p ".planning/phases/{NN}-{name}"
+mkdir -p "${partition_root}/phases/{NN}-{name}"  # legacy fallback resolves to .planning/phases
 ```
 
 ## 9. Commit

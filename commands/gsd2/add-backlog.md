@@ -27,11 +27,12 @@ the normal phase sequence and accumulate context over time.
    ```
    If no 999.x phases exist, start at 999.1.
 
-3. **Create the phase directory:**
+3. **Create the phase directory** (resolves to partitioned `.planning/{milestone}/phases/` when STATE.md has a milestone, else `.planning/phases/` legacy fallback):
    ```bash
    SLUG=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" generate-slug "$ARGUMENTS")
-   mkdir -p ".planning/phases/${NEXT}-${SLUG}"
-   touch ".planning/phases/${NEXT}-${SLUG}/.gitkeep"
+   PARTITION_ROOT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op --raw 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);process.stdout.write(j.partition_root||'.planning')}catch{process.stdout.write('.planning')}}")
+   mkdir -p "${PARTITION_ROOT}/phases/${NEXT}-${SLUG}"
+   touch "${PARTITION_ROOT}/phases/${NEXT}-${SLUG}/.gitkeep"
    ```
 
 4. **Add to ROADMAP.md** under a `## Backlog` section. If the section doesn't exist, create it at the end:
@@ -51,7 +52,7 @@ the normal phase sequence and accumulate context over time.
 
 5. **Commit:**
    ```bash
-   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: add backlog item ${NEXT} — ${ARGUMENTS}" --files .planning/ROADMAP.md ".planning/phases/${NEXT}-${SLUG}/.gitkeep"
+   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: add backlog item ${NEXT} — ${ARGUMENTS}" --files .planning/ROADMAP.md "${PARTITION_ROOT}/phases/${NEXT}-${SLUG}/.gitkeep"
    ```
 
 6. **Report:**
@@ -59,7 +60,7 @@ the normal phase sequence and accumulate context over time.
    ## 📋 Backlog Item Added
 
    Phase {NEXT}: {description}
-   Directory: .planning/phases/{NEXT}-{slug}/
+   Directory: {partition_root}/phases/{NEXT}-{slug}/
 
    This item lives in the backlog parking lot.
    Use /gsd2:discuss-phase {NEXT} to explore it further.

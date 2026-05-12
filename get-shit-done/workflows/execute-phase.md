@@ -171,7 +171,7 @@ Report:
 <step name="execute_waves">
 Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`, sequential if `false`.
 
-> Phase 4 adds an inline verify-loop sub-flow per task — see `<sub_flow name="verify_loop">` below. The contract source of truth is `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md`.
+> Phase 4 adds an inline verify-loop sub-flow per task — see `<sub_flow name="verify_loop">` below. The contract source of truth is `.planning/**/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md`.
 
 **For each wave:**
 
@@ -307,7 +307,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
    Loops within a single wave run sequentially (parallel-wave serialization rule). Concurrent loops would race on the loop debug file at `.planning/debug/{plan-slug}-verify-loop.md` and confuse iteration counting.
 
-   The contract source of truth is `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md`.
+   The contract source of truth is `.planning/**/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md`.
 
 6. **Handle failures:**
 
@@ -347,7 +347,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
 **Trigger:** any task with `verify_after="true"` in a PLAN.md whose plan frontmatter does NOT set `auto_verify: false`.
 
-**Source of truth for contracts:** `.planning/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` §Communication Contracts. Every JSON message shape below is reproduced from that spec — when in doubt, the spec wins, not this prose.
+**Source of truth for contracts:** `.planning/**/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` §Communication Contracts. Every JSON message shape below is reproduced from that spec — when in doubt, the spec wins, not this prose.
 
 **Pre-condition:** spot-check for the plan passed (existing step 5 in execute_waves).
 
@@ -539,7 +539,7 @@ mv .planning/debug/{slug}.md .planning/debug/resolved/
 
 6. **Commit updated artifacts:**
 ```bash
-node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-${PARENT_PHASE}): resolve UAT gaps and debug sessions after ${PHASE_NUMBER} gap closure" --files .planning/**/phases/*${PARENT_PHASE}*/*-UAT.md .planning/debug/resolved/*.md
 ```
 </step>
 
@@ -550,7 +550,7 @@ Skip if this is the first phase (no prior phases) or no prior VERIFICATION.md fi
 
 1. **Discover prior phases' test files:**
 ```bash
-PRIOR_VERIFICATIONS=$(find .planning/phases/ -name "*-VERIFICATION.md" ! -path "*${PHASE_NUMBER}*" 2>/dev/null)
+PRIOR_VERIFICATIONS=$(find .planning -path "*/phases/*-VERIFICATION.md" ! -path "*${PHASE_NUMBER}*" 2>/dev/null)
 ```
 
 2. **Extract test file lists from prior verifications.** Look for:

@@ -123,7 +123,7 @@ Milestone Stats:
 <step name="extract_accomplishments">
 
 ```bash
-for summary in .planning/phases/*-*/*-SUMMARY.md; do
+for summary in $(find .planning -path "*/phases/*-*/*-SUMMARY.md" 2>/dev/null); do
   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" summary-extract "$summary" --fields one_liner | jq -r '.one_liner'
 done
 ```
@@ -143,7 +143,7 @@ MILESTONES.md entry is created automatically by `gsd-tools milestone complete` i
 Read all phase summaries:
 
 ```bash
-cat .planning/phases/*-*/*-SUMMARY.md
+find .planning -path "*/phases/*-*/*-SUMMARY.md" -exec cat {} \;
 ```
 
 **Full review checklist — update PROJECT.md inline:**
@@ -206,7 +206,7 @@ Update `.planning/ROADMAP.md` — group completed milestone phases under collaps
 
 <step name="offer_documentation">
 
-Before archiving this milestone, offer to refresh the system map. The milestone's phase artifacts are about to be archived; regenerating docs now captures the final milestone state while those artifacts are still live in `.planning/phases/`.
+Before archiving this milestone, offer to refresh the system map. The milestone's phase artifacts are about to be archived; regenerating docs now captures the final milestone state while those artifacts are still live under `.planning/**/phases/` (legacy fallback `.planning/phases/`).
 
 Check for `--skip-docs` in `$ARGUMENTS`. If present, skip this step and proceed to `archive_milestone`.
 
@@ -240,7 +240,8 @@ Extract from result: `version`, `date`, `phases`, `plans`, `tasks`, `accomplishm
 If yes:
 ```bash
 mkdir -p .planning/milestones/v[X.Y]-phases
-mv .planning/phases/{phase-dir} .planning/milestones/v[X.Y]-phases/
+# partition_root resolves to `.planning/{milestone}` (partitioned) or `.planning` (legacy fallback)
+mv "${partition_root}/phases/{phase-dir}" .planning/milestones/v[X.Y]-phases/
 ```
 
 After archival, AI still handles (requires judgment, not delegated to CLI):

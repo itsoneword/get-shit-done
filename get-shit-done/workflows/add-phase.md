@@ -52,7 +52,7 @@ The CLI handles:
 - Finding the highest existing integer phase number
 - Calculating next phase number (max + 1)
 - Generating slug from description
-- Creating the phase directory (`.planning/phases/{NN}-{slug}/`)
+- Creating the phase directory (`${partition_root}/phases/{NN}-{slug}/` — partition-aware; legacy fallback `.planning/phases/{NN}-{slug}/`)
 - Inserting the phase entry into ROADMAP.md with Goal, Depends on, and Plans sections
 
 Extract from result: `phase_number`, `padded`, `name`, `slug`, `directory`.
@@ -76,7 +76,7 @@ Present completion summary:
 ```
 Phase {N} added to current milestone:
 - Description: {description}
-- Directory: .planning/phases/{phase-num}-{slug}/
+- Directory: ${partition_root}/phases/{phase-num}-{slug}/  (legacy fallback: .planning/phases/{phase-num}-{slug}/)
 - Status: Not planned yet
 
 Roadmap updated: .planning/ROADMAP.md
