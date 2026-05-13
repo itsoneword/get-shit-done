@@ -8,14 +8,22 @@ A framework that shifts AI-assisted development from "write code, fix bugs" to "
 
 Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
 
-## Current Milestone: v1.4 Domain-Aware Planning
+## Current State
+
+**v1.4 Domain-Aware Planning — shipped 2026-05-13**
+
+Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. Next milestone TBD.
+
+## Last Completed Milestone: v1.4 Domain-Aware Planning
 
 **Goal:** Make GSD planning domain-aware — automatically detect what kind of system is being built and load specialized planning tools for that domain.
 
-**Target features:**
+**Shipped:**
 - Domain router in discuss-phase (classify, don't ask)
 - AGENT-SPEC template and questionnaire for agentic systems
 - On-demand documentation agent for system map generation
+- Verification harness + context efficiency (~13k tokens saved per /gsd2:progress)
+- Milestone-partitioned layout + migration command
 
 ## Requirements
 
