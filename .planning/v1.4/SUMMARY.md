@@ -1,7 +1,7 @@
 ---
 milestone: v1.4
 name: Domain-Aware Planning
-shipped: 2026-05-12
+shipped: 2026-05-13
 phases: [01, 02, 03, 04, 05]
 schema_version: 1
 # --- (end frontmatter)
@@ -188,61 +188,71 @@ Distilled artifact. Machine-parseable typed-tag sections (Phase 6 graph-indexabl
   type: "design"
   rationale: "protects free prose like 'see phases 1-3'"
 - id: "dec-36"
+  text: "W4: migration_hint is informational auto-detect at every init call; actual migration requires explicit --yes confirmation"
+  phase: "05"
+  type: "design"
+  rationale: "auto-retrofit means detect+prompt not auto-mutate"
+- id: "dec-37"
+  text: "Empty legacy phases/ dir left by git mv is auto-removed post-moves in migration.cjs via rmdirSync (best-effort)"
+  phase: "05"
+  type: "design"
+  rationale: null
+- id: "dec-38"
   text: "Test contract format mirrors TEST-SPEC.md exactly (Action / Observables / Pass criteria) for SPEC-04 structural reuse"
   phase: "02"
   type: "design"
   rationale: null
-- id: "dec-37"
+- id: "dec-39"
   text: "Observability section uses three required subsections (Tracing, Boundary Logging, Failure Diagnosis) so checker can validate concretely instead of accepting \"TBD"
   phase: "02"
   type: "design"
   rationale: null
-- id: "dec-38"
+- id: "dec-40"
   text: "Each topology pattern except Chain has both upgrade and downgrade signals so the researcher can challenge complexity in either direction"
   phase: "02"
   type: "design"
   rationale: null
-- id: "dec-39"
+- id: "dec-41"
   text: "Pattern Selection Checklist orders questions simplest-first to bias toward simpler patterns"
   phase: "02"
   type: "design"
   rationale: null
-- id: "dec-40"
+- id: "dec-42"
   text: "existing_subsystems filter excludes both _gaps.md AND _proposed.md (not just _gaps.md as referenced in RESEARCH.md skeleton) because _proposed.md is an updater scratch file, not a subsystem"
   phase: "03"
   type: "design"
   rationale: null
-- id: "dec-41"
+- id: "dec-43"
   text: "new_todos uses git log --numstat to sum additions under .planning/todos/ — aligns with Pitfall 3 (scope inference false negative) mitigation"
   phase: "03"
   type: "design"
   rationale: null
-- id: "dec-42"
+- id: "dec-44"
   text: "completed_phases_since emits ALL [x] phases from ROADMAP (not filtered by git-blame date) — orchestrator compares against the last-run map to compute the delta"
   phase: "03"
   type: "design"
   rationale: null
-- id: "dec-43"
+- id: "dec-45"
   text: "Mapper tools: Read, Bash, Grep, Glob, Write (no Edit); Updater tools add Edit for surgical pass-2 edits"
   phase: "03"
   type: "design"
   rationale: null
-- id: "dec-44"
+- id: "dec-46"
   text: "Deferred Task 4 (manual harness dogfood) — GSD self-verification needs its own workflow design"
   phase: "04"
   type: "design"
   rationale: null
-- id: "dec-45"
+- id: "dec-47"
   text: "Per-plan verify_loop config emitted by init execute-phase (additive — no existing keys removed)"
   phase: "04"
   type: "design"
   rationale: null
-- id: "dec-46"
+- id: "dec-48"
   text: "verify_loop sub_flow spliced after execute_waves and before verify_phase_goal — preserves end-of-waves verifier"
   phase: "04"
   type: "design"
   rationale: null
-- id: "dec-47"
+- id: "dec-49"
   text: "Parallel-wave loops run sequentially to avoid debug-file races"
   phase: "04"
   type: "design"
@@ -387,4 +397,4 @@ Distilled artifact. Machine-parseable typed-tag sections (Phase 6 graph-indexabl
 
 ---
 
-*Generated: 2026-05-12 by `gsd-tools milestone distill v1.4`*
+*Generated: 2026-05-13 by `gsd-tools milestone distill v1.4`*
