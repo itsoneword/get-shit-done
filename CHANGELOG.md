@@ -2,6 +2,37 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.4.6] - 2026-05-13
+
+Phase 05 of milestone v1.4 — milestone-versioned phase IDs, partition-aware layout, migration tool, and distillation artifacts. No breaking changes for projects on the legacy layout (auto-detect + one-time migration prompt).
+
+### Added
+
+- **Milestone-partitioned `.planning/` layout** — phases now live under `.planning/{milestone}/phases/` (e.g. `.planning/v1.4/phases/01-…/`). Root files (PROJECT/ROADMAP/STATE/cross-phase-notes/todos/quick) stay at `.planning/` root. Each milestone is a self-contained phase tree that resets numbering to 01, 02, 03…
+- **`gsd-tools migrate-to-milestone-partition` subcommand** — one-time migration of a legacy `.planning/phases/` layout:
+  - Prints a dry-run manifest of every `git mv` + reference rewrite before touching anything
+  - Prompts `[y/N]` (or `--yes` flag) before mutating; `--dry-run` exits after the preview
+  - Pre-flight checks clean working tree (scoped to `.planning/`) so no in-progress WIP is lost
+  - Rewrites full-path refs in STATE.md, PROJECT.md, ROADMAP.md, cross-phase-notes.md and bare-path refs inside `todos/**/*.md` and `quick/**/*.md`
+- **`migration_hint` auto-detect** — every `gsd-tools init` call checks for the legacy layout and surfaces a one-line hint when detected; no auto-mutation (explicit migration command required)
+- **`init` JSON contract additions** — `milestone_root`, `partition_root`, `legacy_layout_detected`, `prior_milestones[]` emitted alongside existing fields (purely additive; no existing keys changed)
+- **`/gsd2:complete-milestone` distillation artifact** — produces `.planning/{milestone}/SUMMARY.md` with machine-parseable typed-tag sections: `decisions[]` (phase-linked, typed), `requirements_validated[]`, `open_blockers[]`, `entry_points[]` (file:symbol), `public_api[]`
+
+### Changed
+
+- **`phasesDir(cwd)` / `planningPaths().phases`** — now partition-aware: resolves to `{milestone_root}/phases/` when the active milestone's partition exists; falls back to legacy root phases dir when partition absent (safe for migration-in-progress states)
+- **`/gsd2:progress` context loading** — loads active milestone phases + root docs + prior closed milestone SUMMARY files, not the entire phase tree regardless of milestone count
+
+### Fixed
+
+- **Empty legacy `phases/` dir cleanup** — after `git mv` completes, `migration.cjs` calls `rmdirSync` (best-effort) on the now-empty legacy dir so it doesn't linger in the repo
+
+### Design Notes
+
+- `STATE.md` `milestone:` frontmatter is the single source of truth for active milestone; a missing/corrupt value causes a clear refusal-and-prompt error, not a path-guess fallback
+- Decimal-phase resolution (`2.1`, `1.1`) and existing workflow placeholders (`{padded_phase}`, `{phase_dir}`, `{phase_number}`) continue to resolve correctly inside the partitioned tree
+- Migration pre-flight scoped to `.planning/` only — users may have unrelated WIP in `src/`
+
 ## [1.4.5] - 2026-05-07
 
 Phase 04 of milestone v1.4 — verifier-loop harness and `/gsd2:progress` token savings. Patch release; no breaking changes. Some items are wired but not yet dogfooded — see "Deferred" below.

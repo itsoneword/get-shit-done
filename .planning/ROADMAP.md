@@ -59,7 +59,7 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4
+**Execution Order:** 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -67,6 +67,7 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 | 2. AGENT-SPEC | 3/3 | Complete (human_needed) | 2026-04-17 |
 | 3. Documentation Agent | 3/3 | Complete (VERIFICATION.md outstanding) | 2026-04-17 |
 | 4. Verification Harness | 4/4 | Complete (3/4 plans full; 04-04 Task 4 deferred) | 2026-05-07 |
+| 5. Milestone-versioned Phase IDs | 3/3 | Complete | 2026-05-13 |
 
 ### Phase 4: Verification harness and context efficiency
 **Goal**: Cut /gsd2:progress token cost by ~13k per call AND add a self-healing verifier→investigator→fixer loop (max 3 iterations, fresh contexts) that fires at planner-marked testable boundaries inside execute-phase

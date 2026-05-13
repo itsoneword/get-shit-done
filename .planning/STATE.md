@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: milestone
-status: unknown
+status: milestone_complete
 stopped_at: Completed 05-03-PLAN.md (dogfood retrofit + distillation smoke test)
 last_updated: "2026-05-13T19:19:07.449Z"
 last_activity: 2026-05-12
@@ -15,8 +15,7 @@ progress:
 
 ## Current Position
 
-Phase: 05 (milestone-versioned-phase-ids) — EXECUTING
-Plan: 3 of 3
+Milestone v1.4 COMPLETE — all 5 phases, 15 plans shipped.
 
 ## Project Reference
 
