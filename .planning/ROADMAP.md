@@ -14,6 +14,7 @@ v1.4 makes GSD planning domain-aware. Phase 1 builds the router that classifies 
 - [x] **Phase 2: AGENT-SPEC** - Full agentic system spec template, questionnaire, checker, and plan-phase integration (completed 2026-04-17)
 - [x] **Phase 3: Documentation Agent** - `/gsd2:document` generates a sourced system map from artifacts, code, and git history (completed 2026-04-17, VERIFICATION.md outstanding)
 - [x] **Phase 4: Verification Harness and Context Efficiency** - /gsd2:progress token savings, verifier-loop primitives, verify_after task attribute (completed 2026-05-07, dogfood deferred)
+- [x] **Phase 5: Milestone-versioned phase IDs** - Partition-aware layout, migrate-to-milestone-partition command, distillation artifact, dogfood retrofit (completed 2026-05-13)
 
 ## Phase Details
 
