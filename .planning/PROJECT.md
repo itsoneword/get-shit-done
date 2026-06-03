@@ -24,7 +24,7 @@ Every line of code written by an AI agent should trace back to a requirement tha
 
 **v1.4 Domain-Aware Planning — shipped 2026-05-13**
 
-Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port now in planning.
+Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port in progress — Phase 1 (Security Hooks) complete: 3 advisory guard hooks ported under gsd2-* naming, config-gated, no build dependency.
 
 ## Last Completed Milestone: v1.4 Domain-Aware Planning
 
@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 — milestone v1.5 Capability Port started*
+*Last updated: 2026-06-03 — v1.5 Phase 1 (Security Hooks) complete*
