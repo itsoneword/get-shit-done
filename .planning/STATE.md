@@ -1,28 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: milestone
-status: milestone_complete
-stopped_at: Completed 05-03-PLAN.md (dogfood retrofit + distillation smoke test)
-last_updated: "2026-05-13T19:19:07.449Z"
-last_activity: 2026-05-12
+milestone: v1.5
+milestone_name: Capability Port
+status: defining_requirements
+stopped_at: Milestone v1.5 started — defining requirements
+last_updated: "2026-06-03T00:00:00.000Z"
+last_activity: 2026-06-03
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 ## Current Position
 
-Milestone v1.4 COMPLETE — all 5 phases, 15 plans shipped.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-03 — Milestone v1.5 Capability Port started
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-15)
+See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 05 — milestone-versioned-phase-ids
+**Current focus:** v1.5 Capability Port — selectively porting proven capabilities from gsd-core
 
 ## Performance Metrics
 

@@ -8,11 +8,23 @@ A framework that shifts AI-assisted development from "write code, fix bugs" to "
 
 Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
 
+## Current Milestone: v1.5 Capability Port
+
+**Goal:** Close the fork's execution-detail gap by selectively porting proven, low-dependency capabilities from `gsd-core` — security guard hooks, a general research agent, and execution-detail enrichment — each discussed and verified, not copied wholesale. Preserve the fork's discussion-first differentiators (conversation-first discuss, signal-strength tagging, cross-phase pollination).
+
+**Guiding principle:** Adopt by *understanding*, not by *copying*. Every candidate goes through discuss → plan → execute → verify. Input analysis: `reference/COMPARISON.md`.
+
+**Target features:**
+- Security guard hooks (4 standalone injection/path guards), namespaced + config-gated
+- General technical/domain research agent, distinct from the agent-spec researcher
+- Execution-detail enrichment: anti-pattern/bug-pattern references (+Python), context-budget tiers + utilization classifier, plan-loop stall detection
+- Fix the `parseMustHavesBlock` 2-space-indent regex bug (v1.4 carry-over)
+
 ## Current State
 
 **v1.4 Domain-Aware Planning — shipped 2026-05-13**
 
-Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. Next milestone TBD.
+Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port now in planning.
 
 ## Last Completed Milestone: v1.4 Domain-Aware Planning
 
@@ -44,7 +56,14 @@ Domain router, AGENT-SPEC, documentation agent, verification harness, and milest
 
 ### Active
 
-_(milestone v1.4 closed; next milestone TBD — likely candidates: GSD self-verification UX phase to dogfood the verifier-loop harness shipped in 04, plus DATA-SPEC domain.)_
+_(milestone v1.5 Capability Port — see `.planning/REQUIREMENTS.md` for full REQ-IDs)_
+
+- Security guard hooks ported, namespaced (`gsd2:`), and config-gated (SEC)
+- General technical/domain research agent wired into discuss/plan (RSCH)
+- Anti-pattern/bug-pattern reference docs incl. Python (GUIDE)
+- Context-budget degradation tiers + utilization classifier (CTX)
+- Stall-detection in the plan revision loop (CONV)
+- `parseMustHavesBlock` 2-space-indent fix (FIX)
 
 ### Out of Scope
 
@@ -94,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after Phase 04 (verification harness + context efficiency) complete*
+*Last updated: 2026-06-03 — milestone v1.5 Capability Port started*
