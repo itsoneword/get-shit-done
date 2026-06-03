@@ -15,10 +15,10 @@ const DIST_DIR = path.join(HOOKS_DIR, 'dist');
 
 // Hooks to copy (pure Node.js, no bundling needed)
 const HOOKS_TO_COPY = [
-  'gsd-check-update.js',
-  'gsd-context-monitor.js',
-  'gsd-statusline.js',
-  'gsd-workflow-guard.js'
+  'gsd2-check-update.js',
+  'gsd2-context-monitor.js',
+  'gsd2-statusline.js',
+  'gsd2-workflow-guard.js'
 ];
 
 /**
