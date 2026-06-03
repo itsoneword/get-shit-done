@@ -10,7 +10,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Security Hooks** - Port 4 standalone guard hooks into hooks/ under gsd2: namespace, config-gated, no build dependency
+- [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
 - [ ] **Phase 2: General Research Agent** - Add a general technical/domain researcher distinct from gsd-agent-researcher, wired into discuss/plan
 - [ ] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern references (incl. Python), context-budget tiers, and gsd-health utilization classifier
 - [ ] **Phase 4: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
@@ -20,11 +20,11 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 ### Phase 1: Security Hooks
 **Goal**: Users running GSD on agentic pipelines have a defense-in-depth hook layer that guards against prompt injection and out-of-worktree edits — config-gated, namespace-clean, with no TypeScript or core-lib dependency
 **Depends on**: Nothing (first phase)
-**Requirements**: SEC-01, SEC-02, SEC-03, SEC-04
-**Discussion focus**: Per-hook posture decisions — which hooks should be on-by-default vs opt-in, and which should be advisory (soft) vs hard-blocking; gsd2: namespace naming conventions; config key schema for per-hook gates; whether gsd-validate-commit.sh (bash, hard-block) is in scope or deferred
+**Requirements**: SEC-01, SEC-02, SEC-03, SEC-04 (worktree-path-guard descoped to SEC-DEFER-01 per Phase 1 discussion)
+**Discussion focus**: RESOLVED in 01-CONTEXT.md — 3 advisory hooks (prompt-guard + read-injection-scanner default-on, read-guard opt-in); blanket `gsd2-*` rename incl. existing 4 hooks; config gating via `.planning/config.json` `hooks.*` keys mirroring `hooks.workflow_guard`; worktree-path-guard + validate-commit deferred
 **Success Criteria** (what must be TRUE):
-  1. Running `npm run build:hooks` produces all 4 new guard hooks in hooks/dist/ alongside the existing 4 hooks — no build errors
-  2. Running `gsd2 --claude --local` (or equivalent install) registers the new hooks in .claude/settings.json under the gsd2: namespace
+  1. Running `npm run build:hooks` produces the 3 new `gsd2-*` guard hooks in hooks/dist/ alongside the renamed existing hooks — no build errors
+  2. Running `gsd2 --claude --local` (or equivalent install) registers the new hooks in .claude/settings.json under `gsd2-*` filenames and removes stale `gsd-*` registrations
   3. Each new hook is independently enable/disable-able via a config.json key; the default posture (on vs opt-in) is documented per hook
   4. The hooks run from pure standalone JS — no import of a TypeScript-compiled lib or any new runtime dependency
 **Plans**: TBD

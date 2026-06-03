@@ -13,9 +13,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Security Hooks (SEC)
 
-- [ ] **SEC-01**: The 4 standalone guard hooks (`prompt-guard`, `read-injection-scanner`, `read-guard`, `worktree-path-guard`) are ported into `hooks/` under the `gsd2:` namespace
+- [ ] **SEC-01**: The 3 standalone advisory guard hooks (`prompt-guard`, `read-injection-scanner`, `read-guard`) are ported into `hooks/` under the `gsd2-*` filename convention (worktree-path-guard descoped to SEC-DEFER-01 — Phase 1 discussion 2026-06-03)
 - [ ] **SEC-02**: Hooks build via `build-hooks.js` and register through `install.js` settings wiring
-- [ ] **SEC-03**: Each hook is config-gated, with on-by-default vs opt-in and advisory (soft) vs hard-block behavior decided per hook
+- [ ] **SEC-03**: Each hook is config-gated via `.planning/config.json` `hooks.*` keys — scanners (`prompt_guard`, `read_injection_scanner`) on-by-default, `read_guard` opt-in; all 3 advisory (no hard-block ships in Phase 1)
 - [ ] **SEC-04**: Hooks run with no TypeScript/build/core-lib dependency (pure standalone JS)
 
 ### Research Roster (RSCH)
@@ -45,6 +45,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 ## Future Requirements
 
 Deferred to future milestones. Tracked but not in current roadmap.
+
+### Security Hooks — descoped (Phase 1 discussion 2026-06-03)
+
+- **SEC-DEFER-01**: `worktree-path-guard` hard-block hook (PreToolUse `Write|Edit|MultiEdit`, exit 2 on absolute paths escaping a linked worktree, #260) — descoped from Phase 1; user doesn't rely on worktree isolation and no other functionality depends on it. Source: `gsd-core/hooks/gsd-worktree-path-guard.js`. Revisit if worktree-isolated execution becomes routine.
+- **SEC-DEFER-02**: `gsd-validate-commit.sh` (bash, Conventional Commits hard-block) — larger security-auditor surface, not actively needed.
 
 ### Knowledge Graph (idea #1)
 
