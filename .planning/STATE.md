@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-06-03T18:09:06.256Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-06-03T18:18:33.264Z"
 last_activity: 2026-06-03
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 ## Current Position
@@ -84,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase 01]: gsd-workflow-guard.js registration gap left as-is (pre-existing; wiring it is out of scope for Plan 01)
 - [Phase 01]: Uninstall array uses union of old+new hook names for partial-upgrade safety
 - [Phase 01]: statusLine migration is a two-hop chain: statusline.js->gsd-statusline.js->gsd2-statusline.js (both blocks preserved in cleanupOrphanedHooks)
+- [Phase 01]: Default-ON gate placed after .planning/ path filter so config read only fires for files that would be scanned
+- [Phase 01]: PreToolUse Write|Edit entry holds both prompt-guard and read-guard in one hooks[] array (cleanest; mirrors core shape)
+- [Phase 01]: Separate PostToolUse entry for read-injection-scanner with matcher 'Read' so it scopes correctly and does not fire on all post-tool events
 
 ### Pending Todos
 
@@ -106,6 +109,7 @@ Recent decisions affecting current work:
 | Phase 05-milestone-versioned-phase-ids P02 | 10min | 2 tasks | 4 files |
 | Phase 05 P03 | 0 | 3 tasks | 3 files |
 | Phase 01 P01 | 6 | 3 tasks | 10 files |
+| Phase 01-security-hooks P02 | 5min | 3 tasks | 9 files |
 
 ### Roadmap Evolution
 
@@ -113,7 +117,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-03T18:09:06.215Z
+Last session: 2026-06-03T18:18:33.238Z
 Last activity: 2026-06-03
-Stopped at: Completed 01-01-PLAN.md
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

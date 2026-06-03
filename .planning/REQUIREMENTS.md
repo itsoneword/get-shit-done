@@ -15,8 +15,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **SEC-01**: The 3 standalone advisory guard hooks (`prompt-guard`, `read-injection-scanner`, `read-guard`) are ported into `hooks/` under the `gsd2-*` filename convention (worktree-path-guard descoped to SEC-DEFER-01 — Phase 1 discussion 2026-06-03)
 - [x] **SEC-02**: Hooks build via `build-hooks.js` and register through `install.js` settings wiring
-- [ ] **SEC-03**: Each hook is config-gated via `.planning/config.json` `hooks.*` keys — scanners (`prompt_guard`, `read_injection_scanner`) on-by-default, `read_guard` opt-in; all 3 advisory (no hard-block ships in Phase 1)
-- [ ] **SEC-04**: Hooks run with no TypeScript/build/core-lib dependency (pure standalone JS)
+- [x] **SEC-03**: Each hook is config-gated via `.planning/config.json` `hooks.*` keys — scanners (`prompt_guard`, `read_injection_scanner`) on-by-default, `read_guard` opt-in; all 3 advisory (no hard-block ships in Phase 1)
+- [x] **SEC-04**: Hooks run with no TypeScript/build/core-lib dependency (pure standalone JS)
 
 ### Research Roster (RSCH)
 
@@ -86,8 +86,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Complete |
-| SEC-03 | Phase 1 | Pending |
-| SEC-04 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Complete |
+| SEC-04 | Phase 1 | Complete |
 | RSCH-01 | Phase 2 | Pending |
 | RSCH-02 | Phase 2 | Pending |
 | RSCH-03 | Phase 2 | Pending |
