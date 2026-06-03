@@ -2,30 +2,28 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-06-03T17:24:17.902Z"
-last_activity: 2026-06-03 — Roadmap created for v1.5 Capability Port (4 phases)
+status: unknown
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-06-03T18:09:06.256Z"
+last_activity: 2026-06-03
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 ## Current Position
 
-Phase: 1 of 4 (Security Hooks)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-06-03 — Roadmap created for v1.5 Capability Port (4 phases)
+Phase: 01 (security-hooks) — EXECUTING
+Plan: 2 of 2
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** v1.5 Capability Port — selectively porting proven capabilities from gsd-core
+**Current focus:** Phase 01 — security-hooks
 
 ## Performance Metrics
 
@@ -83,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase 05-02]: PATTERN_BARE swept only inside todos/ and quick/; root files (PROJECT/ROADMAP/STATE/cross-phase-notes) only get FULL_PATH rewrites — protects free prose like 'see phases 1-3'
 - [Phase 05]: W4: migration_hint is informational auto-detect at every init call; actual migration requires explicit --yes confirmation — auto-retrofit means detect+prompt not auto-mutate
 - [Phase 05]: Empty legacy phases/ dir left by git mv is auto-removed post-moves in migration.cjs via rmdirSync (best-effort)
+- [Phase 01]: gsd-workflow-guard.js registration gap left as-is (pre-existing; wiring it is out of scope for Plan 01)
+- [Phase 01]: Uninstall array uses union of old+new hook names for partial-upgrade safety
+- [Phase 01]: statusLine migration is a two-hop chain: statusline.js->gsd-statusline.js->gsd2-statusline.js (both blocks preserved in cleanupOrphanedHooks)
 
 ### Pending Todos
 
@@ -104,6 +105,7 @@ Recent decisions affecting current work:
 | Phase 05-milestone-versioned-phase-ids P01 | 27 | 3 tasks | 11 files |
 | Phase 05-milestone-versioned-phase-ids P02 | 10min | 2 tasks | 4 files |
 | Phase 05 P03 | 0 | 3 tasks | 3 files |
+| Phase 01 P01 | 6 | 3 tasks | 10 files |
 
 ### Roadmap Evolution
 
@@ -111,7 +113,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-03T17:24:17.859Z
+Last session: 2026-06-03T18:09:06.215Z
 Last activity: 2026-06-03
-Stopped at: Phase 1 context gathered
-Resume file: .planning/v1.5/phases/01-security-hooks/01-CONTEXT.md
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
