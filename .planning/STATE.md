@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Capability Port
-status: defining_requirements
-stopped_at: Milestone v1.5 started — defining requirements
+status: ready_to_plan
+stopped_at: Roadmap created — v1.5 Capability Port, 4 phases defined
 last_updated: "2026-06-03T00:00:00.000Z"
 last_activity: 2026-06-03
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,10 +15,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 1 of 4 (Security Hooks)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-03 — Milestone v1.5 Capability Port started
+Status: Ready to plan
+Last activity: 2026-06-03 — Roadmap created for v1.5 Capability Port (4 phases)
 
 ## Project Reference
 
@@ -94,9 +94,7 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-yet.
-
-- [Phase 04-03 discovery] parseMustHavesBlock in frontmatter.cjs uses 4-space-indent regex; real plans use 2-space; 'verify artifacts' and 'verify key-links' silently return 'no blocks found' for ALL current plans. Surfaced while implementing parseVerifyCommands. Out of 04-03 scope — fix in follow-up plan.
+- [Phase 04-03 discovery] parseMustHavesBlock in frontmatter.cjs uses 4-space-indent regex; real plans use 2-space; 'verify artifacts' and 'verify key-links' silently return 'no blocks found' for ALL current plans. Surfaced while implementing parseVerifyCommands. Scheduled for Phase 4 (FIX-01).
 
 ### Quick Tasks Completed
 
@@ -109,12 +107,11 @@ yet.
 
 ### Roadmap Evolution
 
-- Phase 4 added: Verification harness and context efficiency
-- Phase 5 added: Milestone-versioned phase IDs
+- v1.5 roadmap created: 4 phases — Security Hooks, General Research Agent, Execution-Detail Enrichment, Plan-Loop Convergence and Verify Fix
 
 ## Session Continuity
 
-Last session: 2026-05-12T16:25:29.387Z
-Last activity: 2026-05-12
-Stopped at: Completed 05-03-PLAN.md (dogfood retrofit + distillation smoke test)
+Last session: 2026-06-03T00:00:00.000Z
+Last activity: 2026-06-03
+Stopped at: Roadmap created — ready to plan Phase 1 (Security Hooks)
 Resume file: None
