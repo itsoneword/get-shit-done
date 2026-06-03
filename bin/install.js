@@ -3127,6 +3127,7 @@ function install(isGlobal, runtime = 'claude') {
   // Configure statusline and hooks in settings.json
   // Gemini and Antigravity use AfterTool instead of PostToolUse for post-tool hooks
   const postToolEvent = (runtime === 'gemini' || runtime === 'antigravity') ? 'AfterTool' : 'PostToolUse';
+  const preToolEvent = (runtime === 'gemini' || runtime === 'antigravity') ? 'BeforeTool' : 'PreToolUse';
   const settingsPath = path.join(targetDir, 'settings.json');
   const settings = cleanupOrphanedHooks(readSettings(settingsPath));
   const statuslineCommand = isGlobal
@@ -3138,6 +3139,15 @@ function install(isGlobal, runtime = 'claude') {
   const contextMonitorCommand = isGlobal
     ? buildHookCommand(targetDir, 'gsd2-context-monitor.js')
     : 'node ' + dirName + '/hooks/gsd2-context-monitor.js';
+  const promptGuardCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd2-prompt-guard.js')
+    : 'node ' + dirName + '/hooks/gsd2-prompt-guard.js';
+  const readInjectionScannerCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd2-read-injection-scanner.js')
+    : 'node ' + dirName + '/hooks/gsd2-read-injection-scanner.js';
+  const readGuardCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd2-read-guard.js')
+    : 'node ' + dirName + '/hooks/gsd2-read-guard.js';
 
   // Enable experimental agents for Gemini CLI (required for custom sub-agents)
   if (isGemini) {
@@ -3194,6 +3204,34 @@ function install(isGlobal, runtime = 'claude') {
         ]
       });
       console.log(`  ${green}✓${reset} Configured context window monitor hook`);
+    }
+
+    // Configure PostToolUse Read hook for read injection scanning
+    const hasReadScanner = settings.hooks[postToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd2-read-injection-scanner'))
+    );
+    if (!hasReadScanner) {
+      settings.hooks[postToolEvent].push({
+        matcher: 'Read',
+        hooks: [ { type: 'command', command: readInjectionScannerCommand } ]
+      });
+      console.log(`  ${green}✓${reset} Configured read injection scanner hook`);
+    }
+
+    // Configure PreToolUse Write|Edit hooks for prompt-guard and read-guard
+    if (!settings.hooks[preToolEvent]) settings.hooks[preToolEvent] = [];
+    const hasPromptGuard = settings.hooks[preToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd2-prompt-guard'))
+    );
+    const hasReadGuard = settings.hooks[preToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd2-read-guard'))
+    );
+    if (!hasPromptGuard || !hasReadGuard) {
+      const preHooks = [];
+      if (!hasPromptGuard) preHooks.push({ type: 'command', command: promptGuardCommand });
+      if (!hasReadGuard) preHooks.push({ type: 'command', command: readGuardCommand });
+      settings.hooks[preToolEvent].push({ matcher: 'Write|Edit', hooks: preHooks });
+      console.log(`  ${green}✓${reset} Configured PreToolUse guard hooks (prompt-guard, read-guard)`);
     }
   }
 

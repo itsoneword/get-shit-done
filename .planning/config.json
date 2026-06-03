@@ -1,5 +1,10 @@
 {
   "workflow": {
     "_auto_chain_active": false
+  },
+  "hooks": {
+    "prompt_guard": true,
+    "read_injection_scanner": true,
+    "read_guard": false
   }
 }
