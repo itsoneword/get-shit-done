@@ -27,7 +27,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   2. Running `gsd2 --claude --local` (or equivalent install) registers the new hooks in .claude/settings.json under `gsd2-*` filenames and removes stale `gsd-*` registrations
   3. Each new hook is independently enable/disable-able via a config.json key; the default posture (on vs opt-in) is documented per hook
   4. The hooks run from pure standalone JS — no import of a TypeScript-compiled lib or any new runtime dependency
-**Plans**: TBD
+**Plans**: 2 (01 rename to gsd2-*, 02 port 3 new advisory hooks + gating)
 
 ### Phase 2: General Research Agent
 **Goal**: Planners and discussers have a general technical/domain researcher available for broad research questions — distinct from gsd-agent-researcher (which authors AGENT-SPEC) — so technical unknowns get researched rather than guessed
@@ -69,7 +69,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Security Hooks | 0/TBD | Not started | - |
+| 1. Security Hooks | 0/2 | Planned | - |
 | 2. General Research Agent | 0/TBD | Not started | - |
 | 3. Execution-Detail Enrichment | 0/TBD | Not started | - |
 | 4. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
