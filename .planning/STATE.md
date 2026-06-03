@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.5
-milestone_name: Capability Port
-status: ready_to_plan
-stopped_at: Roadmap created — v1.5 Capability Port, 4 phases defined
-last_updated: "2026-06-03T00:00:00.000Z"
-last_activity: 2026-06-03
+milestone_name: milestone
+status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-06-03T17:24:17.902Z"
+last_activity: 2026-06-03 — Roadmap created for v1.5 Capability Port (4 phases)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -111,7 +111,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-03T00:00:00.000Z
+Last session: 2026-06-03T17:24:17.859Z
 Last activity: 2026-06-03
-Stopped at: Roadmap created — ready to plan Phase 1 (Security Hooks)
-Resume file: None
+Stopped at: Phase 1 context gathered
+Resume file: .planning/v1.5/phases/01-security-hooks/01-CONTEXT.md
