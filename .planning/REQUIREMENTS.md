@@ -1,51 +1,63 @@
-# Requirements: GSD v1.4 Domain-Aware Planning
+# Requirements: GSD v1.5 Capability Port
 
-**Defined:** 2026-04-15
+**Defined:** 2026-06-03
 **Core Value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
 
-## v1.4 Requirements
+**Input analysis:** `.planning/reference/COMPARISON.md` (gsd2-vs-gsd-core), `.planning/reference/NEXT-MILESTONE-SEED.md`, `.planning/reference/IDEAS.md`.
+
+**Guiding principle:** Adopt by *understanding*, not by *copying*. Each capability is ported through the normal discuss → plan → execute → verify loop — selectively, not wholesale.
+
+## v1.5 Requirements
 
 Requirements for this milestone. Each maps to roadmap phases.
 
-### Domain Router
+### Security Hooks (SEC)
 
-- [x] **DRTR-01**: Router classifies phase domain (UI, agentic, generic) from phase description and codebase context
-- [x] **DRTR-02**: Classification output is always visible — one line showing detected domain and evidence signals
-- [x] **DRTR-03**: Confidence below threshold falls back to generic silently, with override option
-- [x] **DRTR-04**: Router replaces existing hardcoded UI-SPEC trigger in discuss-phase
-- [x] **DRTR-05**: Router detects multi-domain phases (e.g., UI + agentic) and activates both spec workflows
+- [ ] **SEC-01**: The 4 standalone guard hooks (`prompt-guard`, `read-injection-scanner`, `read-guard`, `worktree-path-guard`) are ported into `hooks/` under the `gsd2:` namespace
+- [ ] **SEC-02**: Hooks build via `build-hooks.js` and register through `install.js` settings wiring
+- [ ] **SEC-03**: Each hook is config-gated, with on-by-default vs opt-in and advisory (soft) vs hard-block behavior decided per hook
+- [ ] **SEC-04**: Hooks run with no TypeScript/build/core-lib dependency (pure standalone JS)
 
-### AGENT-SPEC
+### Research Roster (RSCH)
 
-- [x] **SPEC-01**: AGENT-SPEC template with core fields: agent roster, communication contracts (typed), topology pattern, permission boundaries, test contracts, observability (cross-cutting)
-- [x] **SPEC-02**: Agent researcher agent gathers agentic system context through adaptive questioning
-- [x] **SPEC-03**: Agent checker agent validates AGENT-SPEC quality against defined dimensions
-- [x] **SPEC-04**: Test contracts in AGENT-SPEC are compatible with existing TEST-SPEC.md format
-- [x] **SPEC-05**: Framework pattern reference document showing chain, graph, orchestrator, and parallel topology patterns with examples
-- [x] **SPEC-06**: AGENT-SPEC integrates into plan-phase via init.cjs (planner reads spec as input)
+- [ ] **RSCH-01**: A general technical/domain researcher agent exists, distinct from the narrow `gsd-agent-researcher` (which authors AGENT-SPEC)
+- [ ] **RSCH-02**: The general researcher is wired into discuss/plan so technical questions get researched, not guessed
+- [ ] **RSCH-03**: The researcher honors the fork's signal-strength ethos — it does not re-ask what CONTEXT.md already marks decided
 
-### Documentation Agent
+### Execution Enrichment — References (GUIDE)
 
-- [x] **DOCS-01**: `/gsd2:document` command generates system map from planning artifacts, git history, and code
-- [x] **DOCS-02**: System map includes Mermaid diagrams for component relationships and boundaries
-- [x] **DOCS-03**: All documentation claims cite source artifacts — gaps marked as [undocumented]
-- [x] **DOCS-04**: Works for new projects with no milestones (reads code and git history only)
-- [x] **DOCS-05**: Milestone completion workflow suggests running documentation agent
-- [x] **DOCS-06**: Cumulative updates — diffs against existing SYSTEM-MAP.md and updates incrementally
+- [ ] **GUIDE-01**: Anti-pattern / bug-pattern reference docs exist and are read by the planner/verifier ("what good and bad code looks like")
+- [ ] **GUIDE-02**: Good-practices guidance includes Python-specific content (idea #3)
+
+### Execution Enrichment — Context Budget (CTX)
+
+- [ ] **CTX-01**: Context-window degradation tiers + read-depth rules are codified (port of core's `context-budget` reference)
+- [ ] **CTX-02**: A context-utilization classifier (healthy / warning / critical) is wired into `gsd-health`
+
+### Execution Enrichment — Plan Convergence (CONV)
+
+- [ ] **CONV-01**: Stall-detection in the existing plan revision loop — escalate when BLOCKER+WARNING counts stop decreasing across cycles
+
+### Verify Fix (FIX)
+
+- [ ] **FIX-01**: `parseMustHavesBlock` handles 2-space indentation so `verify artifacts` / `verify key-links` work on real plans (v1.4 carry-over blocker)
 
 ## Future Requirements
 
 Deferred to future milestones. Tracked but not in current roadmap.
 
-### Additional Domain Specs
+### Knowledge Graph (idea #1)
 
-- **DATA-01**: DATA-SPEC template for database/performance domain
-- **DATA-02**: Domain router recognizes data/performance phases
+- **GRAPH-01**: `analyze-dependencies` phase-dependency graph (cheap first step, no external binary)
+- **GRAPH-02**: Bug/feature knowledge graph at levels 1/2/3 (reuses core's graph *scaffold*; node/edge schema needs rework)
 
-### AGENT-SPEC Extensions
+### Cross-AI Convergence (idea #4)
 
-- **SPECX-01**: Error handling contracts section in AGENT-SPEC
-- **SPECX-02**: Config flag to disable domain routing globally
+- **CONVX-01**: Cross-AI plan convergence with external reviewer CLIs (Codex/Gemini/Claude) — feasibility-gated by external dependencies
+
+### Learning Loop (idea #2, #3)
+
+- **LEARN-01**: `extract-learnings` + per-project intel store feeding decisions/lessons into future phases
 
 ## Out of Scope
 
@@ -53,13 +65,13 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| DATA-SPEC template | Future domain — same pattern, separate milestone |
-| Framework-specific integrations | Spec is framework-agnostic by design |
-| Executor agent changes | Existing execution machinery sufficient |
-| Inline documentation by executors | Replaced by on-demand doc agent |
-| Error handling contracts in AGENT-SPEC | Deferred — can add in follow-on iteration |
-| Config flag for domain router | Not needed until more domains exist |
-| Router on non-phase actions | Quick fix, todo, debug are domain-agnostic tactical actions |
+| Graphify code knowledge graph (full) | Schema needs rework for bug/feature links; depends on external AST binary — backlog |
+| Skills system / clusters / surface | Medium surface; revisit after curation need is concrete |
+| Workstreams / workspaces / manager | Parallel-execution surface; off the fork's discussion-first direction |
+| Cross-AI external-reviewer convergence | High value but feasibility-gated by external CLIs — deferred to future |
+| Extra phase modes (mvp/spec/ultraplan/eval/spike) | Each is a command to maintain; tension with prune goal — niche |
+| Observability telemetry port | GSD's own telemetry, not user-code logging guidance — low value for this milestone |
+| `secure-phase` + security-auditor | Bigger surface than the standalone hooks; hooks first, auditor later |
 
 ## Traceability
 
@@ -67,29 +79,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DRTR-01 | Phase 1 | Complete |
-| DRTR-02 | Phase 1 | Complete |
-| DRTR-03 | Phase 1 | Complete |
-| DRTR-04 | Phase 1 | Complete |
-| DRTR-05 | Phase 1 | Complete |
-| SPEC-01 | Phase 2 | Complete |
-| SPEC-02 | Phase 2 | Complete |
-| SPEC-03 | Phase 2 | Complete |
-| SPEC-04 | Phase 2 | Complete |
-| SPEC-05 | Phase 2 | Complete |
-| SPEC-06 | Phase 2 | Complete |
-| DOCS-01 | Phase 3 | Complete |
-| DOCS-02 | Phase 3 | Complete |
-| DOCS-03 | Phase 3 | Complete |
-| DOCS-04 | Phase 3 | Complete |
-| DOCS-05 | Phase 3 | Complete |
-| DOCS-06 | Phase 3 | Complete |
+| SEC-01 | TBD | Pending |
+| SEC-02 | TBD | Pending |
+| SEC-03 | TBD | Pending |
+| SEC-04 | TBD | Pending |
+| RSCH-01 | TBD | Pending |
+| RSCH-02 | TBD | Pending |
+| RSCH-03 | TBD | Pending |
+| GUIDE-01 | TBD | Pending |
+| GUIDE-02 | TBD | Pending |
+| CTX-01 | TBD | Pending |
+| CTX-02 | TBD | Pending |
+| CONV-01 | TBD | Pending |
+| FIX-01 | TBD | Pending |
 
 **Coverage:**
-- v1.4 requirements: 17 total
-- Mapped to phases: 17
-- Unmapped: 0
+- v1.5 requirements: 13 total
+- Mapped to phases: 0 (filled by roadmap)
+- Unmapped: 13 ⚠️
 
 ---
-*Requirements defined: 2026-04-15*
-*Last updated: 2026-04-15 — traceability filled after roadmap creation*
+*Requirements defined: 2026-06-03*
+*Last updated: 2026-06-03 — initial definition for v1.5 Capability Port*
