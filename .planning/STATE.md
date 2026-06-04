@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-06-04T20:27:15.635Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-06-04T20:46:27.346Z"
 last_activity: 2026-06-04
 progress:
-  total_phases: 4
-  completed_phases: 2
+  total_phases: 5
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 7
 ---
 
 ## Current Position
 
 Phase: 03 (execution-detail-enrichment) — EXECUTING
-Plan: 1 of 2
+Plan: 2 of 2
 
 ## Project Reference
 
@@ -95,6 +95,10 @@ Recent decisions affecting current work:
 - [Phase 02]: Write-back uses [STRONG, specialist-backed] for HIGH, [WEAK, specialist-backed] for MEDIUM, with inline confidence/source and resolution loop marker
 - [Phase 02]: TECHNICAL UNKNOWN is a new return signal from gsd-planner (not PLANNING INCONCLUSIVE) — planner surfaces, orchestrator resolves, honoring tool-grant boundary
 - [Phase 02]: Signal-strength pre-check in plan-phase step 9.3 skips resolution loop for [STRONG] decisions already in CONTEXT.md (RSCH-03)
+- [Phase 03-execution-detail-enrichment]: PATH-TOKEN RULE: source agent uses ~/.claude/ token; runtime uses absolute path; diff -q not asserted for agent files
+- [Phase 03-execution-detail-enrichment]: planner-antipatterns.md content folded as ## Planner Anti-Patterns in universal-anti-patterns.md; no third standalone file
+- [Phase 03-execution-detail-enrichment]: cp after Write for byte-identity: write source once, cp to runtime — guarantees diff -q pass
+- [Phase 03-execution-detail-enrichment]: Python-Specific Bugs placed before </patterns> in common-bug-patterns.md, with integer division entry retained as historical context
 
 ### Pending Todos
 
@@ -121,6 +125,8 @@ Recent decisions affecting current work:
 | Phase 02-autonomous-technical-resolution P01 | 2 | 2 tasks | 2 files |
 | Phase 02 P02 | 1 | 2 tasks | 1 files |
 | Phase 02 P03 | 83 | 2 tasks | 2 files |
+| Phase 03-execution-detail-enrichment P02 | 17 | 2 tasks | 4 files |
+| Phase 03-execution-detail-enrichment P01 | 16 | 2 tasks | 4 files |
 
 ### Roadmap Evolution
 
@@ -128,7 +134,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-04T17:19:42.685Z
+Last session: 2026-06-04T20:46:27.341Z
 Last activity: 2026-06-04
-Stopped at: Completed 02-03-PLAN.md
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

@@ -28,8 +28,8 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 
 ### Execution Enrichment — References (GUIDE)
 
-- [ ] **GUIDE-01**: Anti-pattern / bug-pattern reference docs exist and are read by the planner/verifier ("what good and bad code looks like")
-- [ ] **GUIDE-02**: Good-practices guidance includes Python-specific content (idea #3)
+- [x] **GUIDE-01**: Anti-pattern / bug-pattern reference docs exist and are read by the planner/verifier ("what good and bad code looks like")
+- [x] **GUIDE-02**: Good-practices guidance includes Python-specific content (idea #3)
 
 ### Execution Enrichment — Context Budget (CTX) — RESHAPED 2026-06-04
 
@@ -100,8 +100,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RSCH-01 | Phase 2 | Complete |
 | RSCH-02 | Phase 2 | Complete |
 | RSCH-03 | Phase 2 | Complete |
-| GUIDE-01 | Phase 3 | Pending |
-| GUIDE-02 | Phase 3 | Pending |
+| GUIDE-01 | Phase 3 | Complete |
+| GUIDE-02 | Phase 3 | Complete |
 | CTX-01 | doctor (TBD) | Reshaped |
 | CTX-02 | doctor (TBD) | Reshaped |
 | OBS-01 | Phase 4 | Pending |

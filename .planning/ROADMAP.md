@@ -12,7 +12,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 - [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
 - [x] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04) (completed 2026-06-04)
-- [ ] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04)
+- [x] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04) (completed 2026-06-04)
 - [ ] **Phase 4: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
 
 ## Phase Details
@@ -81,6 +81,6 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 |-------|----------------|--------|-----------|
 | 1. Security Hooks | 0/2 | Planned | - |
 | 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
-| 3. Execution-Detail Enrichment | 0/2 | Planned | - |
+| 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
 | 4. Agent Observability & Telemetry | 0/TBD | Not started | - |
 | 5. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
