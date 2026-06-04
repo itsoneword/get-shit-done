@@ -11,7 +11,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
 
 - [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
-- [ ] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04)
+- [x] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04) (completed 2026-06-04)
 - [ ] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04)
 - [ ] **Phase 4: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
 
@@ -49,7 +49,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 **Success Criteria** (what must be TRUE):
   1. Anti-pattern and bug-pattern reference docs exist in references/ and are loaded per the hybrid scheme — bug-pattern doc eager-loaded by the verifier, anti-pattern doc referenced on-demand by the planner
   2. The reference docs include Python-specific content (at minimum: Python anti-patterns, common bug patterns, and typing/idiom conventions) alongside the language-agnostic material
-**Plans**: TBD
+**Plans**: 2 (01 common-bug-patterns.md + verifier eager-load; 02 universal-anti-patterns.md [folds planner-antipatterns] + planner on-demand pointer) — both Wave 1, parallel (no shared files)
 
 ### Phase 4: Plan-Loop Convergence and Verify Fix
 **Goal**: The plan revision loop detects when it has stalled (BLOCKER+WARNING counts stop decreasing) and escalates rather than silently cycling; and verify artifacts / verify key-links work correctly on all current plans (2-space-indent fix)
@@ -69,6 +69,6 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Hooks | 0/2 | Planned | - |
-| 2. Autonomous Technical Resolution | 1/3 | In Progress|  |
-| 3. Execution-Detail Enrichment | 0/TBD | Not started | - |
+| 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
+| 3. Execution-Detail Enrichment | 0/2 | Planned | - |
 | 4. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
