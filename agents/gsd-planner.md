@@ -68,6 +68,8 @@ Discovery is mandatory unless you can confirm existing patterns cover the work.
 Signals for Level 2+: new library not in package.json, external API, "choose/evaluate" language. Level 3: "architecture/design/system", multiple services, auth design.
 
 For niche domains (3D, games, audio, ML), suggest `/gsd2:research-phase` before planning.
+
+**Mid-planning technical unknowns (surface, do NOT resolve here):** If a Level 2-3 technical unknown blocks a single planning decision and RESEARCH.md does not already answer it, do NOT guess and do NOT spawn a discovery workflow inline. You have no `Task`/`Agent`/`Skill` tool — you cannot run research. Instead, SURFACE the unknown to the orchestrator via the `## TECHNICAL UNKNOWN` return (see structured_returns). The orchestrator runs the resolution loop and re-spawns you with the answer. This keeps the loop's research at the orchestrator level, where its tools exist (see `get-shit-done/references/resolution-loop.md`).
 </discovery_levels>
 
 <task_design>
@@ -402,7 +404,7 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs($PHASE): creat
 </step>
 
 <step name="return_result">
-Return structured planning outcome to orchestrator.
+Return structured planning outcome to orchestrator. If a single technical fact blocks planning and RESEARCH.md does not cover it, emit `## TECHNICAL UNKNOWN` (not `## PLANNING INCONCLUSIVE`) so the orchestrator resolves it and re-spawns you.
 </step>
 
 </execution_flow>
@@ -464,6 +466,20 @@ Execute: `/gsd2:execute-phase {phase} --gaps-only`
 | 16-01 | Added <verify> to Task 2 | task_completeness |
 
 Files Updated: [list]
+```
+
+## Technical Unknown (surface for orchestrator resolution)
+
+Emit this INSTEAD of guessing when a single technical fact blocks planning and RESEARCH.md does not cover it. This is NOT `## PLANNING INCONCLUSIVE` (which escalates to the human) — this asks the orchestrator to resolve one fact autonomously and re-spawn you.
+
+```markdown
+## TECHNICAL UNKNOWN
+
+**Question:** [the specific technical question blocking a planning decision]
+**Why it blocks:** [which task/decision cannot be specified without this]
+**Constraints:** [relevant project constraints the resolver should honor]
+**What I tried:** [RESEARCH.md sections checked; codebase reads]
+**Default if unresolved:** [the assumption you'd fall back to — typed `technical`]
 ```
 
 </structured_returns>
