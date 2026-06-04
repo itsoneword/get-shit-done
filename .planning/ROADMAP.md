@@ -12,7 +12,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 - [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
 - [ ] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04)
-- [ ] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern references (incl. Python), context-budget tiers, and gsd-health utilization classifier
+- [ ] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04)
 - [ ] **Phase 4: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
 
 ## Phase Details
@@ -41,15 +41,13 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 **Plans**: 3 (01 loop contract + Wave 0 test, 02 discuss-phase LOW-branch wiring, 03 plan-phase orchestrator loop + gsd-planner surfacing)
 
 ### Phase 3: Execution-Detail Enrichment
-**Goal**: Planners and verifiers have codified reference docs for what good and bad code looks like (incl. Python), plus formal context-window degradation tiers and a gsd-health utilization classifier that surfaces context pressure before it causes silent quality degradation
+**Goal**: Planners and verifiers have codified reference docs for what good and bad code looks like (incl. Python), so plans and verifications draw on a shared "good/bad code" standard rather than improvising
 **Depends on**: Nothing (sequenced after Phase 2; no technical dependency)
-**Requirements**: GUIDE-01, GUIDE-02, CTX-01, CTX-02
-**Discussion focus**: Reference doc placement (references/ vs agents/ vs inline in planner prompt); whether anti-pattern/bug-pattern docs are read automatically or on-demand; Python content scope (idioms, anti-patterns, typing conventions); context-budget tier thresholds (healthy/warning/critical percentages); gsd-health integration point (new subcommand or extension of existing --context flag)
+**Requirements**: GUIDE-01, GUIDE-02 (CTX-01, CTX-02 reshaped out → doctor phase, see below)
+**Discussion focus**: RESOLVED in 03-CONTEXT.md — reshaped 2026-06-04. Docs land in `references/` (established convention). Loading is **hybrid**: verifier eager-loads (`@`) the bug-pattern doc (bad code matters most at verify time); planner references the anti-pattern doc on-demand ("Read when relevant", like `tdd.md`) to keep context lean. Python content covers idioms, anti-patterns, typing conventions. The entire context-budget cluster (CTX-01 tiers, CTX-02 classifier) was reshaped OUT: the user rejected a human-facing context warning ("only need to fix it"); the keep-context-tiny goal is met structurally (partitioning/distillation), and the forward-looking piece — an agent-assisted **doctor** that detects documented-then-overwritten decisions and archives superseded ones — becomes its own phase (see `.planning/cross-phase-notes.md`).
 **Success Criteria** (what must be TRUE):
-  1. Anti-pattern and bug-pattern reference docs exist in references/ and are explicitly loaded by the planner and/or verifier during their respective phases
-  2. The reference docs include Python-specific content (at minimum: Python anti-patterns and common bug patterns) alongside the language-agnostic material
-  3. Context-window degradation tiers (healthy / warning / critical) are codified in a reference doc with read-depth rules keyed to context_window percentage
-  4. Running gsd-health (or gsd-health --context) classifies current context utilization as healthy / warning / critical and displays the result
+  1. Anti-pattern and bug-pattern reference docs exist in references/ and are loaded per the hybrid scheme — bug-pattern doc eager-loaded by the verifier, anti-pattern doc referenced on-demand by the planner
+  2. The reference docs include Python-specific content (at minimum: Python anti-patterns, common bug patterns, and typing/idiom conventions) alongside the language-agnostic material
 **Plans**: TBD
 
 ### Phase 4: Plan-Loop Convergence and Verify Fix

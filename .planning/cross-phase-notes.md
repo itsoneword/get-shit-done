@@ -64,3 +64,14 @@
 - Signal: [STRONG] — "the UI, it's not tested" stated as a standing problem.
 
 ---
+
+### From Phase 3 discussion (2026-06-04)
+
+**For a NEW "doctor" phase (add to roadmap — candidate for this milestone or next):**
+- User reframed Phase 3's context-budget cluster: a human-facing context-utilization classifier ("you're at 70%") is NOT wanted. Quote: "there is no need to inform me about it. There is only need to fix it. And it is what I already addressed previously."
+- The keep-context-tiny goal is met **structurally** — keep only the latest state in active docs, move superseded/previous decisions to prior versions, so `/progress` loads minimal content. Partly already addressed (milestone partitioning, distillation).
+- **The forward-looking idea worth building — the "doctor":** an agent-assisted command that, by reading the documentation, finds "decisions which were documented and then overwritten," and heals the docs by archiving the superseded ones. Quote: "the idea for the health command could be useful if we have the agents assisting with the healing, like the doctor command... maybe we can do the health as part of the doctor and the doctor is the command [that] fix[es] this."
+- **Not greenfield:** extends existing `/gsd2:health` (diagnose) + `gsd-tools validate health --repair` (structural repair). The doctor adds a *semantic* layer — superseded-decision detection — on top of the existing structural health check. Fold health INTO doctor.
+- Signal: [STRONG] — user described the mechanism concretely and said "think about it" (park, don't drop).
+- **Design bias reminder (from Phase 2 north-star):** prefer loops/skills raising model autonomy over many special-case agents; the doctor should be a skill + a bounded agent loop, not an agent zoo.
+- Inherits CTX-01/CTX-02 reshaped out of Phase 3 (REQUIREMENTS.md marked Reshaped → doctor). Note: CTX-02's <60/70 token-% thresholds are NOT reusable (doctor measures stale-decision count, not token %); only the keep-lean intent carries.

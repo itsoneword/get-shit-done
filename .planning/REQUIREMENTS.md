@@ -31,10 +31,12 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 - [ ] **GUIDE-01**: Anti-pattern / bug-pattern reference docs exist and are read by the planner/verifier ("what good and bad code looks like")
 - [ ] **GUIDE-02**: Good-practices guidance includes Python-specific content (idea #3)
 
-### Execution Enrichment — Context Budget (CTX)
+### Execution Enrichment — Context Budget (CTX) — RESHAPED 2026-06-04
 
-- [ ] **CTX-01**: Context-window degradation tiers + read-depth rules are codified (port of core's `context-budget` reference)
-- [ ] **CTX-02**: A context-utilization classifier (healthy / warning / critical) is wired into `gsd-health`
+> **Reshaped out of Phase 3 → "doctor" phase (TBD).** During Phase 3 discussion the user rejected the human-facing context-utilization classifier ("no need to inform me about it, only need to fix it") — the keep-context-tiny goal is met structurally via partitioning/distillation (already in flight), not via a token-% warning. CTX-01's read-depth tiers lose their consumer once the classifier is gone (`context_window` is a static config field, not a live usage signal). Both requirements migrate to a future agent-assisted **doctor** phase: a semantic extension of the existing `/gsd2:health` + `validate health --repair` that detects decisions documented-then-overwritten and heals docs by archiving superseded ones to prior versions. See `.planning/cross-phase-notes.md`.
+
+- [~] **CTX-01**: ~~Context-window degradation tiers + read-depth rules codified~~ — RESHAPED → doctor phase (consumer-less without a live classifier)
+- [~] **CTX-02**: ~~Context-utilization classifier wired into `gsd-health`~~ — RESHAPED → doctor phase (human-facing warning rejected; intent carries to semantic stale-decision healing)
 
 ### Execution Enrichment — Plan Convergence (CONV)
 
@@ -95,8 +97,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RSCH-03 | Phase 2 | Pending |
 | GUIDE-01 | Phase 3 | Pending |
 | GUIDE-02 | Phase 3 | Pending |
-| CTX-01 | Phase 3 | Pending |
-| CTX-02 | Phase 3 | Pending |
+| CTX-01 | doctor (TBD) | Reshaped |
+| CTX-02 | doctor (TBD) | Reshaped |
 | CONV-01 | Phase 4 | Pending |
 | FIX-01 | Phase 4 | Pending |
 
