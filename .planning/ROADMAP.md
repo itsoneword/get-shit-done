@@ -51,7 +51,18 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   2. The reference docs include Python-specific content (at minimum: Python anti-patterns, common bug patterns, and typing/idiom conventions) alongside the language-agnostic material
 **Plans**: 2 (01 common-bug-patterns.md + verifier eager-load; 02 universal-anti-patterns.md [folds planner-antipatterns] + planner on-demand pointer) — both Wave 1, parallel (no shared files)
 
-### Phase 4: Plan-Loop Convergence and Verify Fix
+### Phase 4: Agent Observability & Telemetry
+**Goal**: GSD emits a structured, code-level telemetry log of agent activity — every subagent spawn (who/when/spawning-context) and its returned confidence verdict — so loop and feature behavior is verifiable by inspecting a record rather than eyeballing a transcript. Addresses the structural problem that each new prose-based feature gets harder to dogfood-test.
+**Depends on**: Nothing technically; sequenced BEFORE Phase 5 so convergence/stall-detection can consume the telemetry signal.
+**Requirements**: OBS-01, OBS-02
+**Discussion focus** (captured 2026-06-04 — not yet planned): Mechanism = Claude Code **hooks**, reusing the Phase 1 hook infrastructure (`scripts/build-hooks.js`, `hooks/` + `hooks/dist/`, `.claude/settings.json` already wires `PostToolUse`). A new `PostToolUse` hook scoped `"matcher": "Task"` (e.g. `hooks/gsd2-agent-trace.js`, modeled on the existing `gsd2-context-monitor.js`) fires on every subagent spawn and appends JSONL — `{ts, event:"agent.spawn", type, desc, ctx}` and `{ts, event:"agent.return", type, confidence}`. **Observability lives in code/config, NOT in prompts** (explicit user requirement): the confidence value is scraped by the hook from the agent's *return text* (the Phase 2 resolution loop already emits `Confidence: HIGH/MEDIUM/LOW`), so no workflow/agent prose changes are needed. Open scoping for discuss-phase: log location (extend the v1.4 `.planning/debug/` convention vs a dedicated `.planning/telemetry/*.jsonl`), an optional `gsd-tools trace` reader/pretty-printer, retention/rotation. Design caveat: hooks fire in Claude Code (interactive + headless-if-configured) but not in Copilot/Gemini runtimes — telemetry must be best-effort and never block a run. Immediate payoff: makes Phase 2's autonomous-resolution dogfood items (and every future phase's behavior) grep-checkable instead of transcript-watched.
+**Success Criteria** (what must be TRUE):
+  1. A code-level hook records every `gsd-*` subagent spawn to a structured log (timestamp, agent type, spawning context) with zero changes to workflow/agent prompt files
+  2. The log captures the confidence verdict of resolution/verifier agent returns, so a confidence-driven re-research (LOW → second spawn) is visible as distinct, timestamped, correlated entries
+  3. Telemetry is best-effort and non-blocking — a hook failure never interrupts the agent run, and it degrades cleanly in runtimes without hook support
+**Plans**: TBD
+
+### Phase 5: Plan-Loop Convergence and Verify Fix
 **Goal**: The plan revision loop detects when it has stalled (BLOCKER+WARNING counts stop decreasing) and escalates rather than silently cycling; and verify artifacts / verify key-links work correctly on all current plans (2-space-indent fix)
 **Depends on**: Nothing (sequenced after Phase 3; FIX-01 is a self-contained bug fix; CONV-01 touches plan-phase revision loop only)
 **Requirements**: CONV-01, FIX-01
@@ -64,11 +75,12 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4
+**Execution Order:** 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Hooks | 0/2 | Planned | - |
 | 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
 | 3. Execution-Detail Enrichment | 0/2 | Planned | - |
-| 4. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
+| 4. Agent Observability & Telemetry | 0/TBD | Not started | - |
+| 5. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |

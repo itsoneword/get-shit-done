@@ -46,6 +46,11 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 
 - [ ] **FIX-01**: `parseMustHavesBlock` handles 2-space indentation so `verify artifacts` / `verify key-links` work on real plans (v1.4 carry-over blocker)
 
+### Agent Observability (OBS)
+
+- [ ] **OBS-01**: A code-level hook (Claude Code `PostToolUse`, `matcher: Task`) logs every `gsd-*` subagent spawn — timestamp, agent type, spawning context — to a structured telemetry file, with zero changes to workflow/agent prompt files
+- [ ] **OBS-02**: Telemetry captures agent-return confidence verdicts (scraped from return text) so a confidence-driven re-research (LOW → second spawn) is visible as correlated, timestamped entries; best-effort and non-blocking, with an optional reader to inspect the log
+
 ## Future Requirements
 
 Deferred to future milestones. Tracked but not in current roadmap.
@@ -99,14 +104,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GUIDE-02 | Phase 3 | Pending |
 | CTX-01 | doctor (TBD) | Reshaped |
 | CTX-02 | doctor (TBD) | Reshaped |
-| CONV-01 | Phase 4 | Pending |
-| FIX-01 | Phase 4 | Pending |
+| OBS-01 | Phase 4 | Pending |
+| OBS-02 | Phase 4 | Pending |
+| CONV-01 | Phase 5 | Pending |
+| FIX-01 | Phase 5 | Pending |
 
 **Coverage:**
-- v1.5 requirements: 13 total
-- Mapped to phases: 13 ✓
+- v1.5 requirements: 15 total
+- Mapped to phases: 15 ✓
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-03*
-*Last updated: 2026-06-03 — traceability filled, roadmap created*
+*Last updated: 2026-06-04 — added OBS-01/02 (Agent Observability, Phase 4); convergence renumbered to Phase 5*
