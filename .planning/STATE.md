@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-06-04T17:13:44.373Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-06-04T17:18:57.260Z"
 last_activity: 2026-06-04
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
 ---
 
 ## Current Position
 
 Phase: 02 (autonomous-technical-resolution) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Project Reference
 
@@ -90,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Loop contract landed in committed source (get-shit-done/references/); plain text load-bearing strings for literal grep acceptance
 - [Phase 02]: RSCH-02/03 test groups intentionally RED at Wave 0 — target wiring files not modified until Plans 02/03
 - [Phase 02]: plan-phase spawn assertion whole-file scoped to tolerate Plan 03 ## 9.3 sub-step placement
+- [Phase 02]: MEDIUM auto-decides in discuss-phase question_triage (does NOT fall through to ask-user); LOW runs bounded re-research loop before escalating to human
+- [Phase 02]: Signal-strength pre-check inserted before TECHNICAL/HYBRID spawn — STRONG decisions in CONTEXT.md skipped without spawning micro-research (RSCH-03)
+- [Phase 02]: Write-back uses [STRONG, specialist-backed] for HIGH, [WEAK, specialist-backed] for MEDIUM, with inline confidence/source and resolution loop marker
 
 ### Pending Todos
 
@@ -114,6 +117,7 @@ Recent decisions affecting current work:
 | Phase 01 P01 | 6 | 3 tasks | 10 files |
 | Phase 01-security-hooks P02 | 5min | 3 tasks | 9 files |
 | Phase 02-autonomous-technical-resolution P01 | 2 | 2 tasks | 2 files |
+| Phase 02 P02 | 1 | 2 tasks | 1 files |
 
 ### Roadmap Evolution
 
@@ -121,7 +125,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-04T17:13:44.365Z
+Last session: 2026-06-04T17:18:57.255Z
 Last activity: 2026-06-04
-Stopped at: Completed 02-01-PLAN.md
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
