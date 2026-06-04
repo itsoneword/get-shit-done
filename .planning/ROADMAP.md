@@ -38,7 +38,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   1. A reusable technical-resolution loop (research → self-critique → confidence verdict) exists, composed from existing capability — no new specialized agent. It raises LOW→HIGH confidence without human input where evidence allows.
   2. A technical/HYBRID question arising in plan-phase is resolved inline (a path that does not exist today); discuss-phase's LOW-confidence fallback no longer defaults to asking the human when evidence can resolve it. A technical question reaches the human only when confidence stays LOW after the loop exhausts, or it is genuine preference.
   3. The loop honors signal strength — skips `[STRONG]`/`[STRONG, user-override]` decisions — and records resolved technical decisions with confidence + source so they aren't re-asked downstream.
-**Plans**: TBD
+**Plans**: 3 (01 loop contract + Wave 0 test, 02 discuss-phase LOW-branch wiring, 03 plan-phase orchestrator loop + gsd-planner surfacing)
 
 ### Phase 3: Execution-Detail Enrichment
 **Goal**: Planners and verifiers have codified reference docs for what good and bad code looks like (incl. Python), plus formal context-window degradation tiers and a gsd-health utilization classifier that surfaces context pressure before it causes silent quality degradation
@@ -70,6 +70,6 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Hooks | 0/2 | Planned | - |
-| 2. Autonomous Technical Resolution | 0/TBD | Not started | - |
+| 2. Autonomous Technical Resolution | 0/3 | Planned | - |
 | 3. Execution-Detail Enrichment | 0/TBD | Not started | - |
 | 4. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
