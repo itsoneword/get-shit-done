@@ -19,6 +19,7 @@ Then verify each level against the actual codebase.
 
 <required_reading>
 @~/.claude/get-shit-done/references/verification-patterns.md
+@~/.claude/get-shit-done/references/common-bug-patterns.md
 @~/.claude/get-shit-done/templates/verification-report.md
 </required_reading>
 
