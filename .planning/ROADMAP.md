@@ -43,7 +43,8 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 ### Phase 3: Execution-Detail Enrichment
 **Goal**: Planners and verifiers have codified reference docs for what good and bad code looks like (incl. Python), so plans and verifications draw on a shared "good/bad code" standard rather than improvising
 **Depends on**: Nothing (sequenced after Phase 2; no technical dependency)
-**Requirements**: GUIDE-01, GUIDE-02 (CTX-01, CTX-02 reshaped out → doctor phase, see below)
+**Requirements**: GUIDE-01, GUIDE-02
+**Reshaped-out requirements**: CTX-01, CTX-02 → doctor phase (see Discussion focus + REQUIREMENTS.md)
 **Discussion focus**: RESOLVED in 03-CONTEXT.md — reshaped 2026-06-04. Docs land in `references/` (established convention). Loading is **hybrid**: verifier eager-loads (`@`) the bug-pattern doc (bad code matters most at verify time); planner references the anti-pattern doc on-demand ("Read when relevant", like `tdd.md`) to keep context lean. Python content covers idioms, anti-patterns, typing conventions. The entire context-budget cluster (CTX-01 tiers, CTX-02 classifier) was reshaped OUT: the user rejected a human-facing context warning ("only need to fix it"); the keep-context-tiny goal is met structurally (partitioning/distillation), and the forward-looking piece — an agent-assisted **doctor** that detects documented-then-overwritten decisions and archives superseded ones — becomes its own phase (see `.planning/cross-phase-notes.md`).
 **Success Criteria** (what must be TRUE):
   1. Anti-pattern and bug-pattern reference docs exist in references/ and are loaded per the hybrid scheme — bug-pattern doc eager-loaded by the verifier, anti-pattern doc referenced on-demand by the planner
