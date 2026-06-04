@@ -545,6 +545,33 @@ Task(
 - **`## PLANNING COMPLETE`:** Display plan count. Check for `## ASSUMPTIONS` section → proceed to step 9.5. If no assumptions, skip to step 10 (or step 13 if `--skip-verify`).
 - **`## CHECKPOINT REACHED`:** Present to user, get response, spawn continuation (step 12)
 - **`## PLANNING INCONCLUSIVE`:** Show attempts, offer: Add context / Retry / Manual
+- **`## TECHNICAL UNKNOWN`:** The planner can plan but one technical fact blocks a decision. Do NOT escalate to the human (that is the INCONCLUSIVE path). Run the resolution loop at the orchestrator level → step 9.3.
+
+## 9.3. Resolve Technical Unknown (orchestrator resolution loop)
+
+The orchestrator (which has `Task`/`Agent`) runs the resolution loop — see `get-shit-done/references/resolution-loop.md`. The gsd-planner cannot do this itself (no `Task`/`Agent`/`Skill`).
+
+**Signal-strength pre-check:** If the question matches a `[STRONG]` / `[STRONG, user-override]` / `[STRONG, specialist-backed]` decision in CONTEXT.md `<decisions>`, skip the loop — apply that decision and re-spawn the planner with it.
+
+**Otherwise run the loop (max 2 iterations; budget-bounded):**
+- Iteration 1 — light path: spawn micro-research.
+```
+Task(subagent_type="gsd-phase-researcher", prompt="
+<micro_research>
+QUESTION: {the planner's TECHNICAL UNKNOWN question}
+CONSTRAINTS: {from the planner's return + CONTEXT.md}
+PHASE GOAL: {from ROADMAP.md}
+DOMAIN: {the technical domain}
+</micro_research>
+", description="Resolve plan-phase unknown: {short}")
+```
+- **HIGH/MEDIUM** → auto-decide (MEDIUM with override caveat); record + re-spawn planner.
+- **LOW** → iteration 2: re-spawn with a critique hint (broaden / different source), OR escalate to the heavy path: `gsd-phase-researcher` full mode (orchestrator-spawned). Decrement budget.
+- Still LOW after the loop exhausts → THEN surface to the human (this is the only path to the human).
+
+**Record (RSCH-03 write-back):** Append the resolved decision to the phase CONTEXT.md `<decisions>` section — `[STRONG, specialist-backed]` if HIGH, `[WEAK, specialist-backed]` if MEDIUM — with inline `confidence:` + `source:` + the marker `<!-- resolved inline by resolution loop -->`. Downstream planners/verifiers read CONTEXT.md and will not re-ask.
+
+**Re-spawn the planner** with the resolved answer in context (reuse the Step 8 `Task(subagent_type="gsd-planner", ...)` shape, adding the resolved decision to the prompt), then return to step 9.
 
 ## 9.5. Preference Gap Check
 
