@@ -2,7 +2,7 @@
 
 **Researched:** 2026-06-04
 **Domain:** Agentic loop wiring — GSD workflow modification (discuss-phase, plan-phase, gsd-planner)
-**Confidence:** HIGH on integration mechanics; HIGH on missing deep-research gap (critical finding)
+**Confidence:** HIGH on integration mechanics; HIGH on the deep-research callability constraint (critical finding — corrected 2026-06-04)
 
 ---
 
@@ -46,11 +46,11 @@
 
 Phase 2 builds an autonomous technical-resolution loop that runs inside the existing GSD workflows rather than alongside them as a new agent. The loop has two research primitives (light = micro_research_mode, heavy = either deep-research or gsd-phase-researcher full mode), a self-critique layer that mirrors Phase 4's bounded-iteration verifier shape, and two wiring points: discuss-phase's LOW-confidence fallback branch (~line 302–306 of discuss-phase.md) and a new inline path in plan-phase attached near but distinct from Step 5 (the existing full-research spawn).
 
-**Critical finding:** The `deep-research` skill cited in CONTEXT.md as the heavy path does not exist as a file anywhere in this repo (Skills count in fork = 0, confirmed by COMPARISON.md; `find` over both project and global scopes returned nothing). All the adversarial-verify language in CONTEXT.md and DISCUSSION-LOG originates from the discuss-phase AI's characterization during the reframe conversation — it appears to have been a forward-looking or mistaken reference to gsd-core's domain-researcher tier. The planner must choose the heavy-path resolution: either treat `gsd-phase-researcher` full mode as the heavy path (it already searches, fetches, and reasons across sources, which is functionally equivalent), or treat building `deep-research` as a Wave 0 prerequisite of this phase. See Open Questions §1.
+**Critical finding (corrected):** `deep-research` DOES exist — it is a **native Claude Code harness skill** (present in the interactive session's available-skills list alongside `verify`/`run`/`init`/`code-review`), not a file-based skill. That is why a `find` over the repo and `~/.claude/skills/` turns up nothing, and why COMPARISON.md's "Skills: 0" (which counts *project* skill files) is misleading here. The original draft's "does not exist" was wrong; the real constraint is **callability, not existence**: the loop is LLM-executed prose whose capabilities are bounded by the tool grants of whichever agent executes that file. `gsd-planner` (Tools: Read, Write, Bash, Glob, Grep, WebFetch, context7 — **no `Skill`, no `Agent`, no WebSearch**) and `gsd-phase-researcher` (adds WebSearch — **still no `Skill`, no `Agent`**) **cannot invoke `Skill(deep-research)` nor spawn a research subagent.** `deep-research` is reachable only from the **main-loop orchestrator** (e.g. discuss-phase.md, which runs with full tools). Two consequences for the planner: (1) the `[STRONG]` "reuse deep-research" decision is unsatisfiable on any subagent-executed path — the heavy path must be **orchestrator-spawned `gsd-phase-researcher` full mode** (honors "reuse, don't rebuild"); (2) this constrains the wiring location (see Open Questions §1 and §2 — it undercuts Option B). Additionally, native skills are not guaranteed present on every install (headless/cron/other machines), so depending on `deep-research` directly would be fragile even where callable. See Open Questions §1.
 
 The loop's convergence shape — bounded iterations, structured verdict JSON, debug file trace — maps directly onto the Phase 4 AGENT-SPEC verifier-loop pattern. That pattern is fully implemented (STATE shows 04-01/02/03 complete), so the planner can reference it as a confirmed working model. The plan-phase wiring is the only verified-absent integration point; discuss-phase micro-research already exists and the loop simply augments its LOW-confidence exit path rather than replacing the classification or spawning logic.
 
-**Primary recommendation:** Wire the loop as two surgical edits to existing workflow files (discuss-phase.md, plan-phase.md) plus one inline loop definition (new file or inline in an agent), with gsd-phase-researcher full mode serving as the heavy path until deep-research is built.
+**Primary recommendation:** Wire the loop as two surgical edits to existing workflow files (discuss-phase.md, plan-phase.md) plus one inline loop definition (new reference file), with **orchestrator-spawned `gsd-phase-researcher` full mode as the heavy path** and micro_research_mode as the light path. Because the heavy path requires `Agent`/`Task` (and the light path does too), the loop's research steps must execute where those tools exist — the **main-loop orchestrator**, not inside the `gsd-planner`/`gsd-phase-researcher` subagents. This is the decisive constraint on the plan-phase wiring (favors Option A / orchestrator-driven over Option B / planner-internal — see §Open Questions).
 
 ---
 
@@ -104,7 +104,7 @@ Present based on confidence:
 
 ### Seam 2: plan-phase inline research path
 
-**Source file:** `get-shit-done/workflows/plan-phase.md` (orchestrator — Option A) OR `agents/gsd-planner.md` (Option B — preferred)
+**Source file:** `get-shit-done/workflows/plan-phase.md` (orchestrator — Option A, **required by tool grants** — see Open Questions §2). Option B (`agents/gsd-planner.md`) is NOT viable for the research steps: the planner subagent has no `Agent`/`Skill` tool, so it cannot spawn micro-research or full research from inside itself.
 **Current state (Step 5):** Full researcher spawn via `Task(subagent_type="gsd-phase-researcher")`. This is for upfront phase research, not inline question resolution. The planner receives RESEARCH.md and plans from it.
 
 **Where inline questions surface:** In `agents/gsd-planner.md`, the `<discovery_levels>` section (lines 56–72) defines when the planner researches. Level 2-3 signals (new library, architecture decision) route to "discovery workflow" — but that means DISCOVERY.md, not an inline loop. The planner has **no mechanism to surface a mid-planning technical question** back to the orchestrator. It either routes to discovery or proceeds.
@@ -127,7 +127,7 @@ run the resolution loop inline rather than deferring to a full discovery workflo
 Return answer inline; continue planning without spawning DISCOVERY.md.
 ```
 
-Option B is preferred (fewer round-trips, planner handles it autonomously) but requires adding loop-invocation capability to the planner agent prompt. Option A is an orchestrator change only (simpler, but introduces an extra spawn round-trip).
+**Tool-grant verdict:** Option A is required for any loop step that does research. `gsd-planner` lacks `Agent`/`Skill`, so it cannot spawn micro-research or `gsd-phase-researcher` full mode from within itself — Option B would silently degrade the heavy/light paths to "whatever Context7+WebFetch can do inline." The planner surfaces the unknown (e.g. `<open_question>` tag / PLANNING INCONCLUSIVE); the orchestrator runs the loop and re-spawns the planner with the answer. The extra round-trip is forced by the tool boundary, not a preference.
 
 ### Seam 3: micro_research_mode invocation contract
 
@@ -264,10 +264,10 @@ The current micro_research flow presents even HIGH findings back to the user ("G
 **Why it happens:** No budget guard in loop.
 **How to avoid:** Check `budget_remaining > 0` before each iteration. If budget = 0 at start of loop, skip directly to ask-user (treating as immediate LOW escalation).
 
-### Pitfall 4: Plan-phase wiring via orchestrator only (Option A) causes extra round-trip
-**What goes wrong:** Planner raises an unknown → plan-phase orchestrator catches it → spawns loop → result fed back → planner re-runs from context. Two extra spawns + context reload.
-**Why it happens:** Wiring at orchestrator level (Option A) rather than inside the planner (Option B).
-**How to avoid:** Wire the loop inside `agents/gsd-planner.md` in the `<mandatory_discovery>` step so the planner can invoke and receive the answer inline without returning to the orchestrator.
+### Pitfall 4: Trying to avoid the round-trip by wiring the loop inside the planner (Option B)
+**What goes wrong:** To save the orchestrator round-trip, the loop is placed inside `agents/gsd-planner.md`. But the planner has no `Agent`/`Skill` tool — it cannot spawn micro-research or `gsd-phase-researcher` full mode. The "loop" silently degrades to inline Context7/WebFetch guessing, and the structural grep tests still pass (prose is present), masking that the heavy/light research paths never actually run.
+**Why it happens:** Optimizing for round-trips without checking subagent tool grants.
+**How to avoid:** Accept the orchestrator round-trip (Option A). The planner flags the unknown (`<open_question>` tag / PLANNING INCONCLUSIVE); the plan-phase orchestrator — which has `Task`/`Agent`/`Skill` — runs the loop, records the decision, and re-spawns the planner with the answer. The round-trip is the cost of the tool boundary, not a wiring mistake.
 
 ### Pitfall 5: Medium-confidence treated as Low
 **What goes wrong:** Loop returns MEDIUM, then asks the user — defeating the round-trip reduction goal for the majority of questions (most real-world technical questions land MEDIUM, not HIGH).
@@ -362,17 +362,15 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 
 ## Open Questions
 
-### 1. deep-research skill does not exist in this repo [CRITICAL — confirm heavy-path substitution before planning]
+### 1. deep-research is a native skill, not callable from the loop's execution context [CRITICAL — resolved with user before planning]
 
-**What we know:** CONTEXT.md and DISCUSSION-LOG cite `deep-research` (fan-out + adversarial-verify + cited synthesis) as the heavy-path research primitive that the loop reuses. A comprehensive `find` over project and global scope (`~/.claude/skills/`, `~/.agents/skills/`) found no such file. COMPARISON.md confirms `Skills: mine 0`. The discussion-phase AI appears to have made a forward-looking or mistaken attribution.
+**What we know (corrected):** `deep-research` exists as a **native Claude Code harness skill** (in the interactive session's available-skills list), NOT as a project/global skill file — which is why `find` and `~/.claude/skills/` came up empty and COMPARISON.md's project-skill count of 0 doesn't apply. The decisive fact is tool grants: the loop is LLM-executed prose, and its capabilities are whatever the *executing agent* can do. `gsd-planner` and `gsd-phase-researcher` subagents have **no `Skill` and no `Agent` tool**, so they cannot call `Skill(deep-research)` nor spawn a research subagent. Only the **main-loop orchestrator** (discuss-phase.md / plan-phase.md prose run at top level) can. Native skills also aren't guaranteed on every install.
 
-**What's unclear:** Whether the user intended to build `deep-research` as part of this phase (making it a Wave 0 prerequisite), or whether `gsd-phase-researcher` full mode (which multi-source searches, fetches, cross-verifies, and produces cited output) is a sufficient functional substitute.
+**What's unclear (for the user):** Whether to (a) use orchestrator-spawned `gsd-phase-researcher` full mode as the heavy path — honoring "reuse, don't rebuild," fully portable, no Skill dependency; or (b) keep `deep-research` as the heavy path but pin the loop's heavy step to the orchestrator level where Skill is callable, accepting it won't run on installs lacking the native skill.
 
-**Recommendation:** Treat `gsd-phase-researcher` full mode as the heavy path. It already does multi-source research with cross-verification (see `agents/gsd-phase-researcher.md` tool strategy + verification pitfalls sections). The only capability gap vs. a hypothetical `deep-research` skill is that it produces a RESEARCH.md artifact rather than inline cited text — the loop could capture the key finding from the researcher's structured return rather than the full file. Name this substitution explicitly in the plan; do NOT silently build a new `deep-research` agent (violates the "no new specialized agent" STRONG constraint).
+**Recommendation:** Option (a) — `gsd-phase-researcher` full mode, orchestrator-spawned. It already does multi-source search + cross-verification (see `agents/gsd-phase-researcher.md` tool strategy + verification pitfalls), is portable across installs, and honors the "reuse existing capability / no new agent" STRONG constraint without depending on a native skill that subagents can't reach. The loop captures the key finding from the researcher's structured return rather than a full RESEARCH.md file. Do NOT build a new `deep-research` agent (violates "no new specialized agent" STRONG).
 
-**Touches a STRONG decision:** CONTEXT.md has `[STRONG]` "Reuse `deep-research`... do not rebuild research capability." Since `deep-research` doesn't exist, applying this decision literally is impossible. The planner must surface this to the user and confirm: "deep-research doesn't exist; using gsd-phase-researcher full mode as heavy path — proceed?" This is the one question the planner cannot resolve autonomously (it contradicts a locked decision by its absence).
-
-**If the user confirms they want `deep-research` built:** that is a new capability and should be a Wave 0 or separate plan task with its own CONTEXT-level decision, since it contradicts "do not rebuild research capability" [STRONG].
+**Touches a STRONG decision:** CONTEXT.md `[STRONG]` "Reuse `deep-research`... do not rebuild." `deep-research` exists but is unreachable from the subagent paths where the loop was expected to run, so applying the decision literally everywhere is impossible. This is the one item to confirm with the user before planning (it reinterprets a locked decision). Frame accurately: *deep-research is a native skill, not a missing one — it just can't be called from the planner subagent; substitute orchestrator-spawned gsd-phase-researcher full mode.*
 
 ### 2. Plan-phase inline wiring: Option A (orchestrator) vs Option B (planner-internal)
 
@@ -380,7 +378,7 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 
 **What's unclear:** Whether the loop should live in `get-shit-done/workflows/plan-phase.md` orchestrator (Option A — easier but more round-trips) or inside `agents/gsd-planner.md` discovery step (Option B — fewer round-trips, more invasive change).
 
-**Recommendation:** Option B. Add the resolution loop call inside `agents/gsd-planner.md`'s `<mandatory_discovery>` step as a Level 1.5 tier: "single known question with technical uncertainty — run resolution loop inline, no DISCOVERY.md." This eliminates the planner→orchestrator→loop→orchestrator→planner round-trip of Option A.
+**Recommendation (revised — tool grants flip this to Option A):** The loop's research steps need `Agent`/`Task` (to spawn micro-research and `gsd-phase-researcher` full mode). `gsd-planner` has neither `Agent` nor `Skill`, so a loop placed *inside* the planner (Option B) collapses to Context7 + WebFetch + codebase reads only — it cannot delegate to the light OR heavy research path. Therefore the loop's research must run at the **orchestrator** level (Option A), where `Task`/`Agent` work. Practical shape: `gsd-planner` flags a mid-planning unknown via an `<open_question>` tag in its return (or PLANNING INCONCLUSIVE); the **plan-phase orchestrator** catches it, runs the resolution loop (Task-spawned research + self-critique), records the resolved decision to CONTEXT.md, and re-spawns the planner with the answer in context. The extra round-trip (Pitfall 4) is the unavoidable cost of the subagent tool-grant boundary — not a design choice. ⚠ Note: the structural grep tests in §Validation Architecture pass on prose presence; they would NOT catch a loop placed where its tools can't execute. The plan must put the loop where the tools are, not just where the prose reads well.
 
 ### 3. CONTEXT.md write-back for plan-phase resolved decisions
 
@@ -402,8 +400,8 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 - `.planning/v1.4/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` — full loop contracts, verdict shapes, iteration ceiling=3, debug file convention
 - `.planning/reference/COMPARISON.md` — Skills: mine 0, confirmed
 - `.gitignore` line `.claude/` — source/runtime split confirmed; STATE.md Phase 04-01 decision corroborates
-- `find /home/cleversol -name "deep-research*"` + `find /home/cleversol/gsd2/core -name "*.md" | xargs grep deep.research` — confirmed deep-research absent from repo
-- `ls ~/.claude/skills/ ~/.agents/skills/` — both absent (exit 2), no global skills
+- `find /home/cleversol -name "deep-research*"` + `ls ~/.claude/skills/ ~/.agents/skills/` — confirmed deep-research is NOT a file-based skill anywhere. **Correction:** it IS present as a native harness skill in the interactive session's available-skills list; the file search missing it does not mean it doesn't exist — it means it's built into the harness, callable only where `Skill` is granted (orchestrator, not subagents).
+- Subagent tool grants (from agent registry): `gsd-planner` = Read/Write/Bash/Glob/Grep/WebFetch/context7 (no Skill, no Agent, no WebSearch); `gsd-phase-researcher` = +WebSearch (no Skill, no Agent). This is the binding constraint on heavy-path callability and wiring location.
 
 ### Secondary (MEDIUM confidence)
 - `.planning/v1.5/phases/02-autonomous-technical-resolution/02-DISCUSSION-LOG.md` — conversation record; confirms deep-research was presented as existing capability during discussion
@@ -453,7 +451,7 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 - Integration mechanics (attach points, invocation contracts): HIGH — direct file reads with line citations
 - Loop convergence shape: HIGH — Phase 4 AGENT-SPEC verified implemented
 - Signal-strength tag semantics: HIGH — discuss-phase.md lines 50-62 read directly
-- deep-research existence: HIGH (absent) — multi-source find + COMPARISON.md confirmation
+- deep-research callability: HIGH — it is a native harness skill (exists), but NOT callable from `gsd-planner`/`gsd-phase-researcher` subagents (no Skill/Agent grant); only from the main-loop orchestrator. Corrected from initial "absent" finding.
 - Plan-phase planner internals: HIGH — gsd-planner.md discovery_levels read directly
 - Source/runtime split: HIGH — .gitignore + STATE.md decision confirmed
 
