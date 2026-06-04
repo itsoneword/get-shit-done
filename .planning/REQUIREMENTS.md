@@ -22,7 +22,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution loop" — per the minimize-human-round-trips north-star. Loops/skills over a new specialized agent; reuse existing capability (discuss-phase micro-research + the `deep-research` skill) rather than rebuild it._
 
-- [ ] **RSCH-01**: An autonomous technical-resolution loop exists (research → self-critique → confidence verdict), composed from existing capability — **not** a new specialized agent. The loop raises a technical answer from LOW→HIGH confidence without human input where evidence allows.
+- [x] **RSCH-01**: An autonomous technical-resolution loop exists (research → self-critique → confidence verdict), composed from existing capability — **not** a new specialized agent. The loop raises a technical answer from LOW→HIGH confidence without human input where evidence allows.
 - [ ] **RSCH-02**: The loop is wired into the decision points where GSD currently defers technical questions to the human — discuss-phase `question_triage` (TECHNICAL/HYBRID, incl. the LOW-confidence fallback) and plan-phase (which has **no inline research path today**). A technical question reaches the human only when confidence stays LOW after the loop exhausts, or when it is genuine preference/taste.
 - [ ] **RSCH-03**: The loop honors signal strength — it does not re-open questions CONTEXT.md marks `[STRONG]`/`[STRONG, user-override]`, and it records resolved technical decisions with provenance + confidence so they are not re-asked downstream.
 
@@ -92,7 +92,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Complete |
-| RSCH-01 | Phase 2 | Pending |
+| RSCH-01 | Phase 2 | Complete |
 | RSCH-02 | Phase 2 | Pending |
 | RSCH-03 | Phase 2 | Pending |
 | GUIDE-01 | Phase 3 | Pending |

@@ -69,6 +69,6 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Hooks | 0/2 | Planned | - |
-| 2. Autonomous Technical Resolution | 0/3 | Planned | - |
+| 2. Autonomous Technical Resolution | 1/3 | In Progress|  |
 | 3. Execution-Detail Enrichment | 0/TBD | Not started | - |
 | 4. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
