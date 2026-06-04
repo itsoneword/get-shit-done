@@ -72,6 +72,13 @@ For niche domains (3D, games, audio, ML), suggest `/gsd2:research-phase` before 
 **Mid-planning technical unknowns (surface, do NOT resolve here):** If a Level 2-3 technical unknown blocks a single planning decision and RESEARCH.md does not already answer it, do NOT guess and do NOT spawn a discovery workflow inline. You have no `Task`/`Agent`/`Skill` tool — you cannot run research. Instead, SURFACE the unknown to the orchestrator via the `## TECHNICAL UNKNOWN` return (see structured_returns). The orchestrator runs the resolution loop and re-spawns you with the answer. This keeps the loop's research at the orchestrator level, where its tools exist (see `get-shit-done/references/resolution-loop.md`).
 </discovery_levels>
 
+<code_quality_reference>
+When making code-quality judgments, choosing between implementation patterns, or flagging anti-patterns in plan tasks:
+Read ~/.claude/get-shit-done/references/universal-anti-patterns.md
+
+Skip if the phase is trivial glue/config with no design decisions.
+</code_quality_reference>
+
 <task_design>
 ## What Makes a Good Task
 
