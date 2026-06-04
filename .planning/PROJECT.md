@@ -8,6 +8,8 @@ A framework that shifts AI-assisted development from "write code, fix bugs" to "
 
 Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
 
+**Operating principle — minimize the human round-trip.** The bottleneck in AI-assisted development is no longer the model; it is the human in the loop. Every time Claude Code stops to ask a question or hand back output, a fast system waits on a slow human — and most of those questions the model could have answered itself. GSD's job is twofold: keep the human oriented with *just-enough* context (no human holds 10 objectives × 10 plans × 10 details), and reserve human input for judgment only a human can supply — taste, preference, intent ("do you want it to work this way?"), never "which technical approach." Everything the model can resolve — technical choices, research, documentation — it should resolve autonomously. Bias toward **loops and skills that raise model autonomy over proliferating special-case agents.**
+
 ## Current Milestone: v1.5 Capability Port
 
 **Goal:** Close the fork's execution-detail gap by selectively porting proven, low-dependency capabilities from `gsd-core` — security guard hooks, a general research agent, and execution-detail enrichment — each discussed and verified, not copied wholesale. Preserve the fork's discussion-first differentiators (conversation-first discuss, signal-strength tagging, cross-phase pollination).
@@ -16,7 +18,7 @@ Every line of code written by an AI agent should trace back to a requirement tha
 
 **Target features:**
 - Security guard hooks (4 standalone injection/path guards), namespaced + config-gated
-- General technical/domain research agent, distinct from the agent-spec researcher
+- Autonomous technical-resolution loop (research → self-critique → decide) wired into discuss/plan — reduces human round-trips; loops over new agents (reshaped from "general research agent" 2026-06-04)
 - Execution-detail enrichment: anti-pattern/bug-pattern references (+Python), context-budget tiers + utilization classifier, plan-loop stall detection
 - Fix the `parseMustHavesBlock` 2-space-indent regex bug (v1.4 carry-over)
 
@@ -59,7 +61,7 @@ Domain router, AGENT-SPEC, documentation agent, verification harness, and milest
 _(milestone v1.5 Capability Port — see `.planning/REQUIREMENTS.md` for full REQ-IDs)_
 
 - Security guard hooks ported, namespaced (`gsd2:`), and config-gated (SEC)
-- General technical/domain research agent wired into discuss/plan (RSCH)
+- Autonomous technical-resolution loop wired into discuss/plan — reduces human round-trips (RSCH)
 - Anti-pattern/bug-pattern reference docs incl. Python (GUIDE)
 - Context-budget degradation tiers + utilization classifier (CTX)
 - Stall-detection in the plan revision loop (CONV)
@@ -94,6 +96,8 @@ _(milestone v1.5 Capability Port — see `.planning/REQUIREMENTS.md` for full RE
 | Observability in spec, not implementation | Logging/tracing in agentic systems is a design decision, not an afterthought | -- Pending |
 | Framework-agnostic spec with pattern references | Show topology patterns (chain, graph, orchestrator) without prescribing tools | -- Pending |
 | On-demand docs, not inline | One agent reads all artifacts and produces system map; avoids fragmented inline docs | -- Pending |
+| Loops over agent proliferation | Bottleneck is human-loop time, not model capability; many special-case agents add wiring cost without raising autonomy (the week lost wiring 5–10 agents for simple CV text is the anti-pattern) | Reshaped Phase 2 (RSCH) from "general research agent" → "autonomous technical-resolution loop" — 2026-06-04 |
+| Minimize the human round-trip | Reserve human input for taste/preference/intent; resolve everything model-answerable autonomously | Adopted as Core Value operating principle — 2026-06-04 |
 
 ## Evolution
 
@@ -113,4 +117,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 — v1.5 Phase 1 (Security Hooks) complete*
+*Last updated: 2026-06-04 — Phase 2 reshaped to autonomous technical-resolution loop; core value gains minimize-human-round-trip principle*

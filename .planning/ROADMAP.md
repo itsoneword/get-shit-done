@@ -2,7 +2,7 @@
 
 ## Overview
 
-v1.5 closes the fork's execution-detail gap by selectively porting four capability clusters from gsd-core. Phase 1 delivers standalone security guard hooks — the highest-confidence, lowest-effort addition. Phase 2 adds a general research agent distinct from the narrow agent-spec researcher. Phase 3 enriches execution with anti-pattern references and context-budget tooling. Phase 4 adds stall-detection to the plan revision loop and fixes the parseMustHavesBlock regression. Every port goes through the normal discuss → plan → execute → verify loop — adopted by understanding, not copied wholesale.
+v1.5 closes the fork's execution-detail gap by selectively porting four capability clusters from gsd-core. Phase 1 delivers standalone security guard hooks — the highest-confidence, lowest-effort addition. Phase 2 builds an autonomous technical-resolution loop (research → self-critique → decide) wired into discuss/plan, so technical unknowns resolve without bouncing back to the human. Phase 3 enriches execution with anti-pattern references and context-budget tooling. Phase 4 adds stall-detection to the plan revision loop and fixes the parseMustHavesBlock regression. Every port goes through the normal discuss → plan → execute → verify loop — adopted by understanding, not copied wholesale.
 
 ## Phases
 
@@ -11,7 +11,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
 
 - [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
-- [ ] **Phase 2: General Research Agent** - Add a general technical/domain researcher distinct from gsd-agent-researcher, wired into discuss/plan
+- [ ] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04)
 - [ ] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern references (incl. Python), context-budget tiers, and gsd-health utilization classifier
 - [ ] **Phase 4: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
 
@@ -29,15 +29,15 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   4. The hooks run from pure standalone JS — no import of a TypeScript-compiled lib or any new runtime dependency
 **Plans**: 2 (01 rename to gsd2-*, 02 port 3 new advisory hooks + gating)
 
-### Phase 2: General Research Agent
-**Goal**: Planners and discussers have a general technical/domain researcher available for broad research questions — distinct from gsd-agent-researcher (which authors AGENT-SPEC) — so technical unknowns get researched rather than guessed
+### Phase 2: Autonomous Technical Resolution
+**Goal**: Technical and domain unknowns are resolved by the model autonomously — researched, self-critiqued to a confidence threshold, and decided — so they stop bouncing back to the human. The human is reserved for genuine preference/taste ("do you want it to work this way?"), never "which technical approach." Wired into the GSD decision points that currently defer to the human.
 **Depends on**: Nothing (sequenced after Phase 1 by confidence; no technical dependency)
 **Requirements**: RSCH-01, RSCH-02, RSCH-03
-**Discussion focus**: Agent identity and scope boundary — what questions go to the general researcher vs the specialist gsd-agent-researcher vs the existing gsd-phase-researcher; how it integrates into discuss-phase (inline micro-research mode vs explicit invocation); how it respects signal-strength context (won't re-research what CONTEXT.md marks [STRONG])
+**Discussion focus**: RESOLVED in 02-CONTEXT.md — reshaped 2026-06-04 from "port a general research agent" to "autonomous technical-resolution loop" per the minimize-human-round-trips north-star. Key decisions: loops/skills over a new specialized agent; reuse `deep-research` (already does fan-out + adversarial-verify) rather than rebuild; close plan-phase's missing inline research path; tighten discuss-phase `question_triage` so LOW-confidence technical questions resolve via the loop instead of defaulting to the human.
 **Success Criteria** (what must be TRUE):
-  1. A gsd-general-researcher (or equivalent named) agent file exists and is distinct from gsd-agent-researcher and gsd-phase-researcher in purpose and scope
-  2. When a technical question arises during discuss-phase or plan-phase, the general researcher can be invoked and its findings surface in the workflow — user does not need to exit GSD to research
-  3. The researcher reads CONTEXT.md signal-strength tags and does not re-open questions already marked [STRONG] or [STRONG, user-override]
+  1. A reusable technical-resolution loop (research → self-critique → confidence verdict) exists, composed from existing capability — no new specialized agent. It raises LOW→HIGH confidence without human input where evidence allows.
+  2. A technical/HYBRID question arising in plan-phase is resolved inline (a path that does not exist today); discuss-phase's LOW-confidence fallback no longer defaults to asking the human when evidence can resolve it. A technical question reaches the human only when confidence stays LOW after the loop exhausts, or it is genuine preference.
+  3. The loop honors signal strength — skips `[STRONG]`/`[STRONG, user-override]` decisions — and records resolved technical decisions with confidence + source so they aren't re-asked downstream.
 **Plans**: TBD
 
 ### Phase 3: Execution-Detail Enrichment
@@ -70,6 +70,6 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Hooks | 0/2 | Planned | - |
-| 2. General Research Agent | 0/TBD | Not started | - |
+| 2. Autonomous Technical Resolution | 0/TBD | Not started | - |
 | 3. Execution-Detail Enrichment | 0/TBD | Not started | - |
 | 4. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |

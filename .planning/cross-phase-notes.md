@@ -45,3 +45,22 @@
 - Signal: [STRONG] — directly implied by Phase 5 scope
 
 ---
+
+### From Phase 2 discussion (2026-06-04)
+
+**PROJECT-LEVEL north-star — re-scores ALL phases, not just Phase 2 (now in PROJECT.md Core Value):**
+- The bottleneck is the human in the loop, not the model. Two failure modes: (1) **latency** — every Claude→human round-trip stalls a fast system on a slow human, and most of those questions the model could answer itself; (2) **context** — no human holds 10 objectives × 10 plans × 10 details, so GSD's job is to feed just-enough context and ask the human ONLY for judgment they uniquely own (taste, preference, intent — never "which technical approach").
+- Quote: "the weakest part of the system is me actually... instead of working on something we now just wait super slow human." / "providing it only the parts where my solution is really needed."
+- **Design bias the user stated explicitly:** "we need more loops and skills on [agents], rather than... create many many agents for every case." The week lost wiring 5–10 agents to write simple CV text is the anti-pattern.
+- Signal: [STRONG] — extended, emphatic, reasoned; user authorized reshaping the roadmap around it.
+- **How to apply to every future phase:** score each feature by "does it reduce human round-trips / human context-load, reserving the human for genuine judgment?" Prefer loops/skills that raise model autonomy over new special-case agents. Where a workflow currently asks the human a technical/factual question, ask whether the model could resolve it instead.
+
+**For Phase 3 (Execution-Detail Enrichment) specifically:**
+- The CTX requirements (context-budget tiers, utilization classifier) and the user's "100k-token /progress" pain are the *context* half of the north-star. Score Phase 3's context work against "keep the human oriented with less loaded," not just "add reference docs."
+- Signal: [STRONG] — the context-bloat pain was named directly as a current top problem.
+
+**For future milestone candidates (not this milestone):**
+- **UI not being tested** is a named live pain with no home in v1.5 — candidate for a future milestone or backlog. Context bloat at scale (graph linking, RAG) is already captured in the Phase 5 notes above (Phase 6/7 candidates).
+- Signal: [STRONG] — "the UI, it's not tested" stated as a standing problem.
+
+---
