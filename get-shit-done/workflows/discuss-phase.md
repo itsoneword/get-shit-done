@@ -302,10 +302,24 @@ DOMAIN: {the technical domain — e.g., real-time data, authentication, database
 ", description="Technical Q: {short summary}")
 ```
 
-**Present based on confidence:**
-- **HIGH** → recommendation: "For [domain], [recommendation] is standard — [reasoning]. Going with that unless you object?"
-- **MEDIUM** → informed suggestion with options: "Research suggests [X] because [reasoning]. Alternative: [Y]. Preference?"
-- **LOW** → fall back to asking user: "I looked into [topic] but it depends on your context. [findings]. Your thinking?"
+**Resolve based on confidence (run the resolution loop — see `get-shit-done/references/resolution-loop.md`):**
+
+The initial micro-research above is iteration 1. Act on its confidence:
+
+- **HIGH** → decide autonomously, present as FYI (not a question): "I resolved [topic]: [recommendation]. Source: [source]." Continue — do not ask.
+- **MEDIUM** → auto-decide WITH an override caveat: "Going with [X] — [reasoning]. You can override." Continue — do not turn this into a question. (MEDIUM does NOT fall through to ask-user; treating MEDIUM as LOW defeats the round-trip-reduction goal.)
+- **LOW** → run the resolution loop before asking the human:
+    - If micro-research budget remains (`budget_remaining > 0`):
+        - Iteration 2 — broaden + re-research: re-spawn `gsd-phase-researcher` with a critique hint, e.g. "Previous pass returned LOW. Broaden scope: drop project-specific constraints, answer for the general domain; cross-check a different source type." Decrement budget.
+        - If iteration 2 returns HIGH/MEDIUM → apply the HIGH/MEDIUM rule above (auto-decide) and record the decision (write-back below).
+        - (Optional iteration 3 if budget allows: cross-check via an explicitly different source type than the first pass.)
+    - Still LOW after the loop exhausts, OR budget already 0 at entry → THEN ask the human: "I looked into [topic] but signals are conflicting. [best-effort finding]. Your call?"
+
+**Record resolved technical decisions (write-back — RSCH-03):**
+When the loop resolves a question autonomously (HIGH or MEDIUM), append the decision to the phase CONTEXT.md `<decisions>` section so it is not re-asked downstream:
+- HIGH → tag `[STRONG, specialist-backed]`
+- MEDIUM → tag `[WEAK, specialist-backed]`
+Include inline `confidence:` and `source:` and the marker `<!-- resolved inline by resolution loop -->`.
 
 **Signal strength for specialist-backed decisions:**
 - User confirms HIGH recommendation → [STRONG, specialist-backed]
