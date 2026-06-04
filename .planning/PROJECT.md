@@ -12,7 +12,7 @@ Every line of code written by an AI agent should trace back to a requirement tha
 
 ## Current Milestone: v1.5 Capability Port
 
-**Goal:** Close the fork's execution-detail gap by selectively porting proven, low-dependency capabilities from `gsd-core` — security guard hooks, a general research agent, and execution-detail enrichment — each discussed and verified, not copied wholesale. Preserve the fork's discussion-first differentiators (conversation-first discuss, signal-strength tagging, cross-phase pollination).
+**Goal:** Close the fork's execution-detail gap by selectively porting proven, low-dependency capabilities from `gsd-core` — security guard hooks, an autonomous technical-resolution loop, and execution-detail enrichment — each discussed and verified, not copied wholesale. Preserve the fork's discussion-first differentiators (conversation-first discuss, signal-strength tagging, cross-phase pollination).
 
 **Guiding principle:** Adopt by *understanding*, not by *copying*. Every candidate goes through discuss → plan → execute → verify. Input analysis: `reference/COMPARISON.md`.
 
