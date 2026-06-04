@@ -6,6 +6,8 @@
 
 ---
 
+<user_constraints>
+
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions [STRONG]
@@ -25,6 +27,8 @@
 - "Add user sync checkpoints to plan-phase subagent chains" — adjacent, not folded
 - UI not being tested — future milestone
 - Context bloat at scale (graph/RAG) — Phase 6/7 candidates
+
+</user_constraints>
 
 ---
 
@@ -50,11 +54,29 @@ The loop's convergence shape — bounded iterations, structured verdict JSON, de
 
 ---
 
+## Source File Layout — Critical for Planner
+
+> `.claude/` is gitignored. All edits MUST land in the committed source copies. The runtime `.claude/` is a mirror populated by `install.js` at install time.
+
+| What changes | Source file to edit (committed) | Runtime mirror (gitignored) |
+|---|---|---|
+| discuss-phase workflow | `get-shit-done/workflows/discuss-phase.md` | `.claude/get-shit-done/workflows/discuss-phase.md` |
+| plan-phase workflow | `get-shit-done/workflows/plan-phase.md` | `.claude/get-shit-done/workflows/plan-phase.md` |
+| gsd-planner agent | `agents/gsd-planner.md` | `.claude/agents/gsd-planner.md` |
+| gsd-phase-researcher agent | `agents/gsd-phase-researcher.md` | `.claude/agents/gsd-phase-researcher.md` |
+| New loop definition (if separate) | `get-shit-done/references/resolution-loop.md` or inline in agent | `.claude/get-shit-done/references/resolution-loop.md` |
+
+**Evidence:** `.gitignore` line `.claude/`; STATE.md Phase 04-01 decision: "All edits mirrored in source (get-shit-done/, commands/) AND runtime (.claude/) — only source committed since runtime is gitignored."
+
+**Verify commands** in test maps use the committed source paths (`get-shit-done/workflows/discuss-phase.md`, `agents/gsd-planner.md`), not `.claude/`.
+
+---
+
 ## Integration Mechanics (Canonical Seam Analysis)
 
 ### Seam 1: discuss-phase `question_triage` — LOW-confidence fallback
 
-**File:** `.claude/get-shit-done/workflows/discuss-phase.md`
+**Source file:** `get-shit-done/workflows/discuss-phase.md` (edit here; runtime mirror: `.claude/get-shit-done/workflows/discuss-phase.md`)
 **Exact lines:** 302–306 (within the `<question_triage>` block, lines 274–317)
 
 Current flow (lines 290–305):
@@ -82,14 +104,14 @@ Present based on confidence:
 
 ### Seam 2: plan-phase inline research path
 
-**File:** `.claude/get-shit-done/workflows/plan-phase.md`
+**Source file:** `get-shit-done/workflows/plan-phase.md` (orchestrator — Option A) OR `agents/gsd-planner.md` (Option B — preferred)
 **Current state (Step 5):** Full researcher spawn via `Task(subagent_type="gsd-phase-researcher")`. This is for upfront phase research, not inline question resolution. The planner receives RESEARCH.md and plans from it.
 
-**Where inline questions surface:** In `gsd-planner.md`, the `<discovery_levels>` section (lines 56–72) defines when the planner researches. Level 2-3 signals (new library, architecture decision) route to "discovery workflow" — but that means DISCOVERY.md, not an inline loop. The planner has **no mechanism to surface a mid-planning technical question** back to the orchestrator. It either routes to discovery or proceeds.
+**Where inline questions surface:** In `agents/gsd-planner.md`, the `<discovery_levels>` section (lines 56–72) defines when the planner researches. Level 2-3 signals (new library, architecture decision) route to "discovery workflow" — but that means DISCOVERY.md, not an inline loop. The planner has **no mechanism to surface a mid-planning technical question** back to the orchestrator. It either routes to discovery or proceeds.
 
 **Hook point (two options, planner picks):**
 
-Option A — plan-phase orchestrator, Step 5.5 (between current 5 and 5.5):
+Option A — plan-phase orchestrator, new Step 5.3 (between current 5 and 5.5):
 ```
 ## 5.3. Inline Technical Questions (new step)
 If planner returns a question (flagged in plan via <open_question> tag), 
@@ -109,7 +131,7 @@ Option B is preferred (fewer round-trips, planner handles it autonomously) but r
 
 ### Seam 3: micro_research_mode invocation contract
 
-**File:** `agents/gsd-phase-researcher.md` lines 15–46
+**Source file:** `agents/gsd-phase-researcher.md` lines 15–46
 
 **Invocation (from discuss-phase.md line 292–299):**
 ```
@@ -245,18 +267,23 @@ The current micro_research flow presents even HIGH findings back to the user ("G
 ### Pitfall 4: Plan-phase wiring via orchestrator only (Option A) causes extra round-trip
 **What goes wrong:** Planner raises an unknown → plan-phase orchestrator catches it → spawns loop → result fed back → planner re-runs from context. Two extra spawns + context reload.
 **Why it happens:** Wiring at orchestrator level (Option A) rather than inside the planner (Option B).
-**How to avoid:** Wire the loop inside `gsd-planner.md` in the `<mandatory_discovery>` step so the planner can invoke and receive the answer inline without returning to the orchestrator.
+**How to avoid:** Wire the loop inside `agents/gsd-planner.md` in the `<mandatory_discovery>` step so the planner can invoke and receive the answer inline without returning to the orchestrator.
 
 ### Pitfall 5: Medium-confidence treated as Low
 **What goes wrong:** Loop returns MEDIUM, then asks the user — defeating the round-trip reduction goal for the majority of questions (most real-world technical questions land MEDIUM, not HIGH).
 **Why it happens:** Conservative threshold — treating MEDIUM as "insufficient to decide."
 **How to avoid:** MEDIUM → decide autonomously with caveat. The human can always override. This is the critical behavior change vs. current micro_research presentation.
 
+### Pitfall 6: Editing the gitignored .claude/ runtime copy
+**What goes wrong:** Edits to `.claude/get-shit-done/workflows/discuss-phase.md` or `.claude/agents/gsd-planner.md` appear to work locally but don't commit (gitignored). Next install wipes them.
+**Why it happens:** `.claude/` is the install-time runtime mirror, not source.
+**How to avoid:** All edits MUST go to `get-shit-done/workflows/`, `get-shit-done/references/`, and `agents/` (the committed sources). The runtime copy is populated by `install.js` at install time. Verify with `git status` after editing — if the file doesn't appear as modified, you edited the wrong copy.
+
 ---
 
 ## Code Examples
 
-### Current micro_research invocation (discuss-phase.md lines 292–299)
+### Current micro_research invocation (get-shit-done/workflows/discuss-phase.md lines 292–299)
 ```markdown
 Task(subagent_type="gsd-phase-researcher", prompt="
 <micro_research>
@@ -270,7 +297,7 @@ DOMAIN: {the technical domain — e.g., real-time data, authentication, database
 
 ### Proposed loop extension in discuss-phase LOW branch (conceptual pseudocode for planner)
 ```markdown
-# Replace lines 302–306 of discuss-phase.md
+# Replace lines 302–306 of get-shit-done/workflows/discuss-phase.md
 
 if result.confidence == LOW:
   if budget_remaining > 0:
@@ -313,7 +340,7 @@ if result.confidence == LOW:
 }
 ```
 
-### Signal-strength tag variants (from discuss-phase.md lines 52–56)
+### Signal-strength tag variants (from get-shit-done/workflows/discuss-phase.md lines 52–56)
 ```
 [STRONG, specialist-backed]   — specialist HIGH + user confirmed
 [STRONG, user-override]       — specialist recommended differently, user overrode
@@ -335,23 +362,25 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 
 ## Open Questions
 
-### 1. deep-research skill does not exist in this repo [CRITICAL — resolution required before planning]
+### 1. deep-research skill does not exist in this repo [CRITICAL — confirm heavy-path substitution before planning]
 
 **What we know:** CONTEXT.md and DISCUSSION-LOG cite `deep-research` (fan-out + adversarial-verify + cited synthesis) as the heavy-path research primitive that the loop reuses. A comprehensive `find` over project and global scope (`~/.claude/skills/`, `~/.agents/skills/`) found no such file. COMPARISON.md confirms `Skills: mine 0`. The discussion-phase AI appears to have made a forward-looking or mistaken attribution.
 
 **What's unclear:** Whether the user intended to build `deep-research` as part of this phase (making it a Wave 0 prerequisite), or whether `gsd-phase-researcher` full mode (which multi-source searches, fetches, cross-verifies, and produces cited output) is a sufficient functional substitute.
 
-**Recommendation:** Treat `gsd-phase-researcher` full mode as the heavy path. It already does multi-source research with cross-verification (see `gsd-phase-researcher.md` tool strategy + verification pitfalls sections). The only capability gap vs. a hypothetical `deep-research` skill is that it produces a RESEARCH.md artifact rather than inline cited text — the loop could capture the key finding from the researcher's structured return rather than the full file. Name this substitution explicitly in the plan; do NOT silently build a new `deep-research` agent (violates the "no new specialized agent" STRONG constraint).
+**Recommendation:** Treat `gsd-phase-researcher` full mode as the heavy path. It already does multi-source research with cross-verification (see `agents/gsd-phase-researcher.md` tool strategy + verification pitfalls sections). The only capability gap vs. a hypothetical `deep-research` skill is that it produces a RESEARCH.md artifact rather than inline cited text — the loop could capture the key finding from the researcher's structured return rather than the full file. Name this substitution explicitly in the plan; do NOT silently build a new `deep-research` agent (violates the "no new specialized agent" STRONG constraint).
+
+**Touches a STRONG decision:** CONTEXT.md has `[STRONG]` "Reuse `deep-research`... do not rebuild research capability." Since `deep-research` doesn't exist, applying this decision literally is impossible. The planner must surface this to the user and confirm: "deep-research doesn't exist; using gsd-phase-researcher full mode as heavy path — proceed?" This is the one question the planner cannot resolve autonomously (it contradicts a locked decision by its absence).
 
 **If the user confirms they want `deep-research` built:** that is a new capability and should be a Wave 0 or separate plan task with its own CONTEXT-level decision, since it contradicts "do not rebuild research capability" [STRONG].
 
 ### 2. Plan-phase inline wiring: Option A (orchestrator) vs Option B (planner-internal)
 
-**What we know:** gsd-planner.md has no mechanism to surface mid-planning questions back to the orchestrator. The planner's `<discovery_levels>` routes Level 2-3 unknowns to "discovery workflow" (DISCOVERY.md), which is a separate spawn, not an inline loop.
+**What we know:** `agents/gsd-planner.md` has no mechanism to surface mid-planning questions back to the orchestrator. The planner's `<discovery_levels>` routes Level 2-3 unknowns to "discovery workflow" (DISCOVERY.md), which is a separate spawn, not an inline loop.
 
-**What's unclear:** Whether the loop should live in plan-phase.md orchestrator (Option A — easier but more round-trips) or inside gsd-planner.md discovery step (Option B — fewer round-trips, more invasive change).
+**What's unclear:** Whether the loop should live in `get-shit-done/workflows/plan-phase.md` orchestrator (Option A — easier but more round-trips) or inside `agents/gsd-planner.md` discovery step (Option B — fewer round-trips, more invasive change).
 
-**Recommendation:** Option B. Add the resolution loop call inside `gsd-planner.md`'s `<mandatory_discovery>` step as a Level 1.5 tier: "single known question with technical uncertainty — run resolution loop inline, no DISCOVERY.md." This eliminates the planner→orchestrator→loop→orchestrator→planner round-trip of Option A.
+**Recommendation:** Option B. Add the resolution loop call inside `agents/gsd-planner.md`'s `<mandatory_discovery>` step as a Level 1.5 tier: "single known question with technical uncertainty — run resolution loop inline, no DISCOVERY.md." This eliminates the planner→orchestrator→loop→orchestrator→planner round-trip of Option A.
 
 ### 3. CONTEXT.md write-back for plan-phase resolved decisions
 
@@ -366,12 +395,13 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 ## Sources
 
 ### Primary (HIGH confidence — direct file reads)
-- `agents/gsd-phase-researcher.md` lines 15–46 — micro_research_mode full invocation contract verified
-- `.claude/get-shit-done/workflows/discuss-phase.md` lines 274–317 — question_triage full block; LOW-confidence fallback at lines 302–306; budget throttle at line 316
-- `.claude/get-shit-done/workflows/plan-phase.md` Steps 5/5.5/5.6 — full research path; verified no inline question handling
+- `agents/gsd-phase-researcher.md` lines 15–46 — micro_research_mode full invocation contract verified (read from `.claude/` runtime mirror, which is identical to committed `agents/` source)
+- `get-shit-done/workflows/discuss-phase.md` lines 274–317 — question_triage full block; LOW-confidence fallback at lines 302–306; budget throttle at line 316
+- `get-shit-done/workflows/plan-phase.md` Steps 5/5.5/5.6 — full research path; verified no inline question handling
 - `agents/gsd-planner.md` — discovery_levels; no inline Q surfacing mechanism confirmed
 - `.planning/v1.4/phases/04-verification-harness-and-context-efficiency/04-AGENT-SPEC.md` — full loop contracts, verdict shapes, iteration ceiling=3, debug file convention
 - `.planning/reference/COMPARISON.md` — Skills: mine 0, confirmed
+- `.gitignore` line `.claude/` — source/runtime split confirmed; STATE.md Phase 04-01 decision corroborates
 - `find /home/cleversol -name "deep-research*"` + `find /home/cleversol/gsd2/core -name "*.md" | xargs grep deep.research` — confirmed deep-research absent from repo
 - `ls ~/.claude/skills/ ~/.agents/skills/` — both absent (exit 2), no global skills
 
@@ -383,6 +413,8 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 ## Validation Architecture
 
 > `workflow.nyquist_validation` is not explicitly set in `.planning/config.json` — treated as enabled.
+
+> **Implementation note:** The loop deliverable is LLM-executed markdown prose wired into workflow files, not a callable JS function. Unit tests target structural properties of the modified markdown (presence of loop logic, correct signal-strength tags), not function invocations. Integration tests use `grep`/`node --test` against the committed source files in `get-shit-done/` and `agents/`.
 
 ### Test Framework
 | Property | Value |
@@ -396,12 +428,13 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| RSCH-01 | Loop raises LOW to HIGH/MEDIUM over ≤2 iterations without human input (mock researcher calls returning LOW then HIGH) | unit | `node --test tests/02-resolution-loop.test.cjs::loop_raises_confidence` | ❌ Wave 0 |
-| RSCH-01 | Loop returns structured verdict `{confidence, recommendation, source, iterations_used, escalate}` | unit | `node --test tests/02-resolution-loop.test.cjs::verdict_shape` | ❌ Wave 0 |
-| RSCH-02 | discuss-phase LOW branch triggers loop (not ask-user) for TECHNICAL questions | integration | `grep -E "resolution_loop|LOW.*escalate" .claude/get-shit-done/workflows/discuss-phase.md` | ❌ Wave 0 |
-| RSCH-02 | plan-phase reaches loop for mid-planning unknown (level 2 discovery) without returning to orchestrator | integration | `grep -E "resolution_loop|inline.*loop" agents/gsd-planner.md` | ❌ Wave 0 |
-| RSCH-03 | Loop skips STRONG-tagged decisions from CONTEXT.md (no spawn if STRONG match) | unit | `node --test tests/02-resolution-loop.test.cjs::strong_signal_skip` | ❌ Wave 0 |
-| RSCH-03 | Resolved HIGH/MEDIUM decision written to CONTEXT.md with `[STRONG, specialist-backed]` or `[WEAK, specialist-backed]` tag | integration | `grep "\[STRONG, specialist-backed\]\|\[WEAK, specialist-backed\]" .planning/v1.5/phases/02-*/02-CONTEXT.md` | ❌ Wave 0 |
+| RSCH-01 | Loop prose exists in modified discuss-phase.md — LOW branch contains bounded-iteration logic (not direct ask-user) | structural | `grep -c "resolution.loop\|self.critique\|iterate.*confidence\|LOW.*exhaust" get-shit-done/workflows/discuss-phase.md` (expect > 0) | ❌ Wave 0 |
+| RSCH-01 | Loop prose exists in gsd-planner.md discovery section — Level 1.5 or inline-loop tier present | structural | `grep -c "resolution.loop\|inline.*loop\|Level.*1\.5" agents/gsd-planner.md` (expect > 0) | ❌ Wave 0 |
+| RSCH-01 | Verdict shape documented in loop definition — confidence/recommendation/iterations_used fields present | structural | `grep -c "iterations_used\|escalate" get-shit-done/workflows/discuss-phase.md agents/gsd-planner.md` (expect > 0) | ❌ Wave 0 |
+| RSCH-02 | discuss-phase LOW branch no longer falls straight to ask-user for TECHNICAL — loop step intervenes | structural | `node --test tests/02-resolution-loop.test.cjs` — test reads discuss-phase.md, asserts LOW branch does not contain only ask-user pattern | ❌ Wave 0 |
+| RSCH-02 | plan-phase mid-planning unknowns reach loop, not discovery workflow | structural | `node --test tests/02-resolution-loop.test.cjs` — test reads gsd-planner.md, asserts discovery Level 2 path has loop-invocation option | ❌ Wave 0 |
+| RSCH-03 | Loop skips questions matching STRONG decisions — skip-logic present before spawn | structural | `grep -c "STRONG.*skip\|skip.*STRONG\|check.*signal" get-shit-done/workflows/discuss-phase.md agents/gsd-planner.md` (expect > 0) | ❌ Wave 0 |
+| RSCH-03 | Write-back tags present — STRONG/WEAK specialist-backed appended to CONTEXT.md on resolution | integration | `grep -c "\[STRONG, specialist-backed\]\|\[WEAK, specialist-backed\]" .planning/v1.5/phases/02-autonomous-technical-resolution/02-CONTEXT.md` (expect > 0 after dogfood run) | ❌ Wave 0 / post-run |
 
 ### Sampling Rate
 - **Per task commit:** `node --test tests/02-resolution-loop.test.cjs`
@@ -409,8 +442,8 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 - **Phase gate:** Full suite green before `/gsd2:verify-work`
 
 ### Wave 0 Gaps
-- [ ] `tests/02-resolution-loop.test.cjs` — covers RSCH-01 (unit: verdict shape, confidence raising), RSCH-03 (unit: STRONG skip)
-- [ ] `tests/02-integration-wiring.test.cjs` — covers RSCH-02 (integration: discuss + plan wiring checks via grep/regex on modified workflow files)
+- [ ] `tests/02-resolution-loop.test.cjs` — covers RSCH-01 and RSCH-02 (structural: reads committed source files, asserts loop logic presence and correct LOW-branch shape)
+- [ ] Structural grep checks above can be embedded in this single test file — no second test file needed
 
 ---
 
@@ -422,6 +455,7 @@ These are the tags the loop appends to CONTEXT.md write-backs.
 - Signal-strength tag semantics: HIGH — discuss-phase.md lines 50-62 read directly
 - deep-research existence: HIGH (absent) — multi-source find + COMPARISON.md confirmation
 - Plan-phase planner internals: HIGH — gsd-planner.md discovery_levels read directly
+- Source/runtime split: HIGH — .gitignore + STATE.md decision confirmed
 
 **Research date:** 2026-06-04
 **Valid until:** 2026-07-04 (stable domain — GSD's own files; no external dependency churn)
