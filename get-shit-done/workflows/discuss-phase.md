@@ -287,6 +287,9 @@ Then follow the conversation naturally.
 - "SQL or NoSQL for time-series trading data?" → TECHNICAL (access patterns determine this)
 - "Which auth provider?" → HYBRID (all viable, tradeoffs need context)
 
+**Signal-strength pre-check (skip the loop for locked decisions):**
+Before spawning any research, scan the phase CONTEXT.md `<decisions>` section. If the question's subject matches a decision tagged `[STRONG]`, `[STRONG, user-override]`, or `[STRONG, specialist-backed]`, do NOT spawn micro-research or the resolution loop — apply the existing decision directly and present it as settled (HIGH confidence, source: "CONTEXT.md locked decision"). Only proceed to research when no STRONG decision already covers the question.
+
 **For TECHNICAL/HYBRID — spawn micro-research:**
 ```
 Task(subagent_type="gsd-phase-researcher", prompt="
