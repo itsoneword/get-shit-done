@@ -5,6 +5,7 @@
   "hooks": {
     "prompt_guard": true,
     "read_injection_scanner": true,
-    "read_guard": false
+    "read_guard": false,
+    "agent_trace": true
   }
 }

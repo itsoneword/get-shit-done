@@ -18,6 +18,9 @@ coverage/
 animation/
 *.gif
 
+# Agent telemetry (append-only JSONL logs, never committed)
+.planning/telemetry/
+
 # Internal planning documents
 reports/
 RAILROAD_ARCHITECTURE.md

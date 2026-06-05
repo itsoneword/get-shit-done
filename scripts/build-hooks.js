@@ -21,7 +21,8 @@ const HOOKS_TO_COPY = [
   'gsd2-workflow-guard.js',
   'gsd2-prompt-guard.js',
   'gsd2-read-injection-scanner.js',
-  'gsd2-read-guard.js'
+  'gsd2-read-guard.js',
+  'gsd2-agent-trace.js'
 ];
 
 /**

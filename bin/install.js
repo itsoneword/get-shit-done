@@ -2211,7 +2211,7 @@ function uninstall(isGlobal, runtime = 'claude') {
   // 4. Remove GSD hooks
   const hooksDir = path.join(targetDir, 'hooks');
   if (fs.existsSync(hooksDir)) {
-    const gsdHooks = ['gsd2-statusline.js', 'gsd2-check-update.js', 'gsd2-context-monitor.js', 'gsd-statusline.js', 'gsd-check-update.js', 'gsd-check-update.sh', 'gsd-context-monitor.js'];
+    const gsdHooks = ['gsd2-statusline.js', 'gsd2-check-update.js', 'gsd2-context-monitor.js', 'gsd2-agent-trace.js', 'gsd-statusline.js', 'gsd-check-update.js', 'gsd-check-update.sh', 'gsd-context-monitor.js'];
     let hookCount = 0;
     for (const hook of gsdHooks) {
       const hookPath = path.join(hooksDir, hook);
@@ -3148,6 +3148,9 @@ function install(isGlobal, runtime = 'claude') {
   const readGuardCommand = isGlobal
     ? buildHookCommand(targetDir, 'gsd2-read-guard.js')
     : 'node ' + dirName + '/hooks/gsd2-read-guard.js';
+  const agentTraceCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd2-agent-trace.js')
+    : 'node ' + dirName + '/hooks/gsd2-agent-trace.js';
 
   // Enable experimental agents for Gemini CLI (required for custom sub-agents)
   if (isGemini) {
@@ -3216,6 +3219,33 @@ function install(isGlobal, runtime = 'claude') {
         hooks: [ { type: 'command', command: readInjectionScannerCommand } ]
       });
       console.log(`  ${green}✓${reset} Configured read injection scanner hook`);
+    }
+
+    // Configure PostToolUse Task|Agent hook for agent spawn telemetry
+    const hasAgentTrace = settings.hooks[postToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd2-agent-trace'))
+    );
+    if (!hasAgentTrace) {
+      settings.hooks[postToolEvent].push({
+        matcher: 'Task|Agent',
+        hooks: [ { type: 'command', command: agentTraceCommand } ]
+      });
+      console.log(`  ${green}✓${reset} Configured agent trace hook`);
+    }
+
+    // Configure PostToolUseFailure Task|Agent hook for crashed spawn capture (A6 confirmed real event)
+    if (postToolEvent === 'PostToolUse') {
+      if (!settings.hooks['PostToolUseFailure']) settings.hooks['PostToolUseFailure'] = [];
+      const hasAgentTraceFail = settings.hooks['PostToolUseFailure'].some(entry =>
+        entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd2-agent-trace'))
+      );
+      if (!hasAgentTraceFail) {
+        settings.hooks['PostToolUseFailure'].push({
+          matcher: 'Task|Agent',
+          hooks: [ { type: 'command', command: agentTraceCommand } ]
+        });
+        console.log(`  ${green}✓${reset} Configured agent trace failure hook`);
+      }
     }
 
     // Configure PreToolUse Write|Edit hooks for prompt-guard and read-guard
