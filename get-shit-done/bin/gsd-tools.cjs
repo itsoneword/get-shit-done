@@ -161,6 +161,7 @@ const commands = require('./lib/commands.cjs');
 const init = require('./lib/init.cjs');
 const frontmatter = require('./lib/frontmatter.cjs');
 const profilePipeline = require('./lib/profile-pipeline.cjs');
+const trace = require('./lib/trace.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 
 // ─── CLI Router ───────────────────────────────────────────────────────────────
@@ -684,6 +685,21 @@ async function main() {
       const fieldsIndex = args.indexOf('--fields');
       const fields = fieldsIndex !== -1 ? args[fieldsIndex + 1].split(',') : null;
       commands.cmdSummaryExtract(cwd, summaryPath, fields, raw);
+      break;
+    }
+
+    case 'trace': {
+      const sIdx = args.indexOf('--session');
+      const aIdx = args.indexOf('--agent');
+      const cIdx = args.indexOf('--confidence');
+      const lIdx = args.indexOf('--last');
+      const opts = {
+        session: sIdx !== -1 ? args[sIdx + 1] : null,
+        agent: aIdx !== -1 ? args[aIdx + 1] : null,
+        confidence: cIdx !== -1 ? args[cIdx + 1] : null,
+        last: lIdx !== -1 ? parseInt(args[lIdx + 1], 10) : 20,
+      };
+      trace.cmdTrace(cwd, opts, raw);
       break;
     }
 
