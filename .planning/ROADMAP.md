@@ -2,7 +2,7 @@
 
 ## Overview
 
-v1.5 closes the fork's execution-detail gap by selectively porting four capability clusters from gsd-core. Phase 1 delivers standalone security guard hooks — the highest-confidence, lowest-effort addition. Phase 2 builds an autonomous technical-resolution loop (research → self-critique → decide) wired into discuss/plan, so technical unknowns resolve without bouncing back to the human. Phase 3 enriches execution with anti-pattern references and context-budget tooling. Phase 4 adds stall-detection to the plan revision loop and fixes the parseMustHavesBlock regression. Every port goes through the normal discuss → plan → execute → verify loop — adopted by understanding, not copied wholesale.
+v1.5 closes the fork's execution-detail gap by selectively porting four capability clusters from gsd-core. Phase 1 delivers standalone security guard hooks — the highest-confidence, lowest-effort addition. Phase 2 builds an autonomous technical-resolution loop (research → self-critique → decide) wired into discuss/plan, so technical unknowns resolve without bouncing back to the human. Phase 3 enriches execution with anti-pattern references and context-budget tooling. Phase 4 adds a code-level observability hook that logs every gsd-* subagent spawn (and its confidence verdict) to a structured telemetry file, making loop behavior grep-checkable. Phase 5 adds stall-detection to the plan revision loop and fixes the parseMustHavesBlock regression. Every port goes through the normal discuss → plan → execute → verify loop — adopted by understanding, not copied wholesale.
 
 ## Phases
 
