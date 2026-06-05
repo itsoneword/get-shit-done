@@ -48,8 +48,8 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 
 ### Agent Observability (OBS)
 
-- [ ] **OBS-01**: A code-level hook (Claude Code `PostToolUse`, `matcher: Task`) logs every `gsd-*` subagent spawn — timestamp, agent type, spawning context — to a structured telemetry file, with zero changes to workflow/agent prompt files
-- [ ] **OBS-02**: Telemetry captures agent-return confidence verdicts (scraped from return text) so a confidence-driven re-research (LOW → second spawn) is visible as correlated, timestamped entries; best-effort and non-blocking, with an optional reader to inspect the log
+- [x] **OBS-01**: A code-level hook (Claude Code `PostToolUse`, `matcher: Task|Agent`) logs every `gsd-*` subagent spawn — timestamp, agent type, spawning context — to a structured telemetry file, with zero changes to workflow/agent prompt files
+- [x] **OBS-02**: Telemetry captures agent-return confidence verdicts (scraped from return text) so a confidence-driven re-research (LOW → second spawn) is visible as correlated, timestamped entries; best-effort and non-blocking, with an optional reader to inspect the log
 
 ## Future Requirements
 
@@ -104,8 +104,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GUIDE-02 | Phase 3 | Complete |
 | CTX-01 | doctor (TBD) | Reshaped |
 | CTX-02 | doctor (TBD) | Reshaped |
-| OBS-01 | Phase 4 | Pending |
-| OBS-02 | Phase 4 | Pending |
+| OBS-01 | Phase 4 | Complete |
+| OBS-02 | Phase 4 | Complete |
 | CONV-01 | Phase 5 | Pending |
 | FIX-01 | Phase 5 | Pending |
 
