@@ -15,6 +15,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - [x] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04) (completed 2026-06-04)
 - [ ] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes
 - [ ] **Phase 5: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
+- [ ] **Phase 6: Skill Self-Sufficiency** - Audit all 14 superpowers skills vs GSD coverage, then port only the genuine gaps (execution-time TDD discipline, receiving-code-review rigor, skill-authoring guidance, worktree-isolation default) into GSD as native commands/references so the external plugin dependency can be dropped — removal itself is a follow-up
 
 ## Phase Details
 
@@ -85,3 +86,17 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
 | 4. Agent Observability & Telemetry | 0/3 | Planned | - |
 | 5. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
+| 6. Skill Self-Sufficiency | 0/TBD | Not started | - |
+
+### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
+
+**Goal**: GSD natively covers the capability gaps currently filled by the (now-disabled) `superpowers` Claude Code plugin, so the external dependency can be dropped without losing capability. GSD becomes the single self-contained framework — no SessionStart skill-injection from a third-party plugin steering the agent.
+**Depends on**: Nothing (sequenced after Phase 5; pure additive audit + port, no technical dependency on prior v1.5 phases)
+**Requirements**: TBD (derived at plan time from the audit)
+**Discussion focus**: This is a *port-from-superpowers* phase, mirroring v1.5's port-from-gsd-core spirit. The user disabled the `superpowers@claude-plugins-official` plugin in `~/.claude/settings.json`; its cached skills remain on disk at `~/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/` for mining. Coverage audit already roughed in (this session): of 14 skills, ~10 are already covered by GSD (brainstorming→discuss-phase, writing/executing-plans→plan/execute-phase, subagent-driven & dispatching-parallel→wave executor, systematic-debugging→gsd2:debug, verification-before-completion→verify-work/gsd-verifier, requesting-code-review→gsd2:review, finishing-a-development-branch→ship/pr-branch). The genuine gaps to port: (1) **execution-time TDD discipline** — enforced red-green-refactor at execute-phase, beyond today's TEST-SPEC/add-tests which only produce specs; (2) **receiving-code-review** rigor — how to consume review feedback critically rather than blindly implement; (3) **writing-skills** — a skill/command-authoring guide for GSD itself; (4) **worktree-isolation as a first-class default** in execute-phase. Open scoping for discuss: which gaps land as references/ docs vs new commands vs workflow edits; whether the existing `gsd2:debug` already absorbs systematic-debugging fully or needs the red-green loop wired in.
+**Out of scope**: Hard-removal of the superpowers plugin cache + `installed_plugins.json` registry entry — explicit follow-up after this phase proves GSD covers the gaps.
+**Success Criteria** (what must be TRUE):
+  1. A written coverage audit maps each of the 14 superpowers skills to either an existing GSD command/reference (covered) or a concrete port target (gap), with rationale
+  2. Each genuine gap is ported into GSD as a native artifact (reference doc, command, or workflow edit) that an agent loads through normal GSD flow — no dependency on the superpowers plugin being installed
+  3. Running a representative GSD workflow (plan→execute) exercises the ported TDD/review/worktree behavior without any superpowers skill being available
+**Plans**: TBD (run /gsd2:plan-phase 6 to break down)

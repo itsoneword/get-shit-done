@@ -4,26 +4,26 @@ milestone: v1.5
 milestone_name: milestone
 status: unknown
 stopped_at: Phase 4 context gathered
-last_updated: "2026-06-04T21:03:45.459Z"
-last_activity: 2026-06-04
+last_updated: "2026-06-05T13:09:29.094Z"
+last_activity: 2026-06-05
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 7
+  total_plans: 10
   completed_plans: 7
 ---
 
 ## Current Position
 
-Phase: 03 (execution-detail-enrichment) — EXECUTING
-Plan: 2 of 2
+Phase: 04 (agent-observability-telemetry) — EXECUTING
+Plan: 1 of 3
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 03 — execution-detail-enrichment
+**Current focus:** Phase 04 — agent-observability-telemetry
 
 ## Performance Metrics
 
@@ -131,10 +131,11 @@ Recent decisions affecting current work:
 ### Roadmap Evolution
 
 - v1.5 roadmap created: 4 phases — Security Hooks, General Research Agent, Execution-Detail Enrichment, Plan-Loop Convergence and Verify Fix
+- Phase 6 added (2026-06-05): Skill Self-Sufficiency — audit all 14 superpowers skills vs GSD coverage and port the genuine gaps (execution-time TDD discipline, receiving-code-review, writing-skills, worktree-isolation default) so GSD is self-contained. superpowers plugin disabled by user this session; hard-removal is a follow-up. Sequenced after Phase 5, no hard dependency.
 
 ## Session Continuity
 
 Last session: 2026-06-04T21:03:45.453Z
-Last activity: 2026-06-04
+Last activity: 2026-06-05
 Stopped at: Phase 4 context gathered
 Resume file: .planning/v1.5/phases/04-agent-observability-telemetry/04-CONTEXT.md
