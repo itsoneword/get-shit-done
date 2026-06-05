@@ -1,0 +1,24 @@
+{
+  "status": "completed",
+  "agentType": "gsd-planner",
+  "totalDurationMs": 742811,
+  "content": [
+    { "type": "text", "text": "## PLANNING COMPLETE\n\n**Phase:** 01-security-hooks\n\n**Confidence:** HIGH\n" }
+  ],
+  "cases": {
+    "prose": "**Confidence:** HIGH",
+    "json_form": "{\"confidence\": \"MEDIUM\", \"reasoning\": \"...\"}",
+    "absent": "## PLANNING COMPLETE\nNo verdict here.",
+    "array_blocks": [
+      { "type": "text", "text": "prefix " },
+      { "type": "text", "text": "**Confidence:** LOW" }
+    ],
+    "object_content": {
+      "agentType": "gsd-planner",
+      "totalDurationMs": 742811,
+      "content": [
+        { "type": "text", "text": "## DONE\n**Confidence:** LOW" }
+      ]
+    }
+  }
+}
