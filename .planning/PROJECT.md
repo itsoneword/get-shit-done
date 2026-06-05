@@ -26,7 +26,7 @@ Every line of code written by an AI agent should trace back to a requirement tha
 
 **v1.4 Domain-Aware Planning — shipped 2026-05-13**
 
-Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port in progress — Phase 1 (Security Hooks), Phase 2 (Autonomous Technical Resolution), and Phase 3 (Execution-Detail Enrichment) complete. Phase 3 added codified bug-pattern and anti-pattern reference docs (incl. Python) hybrid-loaded into the verifier (eager) and planner (on-demand), so plans and verifications draw on a shared good/bad-code standard rather than improvising.
+Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port in progress — Phases 1 (Security Hooks), 2 (Autonomous Technical Resolution), 3 (Execution-Detail Enrichment), and 4 (Agent Observability Telemetry) complete. Phase 3 added codified bug-pattern and anti-pattern reference docs (incl. Python) hybrid-loaded into the verifier (eager) and planner (on-demand), so plans and verifications draw on a shared good/bad-code standard rather than improvising. Phase 4 added a `PostToolUse`/`PostToolUseFailure` (`matcher: Task|Agent`) telemetry hook that records every `gsd-*` subagent spawn — timestamp, agent type, scraped confidence verdict — to a gitignored `.planning/telemetry/agent-trace.jsonl`, plus a `gsd-tools trace` reader, all in code/config with zero prompt-file changes (verified live: hook fires, config gate suppresses, non-blocking).
 
 ## Last Completed Milestone: v1.4 Domain-Aware Planning
 
@@ -55,6 +55,7 @@ Domain router, AGENT-SPEC, documentation agent, verification harness, and milest
 - /gsd2:progress context savings (~13k tokens/invocation) — shipped Phase 04
 - Verifier-loop primitives (gsd-verifier/gsd-fixer loop mode, gsd-debugger investigator role, must_haves.verify schema, gsd-tools verify commands) — shipped Phase 04
 - verify_after task attribute and verify_loop sub-flow spliced into execute-phase — shipped Phase 04 (manual end-to-end dogfood deferred — see 04-HUMAN-UAT.md)
+- Agent observability telemetry (`PostToolUse`/`PostToolUseFailure` hook → JSONL spawn log with scraped confidence + `gsd-tools trace` reader, zero prompt changes) — shipped v1.5 Phase 4 (OBS-01, OBS-02)
 
 ### Active
 
@@ -117,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-04 — Phase 3 (Execution-Detail Enrichment) complete: bug-pattern/anti-pattern reference docs hybrid-loaded into verifier and planner*
+*Last updated: 2026-06-05 — Phase 4 (Agent Observability Telemetry) complete: PostToolUse/PostToolUseFailure hook logs every gsd-* spawn with scraped confidence to .planning/telemetry/agent-trace.jsonl; gsd-tools trace reader; zero prompt-file changes; verified live*
