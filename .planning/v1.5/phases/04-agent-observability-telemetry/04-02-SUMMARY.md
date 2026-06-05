@@ -127,6 +127,12 @@ config.json hooks.agent_trace === true: PASS
 | `PostToolUseFailure` → `agent.error` | ✓ Present in the log (the simulated `gsd-executor` `agent.error` record); A6 confirmed real and wired. |
 | Reader end-to-end (`gsd-tools trace`) | ✓ Renders all 3 records as a readable table; `--agent gsd-verifier` filter narrows correctly. |
 
+**Post-verification live hardening (orchestrator, same session):**
+- **Live confidence scrape end-to-end:** a real `gsd-verifier` spawn whose return text contained `**Confidence:** MEDIUM` produced a record with `confidence: "MEDIUM"` — the full composition (`tool_response.content[].text` → `extractReturnText` → `scrapeConfidence`) confirmed live, not just via simulated stdin.
+- **`seq` is a monotonic per-session counter** (hook L85-89 counts existing records for the same `session_id`): three same-session spawns produced `seq 0 → 1 → 2`, so a LOW→HIGH re-research pair is genuinely ordered/correlated (OBS-02), not always-0.
+
+**Install verification note:** `bin/install.js` registration was verified **statically** (read lines 3224–3249 and replicated byte-identically via `cp` + a node script); a full `node bin/install.js --claude --local` was deliberately NOT run mid-session (heavy; `cp` is the plan's explicit alternative). The registration logic is idempotent and correct by inspection.
+
 **Runtime end-state:** the agent-trace hook is left **installed and active** in `.claude/` runtime (the shipped feature; `.claude/` is gitignored). `.planning/telemetry/agent-trace.jsonl` (gitignored) holds the test/live records.
 
 ## Verification Results
