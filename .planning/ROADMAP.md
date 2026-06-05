@@ -100,3 +100,23 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   2. Each genuine gap is ported into GSD as a native artifact (reference doc, command, or workflow edit) that an agent loads through normal GSD flow — no dependency on the superpowers plugin being installed
   3. Running a representative GSD workflow (plan→execute) exercises the ported TDD/review/worktree behavior without any superpowers skill being available
 **Plans**: TBD (run /gsd2:plan-phase 6 to break down)
+
+## Backlog
+
+### Phase 999.1: Doctor — source↔runtime symmetry check (BACKLOG)
+
+**Goal:** A `gsd-tools doctor` self-check detects drift between committed source (`get-shit-done/`, `commands/`, `hooks/`) and the gitignored runtime (`.claude/`) — e.g. `diff -rq get-shit-done .claude/get-shit-done` plus settings.json hook/statusLine registration parity. Replaces per-plan `cp`/`diff -q` discipline with one command. Surfaced 2026-06-05 (statusline-change forensics). Related: Phase 6 worktree-isolation gap.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd2:review-backlog when ready)
+
+### Phase 999.2: Terse output default + verbose opt-in (BACKLOG)
+
+**Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd2:review-backlog when ready)
