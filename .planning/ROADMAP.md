@@ -10,7 +10,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
+- [x] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT) (completed 2026-06-03)
 - [x] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04) (completed 2026-06-04)
 - [x] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04) (completed 2026-06-04)
 - [x] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes (completed 2026-06-05)
@@ -81,7 +81,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Security Hooks | 0/2 | Planned | - |
+| 1. Security Hooks | 2/2 | Complete   | 2026-06-03 |
 | 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
 | 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
 | 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
