@@ -13,7 +13,8 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - [ ] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT)
 - [x] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04) (completed 2026-06-04)
 - [x] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04) (completed 2026-06-04)
-- [ ] **Phase 4: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
+- [ ] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes
+- [ ] **Phase 5: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
 
 ## Phase Details
 
@@ -55,12 +56,12 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 **Goal**: GSD emits a structured, code-level telemetry log of agent activity — every subagent spawn (who/when/spawning-context) and its returned confidence verdict — so loop and feature behavior is verifiable by inspecting a record rather than eyeballing a transcript. Addresses the structural problem that each new prose-based feature gets harder to dogfood-test.
 **Depends on**: Nothing technically; sequenced BEFORE Phase 5 so convergence/stall-detection can consume the telemetry signal.
 **Requirements**: OBS-01, OBS-02
-**Discussion focus** (captured 2026-06-04 — not yet planned): Mechanism = Claude Code **hooks**, reusing the Phase 1 hook infrastructure (`scripts/build-hooks.js`, `hooks/` + `hooks/dist/`, `.claude/settings.json` already wires `PostToolUse`). A new `PostToolUse` hook scoped `"matcher": "Task"` (e.g. `hooks/gsd2-agent-trace.js`, modeled on the existing `gsd2-context-monitor.js`) fires on every subagent spawn and appends JSONL — `{ts, event:"agent.spawn", type, desc, ctx}` and `{ts, event:"agent.return", type, confidence}`. **Observability lives in code/config, NOT in prompts** (explicit user requirement): the confidence value is scraped by the hook from the agent's *return text* (the Phase 2 resolution loop already emits `Confidence: HIGH/MEDIUM/LOW`), so no workflow/agent prose changes are needed. Open scoping for discuss-phase: log location (extend the v1.4 `.planning/debug/` convention vs a dedicated `.planning/telemetry/*.jsonl`), an optional `gsd-tools trace` reader/pretty-printer, retention/rotation. Design caveat: hooks fire in Claude Code (interactive + headless-if-configured) but not in Copilot/Gemini runtimes — telemetry must be best-effort and never block a run. Immediate payoff: makes Phase 2's autonomous-resolution dogfood items (and every future phase's behavior) grep-checkable instead of transcript-watched.
+**Discussion focus** (captured 2026-06-04, researched 2026-06-05): Mechanism = Claude Code **hooks**, reusing the Phase 1 hook infrastructure. A `PostToolUse` hook (`hooks/gsd2-agent-trace.js`, modeled on `gsd2-context-monitor.js`) with `matcher: "Task|Agent"` (amended from `"Task"` — the runtime surfaces the spawn tool as `Agent` per transcript evidence) fires on every gsd-* subagent return and appends one JSONL record (ts, agent_type, description, desc_hash, scraped confidence, seq). A `PostToolUseFailure(Task|Agent)` entry captures crashed spawns as `agent.error`. **Observability lives in code/config, NOT in prompts** (explicit user requirement): confidence is scraped from the agent's return text via a tolerant regex — zero workflow/agent prose changes. Log = append-only `.planning/telemetry/agent-trace.jsonl` (gitignored); reader = minimal `gsd-tools trace` (tail + filter), not a pretty-printer. Default-on via `config.hooks.agent_trace`. **Two empirical unknowns gate the scraper** (resolved in a Wave-0 step before implementation): the runtime `tool_name` string (Task vs Agent) and the hook `tool_response` shape (content-array vs result-string).
 **Success Criteria** (what must be TRUE):
   1. A code-level hook records every `gsd-*` subagent spawn to a structured log (timestamp, agent type, spawning context) with zero changes to workflow/agent prompt files
   2. The log captures the confidence verdict of resolution/verifier agent returns, so a confidence-driven re-research (LOW → second spawn) is visible as distinct, timestamped, correlated entries
   3. Telemetry is best-effort and non-blocking — a hook failure never interrupts the agent run, and it degrades cleanly in runtimes without hook support
-**Plans**: TBD
+**Plans**: 3 (01 Wave-0 empirical fixture capture + scraper/extract TDD; 02 hook body + build/install/config/gitignore wiring + live e2e verify; 03 `gsd-tools trace` reader + tests) — 01 is Wave 0 (gates the scraper); 02 and 03 are Wave 1, parallel (no shared files)
 
 ### Phase 5: Plan-Loop Convergence and Verify Fix
 **Goal**: The plan revision loop detects when it has stalled (BLOCKER+WARNING counts stop decreasing) and escalates rather than silently cycling; and verify artifacts / verify key-links work correctly on all current plans (2-space-indent fix)
@@ -82,5 +83,5 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 1. Security Hooks | 0/2 | Planned | - |
 | 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
 | 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
-| 4. Agent Observability & Telemetry | 0/TBD | Not started | - |
+| 4. Agent Observability & Telemetry | 0/3 | Planned | - |
 | 5. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
