@@ -15,6 +15,7 @@ key_files:
     - hooks/gsd2-agent-trace.js
     - test/agent-trace-scraper.test.js
     - test/fixtures/agent-trace/agent-result-fixture.json
+    - test/fixtures/agent-trace/hook-stdin-envelope.json
   modified: []
 decisions:
   - "extractReturnText leads with object-with-.content branch (confirmed transcript shape from c5609700 L186) before bare-array branch"
@@ -23,9 +24,9 @@ decisions:
 metrics:
   duration: ~8 min
   completed: 2026-06-05
-  tasks_completed: 2
+  tasks_completed: 3
   tasks_total: 3
-  files_created: 3
+  files_created: 4
 requirements: [OBS-01, OBS-02]
 ---
 
@@ -69,7 +70,27 @@ Implemented the corrected regex verbatim from RESEARCH.md Q2:
 **GREEN result:** all 9 tests pass, `node --test` exits 0.
 **Require-safe:** `node -e "require('./hooks/gsd2-agent-trace.js')"` exits 0 immediately.
 
-### Task 3: PENDING — orchestrator live-capture checkpoint (hook-stdin-envelope.json + field-name findings to be appended by orchestrator).
+### Task 3: Capture live hook stdin envelope (orchestrator human-action checkpoint) — DONE
+
+**Performed by:** orchestrator (top level). A debug no-matcher `PostToolUse` hook was temporarily registered in `.claude/settings.json`; a real `gsd-executor` spawn (the Wave-0 executor itself) fired it; the captured stdin envelope was inspected and saved. Mid-session `settings.json` edits **do** take effect (verified with a trivial Bash probe before the real capture). Debug hook + temporary settings entry removed afterward (settings.json restored byte-exact from backup).
+
+**Artifact:** `test/fixtures/agent-trace/hook-stdin-envelope.json` (redacted real capture; large `prompt`/`content.text` truncated).
+
+**Confirmed envelope field names (empirical, this runtime = Claude Code):**
+
+| Question | Finding |
+|----------|---------|
+| `tool_name` value for a subagent spawn | **`"Agent"`** (not `"Task"`). `matcher: "Task\|Agent"` is correct — keep the alternation (other runtimes / historical CC emit `"Task"`). |
+| `tool_response` shape | **object** with keys `status, prompt, agentId, agentType, content, totalDurationMs, totalTokens, totalToolUseCount, usage, toolStats`. `.content` is an **array of `{type:"text", text}`** blocks → `extractReturnText` must read the **object-with-`.content`** branch (matches the skeleton's confirmed branch order). |
+| How to identify a `gsd-*` spawn | `tool_input.subagent_type` (here `"gsd-executor"`); also mirrored at `tool_response.agentType`. Filter on `subagent_type` starting `gsd-`. |
+| `description` available | Yes — `tool_input.description` (used for the trace record + `desc_hash`). |
+| `duration_ms` structured | Yes — **top-level** `duration_ms` (whole-call), plus `tool_response.totalDurationMs` (agent self-reported). Also `totalTokens`, `totalToolUseCount` available as bonus telemetry. |
+| `hook_event_name` present | Yes — `"PostToolUse"`. |
+| `session_id` / `cwd` present | Yes — both top-level. |
+| Confidence on this spawn | `null` (the `gsd-executor` return had no `Confidence:` marker; correct for non-verdict agents). |
+| **A6: is `PostToolUseFailure` a real hook event?** | **YES** — confirmed first-class Claude Code hook event (fires only on tool failure; `PostToolUse` fires only on success). **Plan 02 SHOULD wire a `PostToolUseFailure` entry** (`event: agent.error`), not omit it. |
+
+**Decisions recorded for Plan 02:** matcher `"Task|Agent"` confirmed; `extractReturnText` reads `tool_response.content[].text`; gsd-* filter on `tool_input.subagent_type`; wire `PostToolUseFailure` (it is real).
 
 ## Verification Results
 
@@ -95,7 +116,7 @@ None — plan executed exactly as written.
 
 1. Fixture is a single JSON object with `"cases"` key nesting case variants — satisfies both "valid JSON" acceptance check and fixture shape requirement without requiring two separate files.
 2. No changes to `settings.json`, `build-hooks.js`, or `install.js` — scoped to Plan 01 artifacts only (Plans 02-03 handle wiring).
-3. `hook-stdin-envelope.json` NOT created — that is Task 3's artifact (orchestrator capture).
+3. `hook-stdin-envelope.json` created in Task 3 via live orchestrator-level hook capture (redacted real envelope).
 
 ## Self-Check
 
