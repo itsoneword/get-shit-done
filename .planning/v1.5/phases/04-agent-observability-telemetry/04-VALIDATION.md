@@ -1,8 +1,8 @@
 ---
 phase: 4
 slug: agent-observability-telemetry
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-04
 ---
@@ -41,7 +41,14 @@ created: 2026-06-04
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| _TBD by planner_ | | 0 | OBS-01/02 | empirical fixture capture | `node --test test/...` | ❌ W0 | ⬜ pending |
+| 04-01-01 | 01 | 0 | OBS-02 | unit (RED) | `node --test test/agent-trace-scraper.test.js` | ❌ W0 | ⬜ pending |
+| 04-01-02 | 01 | 0 | OBS-02 | unit (GREEN) | `node --test test/agent-trace-scraper.test.js` | ❌ W0 | ⬜ pending |
+| 04-01-03 | 01 | 0 | OBS-01/02 | empirical capture (checkpoint) | `test -f test/fixtures/agent-trace/hook-stdin-envelope.json` | ❌ W0 | ⬜ pending |
+| 04-02-01 | 02 | 1 | OBS-01/02 | unit + build | `node --test test/agent-trace-scraper.test.js` | ✅ (after 04-01) | ⬜ pending |
+| 04-02-02 | 02 | 1 | OBS-01 | build/install/config wiring | `node scripts/build-hooks.js && grep -q '"agent_trace"' .planning/config.json && grep -q 'gsd2-agent-trace' bin/install.js` | ✅ | ⬜ pending |
+| 04-02-03 | 02 | 1 | OBS-01 | live e2e (checkpoint) | `tail -1 .planning/telemetry/agent-trace.jsonl \| grep -q '"agent_type":"gsd-'` | ❌ runtime | ⬜ pending |
+| 04-03-01 | 03 | 1 | OBS-02 | unit (TDD) | `node --test test/trace-reader.test.js` | ❌ W1 | ⬜ pending |
+| 04-03-02 | 03 | 1 | OBS-02 | CLI dispatch | `node get-shit-done/bin/gsd-tools.cjs trace --last 5` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -69,11 +76,13 @@ created: 2026-06-04
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (the empirical hook-payload fixture)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (each plan is 2/2 auto)
+- [x] Wave 0 covers all MISSING references (the empirical hook-payload fixture — 04-01-03)
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+*`wave_0_complete` stays `false` until the Wave-0 live-capture checkpoint (04-01-03) runs during execution.*
+
+**Approval:** approved 2026-06-04 (gsd-plan-checker Dimension 8 PASS — map filled post-planning)
