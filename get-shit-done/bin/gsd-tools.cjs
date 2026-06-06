@@ -67,6 +67,15 @@
  *                                        history, single-commit transaction, manifest-driven
  *                                        crash recovery.
  *
+ * Worktree Operations (SC1 — parallel executor isolation):
+ *   worktree add <dir> <branch>        Create linked worktree; detect-existing + ignore-check
+ *     [--base <branch>]                Sandbox failure → {ok:false, fallback:"in-place"}
+ *   worktree merge <branch>            Merge branch; per-merge clean check
+ *     [--target <branch>]              Returns {clean:bool, conflict_files:[]}; NEVER aborts on conflict
+ *   worktree remove <dir>              Remove worktree + delete branch
+ *     [--branch <branch>] [--force]
+ *   worktree prune                     git worktree prune (clean stale entries)
+ *
  * Validation:
  *   validate consistency               Check phase numbering, disk/roadmap sync
  *   validate health [--repair]         Check .planning/ integrity, optionally repair
@@ -163,6 +172,7 @@ const frontmatter = require('./lib/frontmatter.cjs');
 const profilePipeline = require('./lib/profile-pipeline.cjs');
 const trace = require('./lib/trace.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
+const worktree = require('./lib/worktree.cjs');
 
 // ─── CLI Router ───────────────────────────────────────────────────────────────
 
@@ -575,6 +585,11 @@ async function main() {
       } else {
         error('Unknown validate subcommand. Available: consistency, health');
       }
+      break;
+    }
+
+    case 'worktree': {
+      worktree.cmdWorktree(cwd, args, raw);
       break;
     }
 
