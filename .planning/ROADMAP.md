@@ -73,7 +73,9 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   1. When the plan revision loop runs max_iterations without the BLOCKER+WARNING count decreasing, it emits a STALL DETECTED block and escalates to the user rather than silently completing
   2. Running `gsd-tools verify artifacts <plan-path>` on a plan with 2-space-indented must_haves block returns the correct artifact list (not "no blocks found")
   3. Running `gsd-tools verify key-links <plan-path>` on a plan with 2-space-indented must_haves block returns the correct key-links (not "no blocks found")
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1, parallel)
+  - 05-01 — FIX-01: generalize parseMustHavesBlock to N-space indent (frontmatter.cjs + regression tests)
+  - 05-02 — CONV-01: stall-detection in the plan-phase revision loop (plan-phase.md)
 
 ## Progress
 
@@ -85,7 +87,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
 | 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
 | 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
-| 5. Plan-Loop Convergence and Verify Fix | 0/TBD | Not started | - |
+| 5. Plan-Loop Convergence and Verify Fix | 0/2 | Not started | - |
 | 6. Skill Self-Sufficiency | 0/TBD | Not started | - |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
