@@ -72,6 +72,27 @@ function cleanup(tmpDir) {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
+/**
+ * Create a minimal git repo with a single seed commit.
+ * Returns { dir, cleanup } — caller must call cleanup() when done.
+ * Suitable for worktree tests: has an initial commit, gpg signing disabled.
+ */
+function createTempGitRepo() {
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-wt-'));
+  execSync('git init -q', { cwd: dir, stdio: 'pipe' });
+  execSync('git config user.email "test@test.com"', { cwd: dir, stdio: 'pipe' });
+  execSync('git config user.name "Test"', { cwd: dir, stdio: 'pipe' });
+  execSync('git config commit.gpgsign false', { cwd: dir, stdio: 'pipe' });
+  fs.writeFileSync(path.join(dir, 'seed.txt'), 'seed\n');
+  execSync('git add -A', { cwd: dir, stdio: 'pipe' });
+  execSync('git commit -q -m "init"', { cwd: dir, stdio: 'pipe' });
+  return {
+    dir,
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  };
+}
+
 // Write minimal STATE.md frontmatter with milestone: <version>
 function withStateMilestone(tmpDir, version) {
   const statePath = path.join(tmpDir, '.planning', 'STATE.md');
@@ -156,6 +177,7 @@ module.exports = {
   runGsdTools,
   createTempProject,
   createTempGitProject,
+  createTempGitRepo,
   createLegacyLayoutFixture,
   createPartitionedFixture,
   createLegacyGitFixture,
