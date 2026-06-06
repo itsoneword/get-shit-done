@@ -185,7 +185,7 @@ End with: **Total deviations:** N auto-fixed (breakdown). **Impact:** assessment
 For `type: tdd` plans — RED-GREEN-REFACTOR:
 
 1. **Infrastructure** (first TDD plan only): detect project, install framework, config, verify empty suite
-2. **RED:** Read `<behavior>` → failing test(s) → run (MUST fail) → commit: `test({phase}-{plan}): add failing test for [feature]`
+2. **RED:** Read `<behavior>` → failing test(s) → run (MUST fail) → **STOP — verify the test visibly fails before writing any production code.** A test that passes immediately is wrong. See the Iron Law in `~/.claude/get-shit-done/references/tdd.md`. → commit: `test({phase}-{plan}): add failing test for [feature]`
 3. **GREEN:** Read `<implementation>` → minimal code → run (MUST pass) → commit: `feat({phase}-{plan}): implement [feature]`
 4. **REFACTOR:** Clean up → tests MUST pass → commit: `refactor({phase}-{plan}): clean up [feature]`
 

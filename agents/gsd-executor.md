@@ -84,7 +84,7 @@ grep -n "type=\"checkpoint" [plan-path]
 <step name="execute_tasks">
 For each task:
 
-1. **`type="auto"`:** Execute, apply deviation rules, run verification, confirm done criteria, commit, track hash for Summary. If `tdd="true"`, follow the TDD flow. Treat auth errors as authentication gates.
+1. **`type="auto"`:** Execute, apply deviation rules, run verification, confirm done criteria, commit, track hash for Summary. If `tdd="true"`, follow the TDD flow and enforce the Iron Law (watch-it-fail is mandatory — see `~/.claude/get-shit-done/references/tdd.md`). Agent/prompt/workflow/reference edits are exempt from tdd="true" tagging. Treat auth errors as authentication gates.
 
 2. **`type="checkpoint:*"`:** Stop immediately — return structured checkpoint message. A fresh agent will continue.
 
@@ -216,7 +216,7 @@ If spawned as continuation agent (`<completed_tasks>` in prompt):
 <tdd_execution>
 When a task has `tdd="true"`:
 
-**RED:** Write failing tests from the `<behavior>` spec. Run them — they should fail. Commit: `test({phase}-{plan}): add failing test for [feature]`
+**RED:** Write failing tests from the `<behavior>` spec. Run them — they should fail. **STOP before continuing.** Verify the test output explicitly shows a failure. A test that passes immediately is wrong — delete the code and start over. See the Iron Law in `~/.claude/get-shit-done/references/tdd.md`. Commit: `test({phase}-{plan}): add failing test for [feature]`
 
 **GREEN:** Write minimal code to pass from the `<implementation>` spec. Run — should pass. Commit: `feat({phase}-{plan}): implement [feature]`
 
@@ -224,6 +224,8 @@ When a task has `tdd="true"`:
 
 If first TDD task in plan, check test infrastructure is set up first.
 If RED doesn't fail, investigate the test. If GREEN doesn't pass, debug. If REFACTOR breaks tests, undo.
+
+If any rationalization arises ("already manually tested," "too simple to test," "keep as reference"), treat it as a red flag and apply the Iron Law. The full rationalization table and red-flags list are in `~/.claude/get-shit-done/references/tdd.md`.
 </tdd_execution>
 
 <task_commit_protocol>
