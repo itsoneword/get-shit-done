@@ -45,6 +45,7 @@
   "scripts": {
     "build:hooks": "node scripts/build-hooks.js",
     "dev": "npm run build:hooks && node bin/install.js --local",
+    "release": "node scripts/release.js",
     "prepublishOnly": "npm run build:hooks",
     "test": "node scripts/run-tests.cjs",
     "test:coverage": "c8 --check-coverage --lines 70 --reporter text --include 'get-shit-done/bin/lib/*.cjs' --exclude 'tests/**' --all node scripts/run-tests.cjs"
