@@ -161,67 +161,101 @@ function spliceFrontmatter(content, newObj) {
 }
 
 function parseMustHavesBlock(content, blockName) {
-  // Extract a specific block from must_haves in raw frontmatter YAML
-  // Handles 3-level nesting: must_haves > artifacts/key_links > [{path, provides, ...}]
+  // Extract a specific block from must_haves in raw frontmatter YAML.
+  // Detects must_haves child indent dynamically so it works for both
+  // 2-space plans (real plans) and 4-space plans (legacy test fixtures).
   const fmMatch = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
   if (!fmMatch) return [];
 
   const yaml = fmMatch[1];
-  // Find the block (e.g., "truths:", "artifacts:", "key_links:")
-  const blockPattern = new RegExp(`^\\s{4}${blockName}:\\s*$`, 'm');
-  const blockStart = yaml.search(blockPattern);
+  const yamlLines = yaml.split(/\r?\n/);
+
+  // Step 1: Find must_haves: and compute its indent level (mhIndent).
+  const mhLineMatch = yaml.match(/^(\s*)must_haves:\s*$/m);
+  if (!mhLineMatch) return [];
+  const mhIndent = mhLineMatch[1].length;
+
+  // Step 2: Determine child indent = indent of first non-blank line after must_haves:.
+  const mhLineIdx = yamlLines.findIndex(l => /^(\s*)must_haves:\s*$/.test(l));
+  let childIndent = null;
+  for (let i = mhLineIdx + 1; i < yamlLines.length; i++) {
+    const l = yamlLines[i];
+    if (l.trim() === '') continue;
+    const ind = l.match(/^(\s*)/)[1].length;
+    if (ind > mhIndent) { childIndent = ind; break; }
+    break; // non-blank, non-deeper line — must_haves block is empty
+  }
+  if (childIndent === null) return [];
+
+  // Derive relative indents. At childIndent=4: itemIndent=6, keyIndent=8, nestedArrIndent=10
+  // (identical to the former hardcodes, preserving 4-space test fixture behaviour).
+  const itemIndent = childIndent + 2;
+  const keyIndent = childIndent + 4;
+  const nestedArrIndent = childIndent + 6;
+
+  // Step 3: Find the block header anchored at EXACTLY childIndent spaces.
+  // Using exact-count `\s{N}` prevents matching a same-named key nested deeper
+  // (e.g., `artifacts:` at 6-space under truths[0] must not be selected when
+  // the top-level `artifacts:` is at 2-space childIndent).
+  const headerPattern = new RegExp(`^([ ]{${childIndent}})${blockName}:\\s*$`, 'm');
+  const blockStart = yaml.search(headerPattern);
   if (blockStart === -1) return [];
 
   const afterBlock = yaml.slice(blockStart);
-  const blockLines = afterBlock.split(/\r?\n/).slice(1); // skip the header line
+  const blockLines = afterBlock.split(/\r?\n/).slice(1); // skip the header line itself
 
+  // Step 4: Walk block body and build items array.
   const items = [];
   let current = null;
 
+  const itemDashRe = new RegExp(`^\\s{${itemIndent}}-\\s+`);
+  const simpleStrRe = new RegExp(`^\\s{${itemIndent}}-\\s+"?([^"]+)"?\\s*$`);
+  const kvOnDashRe  = new RegExp(`^\\s{${itemIndent}}-\\s+(\\w+):\\s*"?([^"]*)"?\\s*$`);
+  const contKeyRe   = new RegExp(`^\\s{${keyIndent},}(\\w+):\\s*"?([^"]*)"?\\s*$`);
+  const nestedArrRe = new RegExp(`^\\s{${nestedArrIndent},}-\\s+"?([^"]+)"?\\s*$`);
+
   for (const line of blockLines) {
-    // Stop at same or lower indent level (non-continuation)
     if (line.trim() === '') continue;
     const indent = line.match(/^(\s*)/)[1].length;
-    if (indent <= 4 && line.trim() !== '') break; // back to must_haves level or higher
+    // Stop when we return to child-block-sibling level or shallower.
+    if (indent <= childIndent) break;
 
-    if (line.match(/^\s{6}-\s+/)) {
-      // New list item at 6-space indent
-      if (current) items.push(current);
-      current = {};
-      // Check if it's a simple string item
-      const simpleMatch = line.match(/^\s{6}-\s+"?([^"]+)"?\s*$/);
+    if (itemDashRe.test(line)) {
+      // New list item
+      if (current !== null) items.push(current);
+      const simpleMatch = simpleStrRe.exec(line);
       if (simpleMatch && !line.includes(':')) {
         current = simpleMatch[1];
       } else {
-        // Key-value on same line as dash: "- path: value"
-        const kvMatch = line.match(/^\s{6}-\s+(\w+):\s*"?([^"]*)"?\s*$/);
+        const kvMatch = kvOnDashRe.exec(line);
         if (kvMatch) {
+          current = { [kvMatch[1]]: kvMatch[2] };
+        } else {
           current = {};
-          current[kvMatch[1]] = kvMatch[2];
         }
       }
-    } else if (current && typeof current === 'object') {
-      // Continuation key-value at 8+ space indent
-      const kvMatch = line.match(/^\s{8,}(\w+):\s*"?([^"]*)"?\s*$/);
+    } else if (current !== null && typeof current === 'object') {
+      // Continuation key-value (lower-bound: tolerates deeper sub-structure)
+      const kvMatch = contKeyRe.exec(line);
       if (kvMatch) {
         const val = kvMatch[2];
-        // Try to parse as number
         current[kvMatch[1]] = /^\d+$/.test(val) ? parseInt(val, 10) : val;
       }
-      // Array items under a key
-      const arrMatch = line.match(/^\s{10,}-\s+"?([^"]+)"?\s*$/);
+      // Nested array item under the last-added key
+      const arrMatch = nestedArrRe.exec(line);
       if (arrMatch) {
-        // Find the last key added and convert to array
         const keys = Object.keys(current);
         const lastKey = keys[keys.length - 1];
-        if (lastKey && !Array.isArray(current[lastKey])) {
-          current[lastKey] = current[lastKey] ? [current[lastKey]] : [];
+        if (lastKey) {
+          if (!Array.isArray(current[lastKey])) {
+            current[lastKey] = current[lastKey] ? [current[lastKey]] : [];
+          }
+          current[lastKey].push(arrMatch[1]);
         }
-        if (lastKey) current[lastKey].push(arrMatch[1]);
       }
     }
   }
-  if (current) items.push(current);
+  if (current !== null) items.push(current);
 
   return items;
 }
