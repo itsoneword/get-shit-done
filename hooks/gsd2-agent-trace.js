@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// gsd-hook-version: {{GSD_VERSION}}
 // gsd2-agent-trace.js — PostToolUse / PostToolUseFailure hook
 // Appends one JSONL record to .planning/telemetry/agent-trace.jsonl per gsd-* subagent spawn.
 // Pure functions exported for testing; stdin reader only runs when executed directly.
