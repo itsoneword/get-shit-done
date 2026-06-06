@@ -75,3 +75,20 @@
 - Signal: [STRONG] — user described the mechanism concretely and said "think about it" (park, don't drop).
 - **Design bias reminder (from Phase 2 north-star):** prefer loops/skills raising model autonomy over many special-case agents; the doctor should be a skill + a bounded agent loop, not an agent zoo.
 - Inherits CTX-01/CTX-02 reshaped out of Phase 3 (REQUIREMENTS.md marked Reshaped → doctor). Note: CTX-02's <60/70 token-% thresholds are NOT reusable (doctor measures stale-decision count, not token %); only the keep-lean intent carries.
+
+---
+
+### From Phase 6 discussion (2026-06-06)
+
+**For Phase 7: Parallel Multi-Session Safety**
+- Phase 6 ports the worktree-isolation *technique* as a GSD reference (detect-existing, native-first, git fallback, ignore-check, baseline test, sandbox fallback). Phase 7 consumes it for the `execute-phase` add→wave→merge orchestration — do NOT re-derive the technique; wire the Phase 6 reference in.
+- Phase 6 deliberately did NOT build a gsd-tools worktree helper — it would guess at Phase 7's orchestration API. Phase 7 defines that API; build the helper there if needed.
+- Signal: [STRONG] — explicit Phase 6/7 boundary, ratified by user ("let's keep it and let's do it"; boundary delegated to Claude).
+
+**Supersedes SEC-DEFER-01 rationale**
+- SEC-DEFER-01 (Phase 1) descoped worktree-path-guard because "user doesn't rely on worktree isolation." That premise is now false: Phase 7's parallelization makes worktree isolation load-bearing. If worktree-isolated execution becomes routine (Phase 7), reconsider SEC-DEFER-01 (the `worktree-path-guard` hard-block hook).
+- Signal: [STRONG] — user reversed the prior explicitly.
+
+**Closes the Phase 4 TDD-default note**
+- Phase 4 cross-phase note flagged "making TDD default-ON is a separate concern needing its own scoping." Phase 6 scoped it: default-ON where helpful (planner-tagged logic tasks), agent/prompt/workflow edits exempt, executor enforces Iron Law when tagged. Not blanket-mandatory.
+- Signal: [STRONG] — resolved.
