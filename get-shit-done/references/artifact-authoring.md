@@ -141,6 +141,6 @@ Every GSD artifact has two homes. After writing source, copy to runtime:
 cp get-shit-done/references/<name>.md .claude/get-shit-done/references/<name>.md
 ```
 
-For agent files, the diff between source and runtime is path tokens only (`~/.claude/` → `/home/cleversol/gsd2/mine/.claude/`). For reference files that contain no path tokens, `cp` produces a byte-identical copy — verified with `diff -q`.
+For agent files, the diff between source and runtime is path tokens only (`~/.claude/` expands to the absolute install path, e.g. `<HOME>/.claude/`). For reference files that contain no path tokens, `cp` produces a byte-identical copy — verified with `diff -q`.
 
 Commit source. Runtime is gitignored and must be kept in sync manually.
