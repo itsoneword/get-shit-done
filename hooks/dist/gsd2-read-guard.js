@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gsd-hook-version: 1.4.6
+// gsd-hook-version: 1.4.7
 // GSD2 Read Guard — PreToolUse hook
 // Injects advisory guidance when Write/Edit targets an existing file,
 // reminding the model to Read the file first.

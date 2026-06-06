@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gsd-hook-version: 1.4.6
+// gsd-hook-version: 1.4.7
 // Claude Code Statusline - GSD Edition
 // Shows: model | current task | directory | context usage
 

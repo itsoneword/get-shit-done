@@ -2,6 +2,10 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.4.7] - 2026-06-06
+
+Development checkpoint for in-progress milestone v1.5. Bumps version to keep `package.json`, hook `dist` headers, and runtime `VERSION` in lockstep (previously desynced at 1.4.6). Captures v1.5 work landed so far: standalone security guard hooks, the autonomous technical-resolution loop wired into discuss/plan, anti-pattern/bug-pattern reference docs, and the agent-observability telemetry hook + `gsd-tools trace` reader.
+
 ## [1.4.6] - 2026-05-13
 
 Phase 05 of milestone v1.4 — milestone-versioned phase IDs, partition-aware layout, migration tool, and distillation artifacts. No breaking changes for projects on the legacy layout (auto-detect + one-time migration prompt).
