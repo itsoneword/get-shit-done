@@ -733,11 +733,45 @@ Task(
 
 After planner returns -> spawn checker again (step 10), increment iteration_count.
 
-**If iteration_count >= 3:**
+**If iteration_count >= 3 (escalation boundary):**
 
-Display: `Max iterations reached. {N} issues remain:` + issue list
+This is the existing escalation boundary — CONV-01 does NOT add an earlier exit and does NOT raise `max_iterations`. Because `iteration_count` started at 1, the trajectory now holds exactly 3 captured counts (`C1`, `C2`, `C3`) and there have been exactly 2 comparison cycles: `C2`-vs-`C1` and `C3`-vs-`C2`. "Non-decreasing for 2 consecutive cycles" is therefore confirmable precisely here.
 
-Offer: 1) Force proceed, 2) Provide guidance and retry, 3) Abandon
+**Determine convergence from the trajectory:**
+- The count is **stalled** if it **never decreased** across the trajectory — i.e. `C2 >= C1` AND `C3 >= C2` (non-decreasing throughout; an *increasing* trajectory like `5 → 6 → 7` is also a stall).
+- Otherwise the count **decreased on at least one cycle** (e.g. `5 → 3 → 1`) but did not reach zero — this is **converging, not stalled**.
+
+**Branch the message accordingly:**
+
+- **Stalled** → emit a `## STALL DETECTED` block:
+
+  ```markdown
+  ## STALL DETECTED
+
+  The plan checker is not converging across revision iterations.
+
+  Issue count: {C1} → {C2} → {C3} — not converging
+
+  Unresolved issues:
+  {issue list from the latest checker return}
+  ```
+
+- **Converging but incomplete** → keep the existing message:
+
+  ```markdown
+  Max iterations reached. {N} issues remain:
+  {issue list}
+  ```
+
+**Both branches then present the SAME three options** (no new options, no new mechanism):
+
+```
+1. Force proceed
+2. Provide guidance and retry
+3. Abandon
+```
+
+Use AskUserQuestion with these three options. (`Force proceed` → continue to step 13; `Provide guidance and retry` → take plain-text guidance and re-spawn the planner in revision mode with it, then re-run the checker; `Abandon` → stop the workflow.)
 
 ## 13. Requirements Coverage Gate
 
