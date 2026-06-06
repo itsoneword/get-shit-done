@@ -752,6 +752,66 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): ev
 Skip this step if `.planning/PROJECT.md` does not exist.
 </step>
 
+<step name="sync_sidecars">
+Refresh the codebase sidecars this phase made stale, then re-sync root `CLAUDE.md`. Sidecars (`.planning/codebase/*.md`) feed the always-loaded `CLAUDE.md`; left frozen, they make Claude operate on a stale mental model.
+
+**Skip the entire step if root `CLAUDE.md` does not exist** — sidecar creation is `/gsd2:new-project`'s job, not a side effect of phase execution:
+```bash
+[ -f CLAUDE.md ] || echo "no root CLAUDE.md — skip sidecar sync"
+```
+If it exists, continue.
+
+**1. Declared impact (planner-driven).** Union `sidecar_impact` across every plan in the phase:
+```bash
+DECLARED=$(for p in {phase_dir}/*-PLAN.md; do
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter get "$p" sidecar_impact --raw 2>/dev/null
+done | grep -oE 'STACK|ARCHITECTURE|CONVENTIONS|INTEGRATIONS|STRUCTURE|TESTING|CONCERNS' | sort -u)
+```
+
+**2. Drift heuristic (safety net).** Independently, match the phase's changed files against glob rules — this catches sidecars a plan forgot to declare. Source the file set from the plans' `files_modified`:
+```bash
+CHANGED=$(for p in {phase_dir}/*-PLAN.md; do
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter get "$p" files_modified --raw 2>/dev/null
+done)
+DRIFT=""
+echo "$CHANGED" | grep -qE 'package\.json|package-lock|requirements\.txt|Cargo\.toml|go\.mod|pyproject\.toml|Gemfile' && DRIFT="$DRIFT STACK"
+echo "$CHANGED" | grep -qE '(^|/)src/(routes|app)/|(^|/)(app|lib|services|modules)/' && DRIFT="$DRIFT ARCHITECTURE"
+echo "$CHANGED" | grep -qE '\.eslintrc|\.prettierrc|jest\.config|vitest\.config|\.test\.|_test\.|(^|/)tests?/' && DRIFT="$DRIFT CONVENTIONS"
+DRIFT=$(echo "$DRIFT" | tr ' ' '\n' | grep -v '^$' | sort -u)
+```
+
+**3. Build the refresh set.**
+- Every sidecar in `DECLARED` → refresh automatically (no prompt).
+- Each sidecar in `DRIFT` but NOT in `DECLARED` → ask once, non-blocking:
+  ```
+  Phase {X} touched files that usually change {SIDECAR}, but no plan declared it stale. Refresh the {SIDECAR} sidecar now? (y/n)
+  ```
+  Add it only on `y`. If the user declines or skips, continue — never block phase completion on this.
+
+If the refresh set is empty, skip to `offer_next`.
+
+**4. Map sidecars → mapper focus** (a focus may cover several sidecars; spawn each focus at most once):
+
+| Sidecar(s) | Focus |
+|------------|-------|
+| `STACK`, `INTEGRATIONS` | `tech` |
+| `ARCHITECTURE`, `STRUCTURE` | `arch` |
+| `CONVENTIONS`, `TESTING` | `quality` |
+| `CONCERNS` | `concerns` |
+
+**5. Spawn only the needed mapper(s).** Use the same focus prompts as `/gsd2:map-codebase` (its tech/arch/quality/concerns agent blocks), restricted to the focuses computed above. Each mapper rewrites only its own sidecar files.
+```bash
+MAPPER_MODEL=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-codebase-mapper --raw 2>/dev/null || echo "inherit")
+```
+Spawn with `subagent_type="gsd-codebase-mapper"`, `model="${MAPPER_MODEL}"`, `run_in_background=true`; wait for all to confirm before continuing.
+
+**6. Re-sync and commit.** `--auto` detects manually-edited managed sections and skips them, so user edits are never clobbered:
+```bash
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" generate-claude-md --auto
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(phase-{X}): refresh impacted sidecars + CLAUDE.md" --files .planning/codebase/*.md CLAUDE.md
+```
+</step>
+
 <step name="offer_next">
 
 **Exception:** If `gaps_found`, the `verify_phase_goal` step already presents the gap-closure path. Skip auto-advance.

@@ -188,6 +188,7 @@ files_modified: []
 autonomous: true           # false if has checkpoints
 requirements: []           # Requirement IDs from ROADMAP — every ID must appear in at least one plan
 user_setup: []             # Omit if empty
+sidecar_impact: []         # Codebase sidecars this plan likely makes stale; omit if []. See below.
 must_haves:
   truths: []               # Observable behaviors (user perspective)
   artifacts: []            # Files that must exist
@@ -238,6 +239,12 @@ After completion, create `.planning/phases/XX-name/{phase}-{plan}-SUMMARY.md`
 When plans depend on existing code, extract key interfaces/types into an `<interfaces>` block in `<context>` so executors don't need to explore the codebase. When plans create new interfaces, add a Wave 0 task defining the contracts.
 
 Only reference prior plan SUMMARYs if genuinely needed (shared types, decisions that affect this plan). Avoid reflexive chaining.
+
+## Sidecar Impact
+
+`.planning/codebase/*.md` sidecars feed the root `CLAUDE.md` (always-loaded context). They go stale when a phase changes the project's stack, architecture, or conventions. Declare which sidecars this plan likely invalidates so execute-phase can refresh only those after the phase passes verification — no cost on routine phases.
+
+Set `sidecar_impact` to any of: `STACK`, `ARCHITECTURE`, `CONVENTIONS`, `INTEGRATIONS`, `STRUCTURE`, `TESTING`, `CONCERNS`. Omit the key (or leave `[]`) when the plan only touches feature logic. Examples: swapping a framework or adding a dependency → `[STACK]`; restructuring modules or changing the communication layer → `[ARCHITECTURE]`; new lint/test scaffolding → `[CONVENTIONS]`.
 </plan_format>
 
 <goal_backward>
