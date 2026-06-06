@@ -32,6 +32,9 @@ gaps.md
 improve.md
 philosophy.md
 
+# Worktree isolation dirs (parallel executor workspaces — never committed)
+.worktrees/
+
 # Installed skills
 .github/agents/gsd-*
 .github/skills/gsd-*
