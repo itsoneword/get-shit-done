@@ -46,12 +46,16 @@ no reflexive praise. Then pick an approach and apply it.
 separate doc, to avoid drift. File reframed from "visual patterns" to "user-facing output
 standards (visual + tone)".
 
-**Wiring:** `ui-brand.md` is already `@`-referenced by all 16 GSD orchestrators
-(commands/gsd2/*.md + get-shit-done/workflows/*.md). Editing the file's content propagates
-the standard to every one of them with zero new `@`-includes — which also kept this work
-disjoint from parallel sessions touching plan-phase/execute-phase/new-project. Source-of-truth
-is the repo `get-shit-done/` copy; mirrored to the project-local `.claude/get-shit-done/`
-install so it is live this session (install/build re-syncs it normally).
+**Wiring:** `ui-brand.md` is already `@`-referenced by ~17 GSD orchestrators
+(commands/gsd2/*.md + get-shit-done/workflows/*.md — planning/execution/UI/profile
+commands; NOT every command — e.g. discuss-phase, debug, fix, ship, verify-work don't load
+it). Editing the file's content propagates the standard to all of them with zero new
+`@`-includes — which also kept this work disjoint from parallel sessions touching
+plan-phase/execute-phase/new-project. Source-of-truth is the repo `get-shit-done/` copy;
+mirrored to the project-local `.claude/get-shit-done/` install. Verified live: the local
+commands rewrite the `@` ref to the absolute path
+`…/mine/.claude/get-shit-done/references/ui-brand.md`, and that resolved file now contains
+the standard — so it is active this session (install/build re-syncs from source normally).
 
 **Scope decision (deliberate):** wiring is at the *orchestrator* level, not `agents/*.md`.
 Orchestrators emit the user-facing prose; subagents return structured artifacts to the
