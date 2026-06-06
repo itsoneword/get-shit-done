@@ -38,3 +38,35 @@ no reflexive praise. Then pick an approach and apply it.
 - A short written standard for neutral, evidence-first output exists and is wired into the
   path GSD agents and the assistant actually read.
 - Confirmations are tied to evidence or explicit confidence, not social affirmation.
+
+## Resolution (2026-06-06)
+
+**Standard authored + wired** in `get-shit-done/references/ui-brand.md` as a new
+"Communication Standard" section (+ "Tone" anti-patterns). Single source of truth — no
+separate doc, to avoid drift. File reframed from "visual patterns" to "user-facing output
+standards (visual + tone)".
+
+**Wiring:** `ui-brand.md` is already `@`-referenced by all 16 GSD orchestrators
+(commands/gsd2/*.md + get-shit-done/workflows/*.md). Editing the file's content propagates
+the standard to every one of them with zero new `@`-includes — which also kept this work
+disjoint from parallel sessions touching plan-phase/execute-phase/new-project. Source-of-truth
+is the repo `get-shit-done/` copy; mirrored to the project-local `.claude/get-shit-done/`
+install so it is live this session (install/build re-syncs it normally).
+
+**Scope decision (deliberate):** wiring is at the *orchestrator* level, not `agents/*.md`.
+Orchestrators emit the user-facing prose; subagents return structured artifacts to the
+orchestrator, not chat. So orchestrator-level wiring + the existing assistant memory
+(`neutral-tone-no-sycophancy`, loaded every session) covers the real user-facing surface.
+Full per-agent reach (`agents/*.md`) is deferred — low marginal value, and
+`gsd-codebase-mapper.md` is owned by the concurrent generate-claude-md work.
+
+**Research grounding:** Constitutional AI treats anti-sycophancy as an explicit principle
+(honesty, non-deception, calibrated confidence); LLMs are overconfident when asked to state
+confidence verbally → tie confidence to evidence; the core failure is capitulation under
+pushback ("are you sure?" flips answers) and mirroring user confidence; training for warmth
+raises sycophancy (Nature 2026) — so a neutral register is the deliberate choice.
+
+**Content:** lead with evidence not affirmation; confirm only what's verified; tag
+confidence (verified / inferred / unknown); disagree when warranted and don't capitulate
+under pushback; tone ≠ length (a terse reply can still be sycophantic); guard against
+over-correcting into reflexive contrarianism.
