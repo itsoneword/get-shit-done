@@ -66,3 +66,17 @@ locally but are no longer tracked. See `.gitignore` lines 33-45.
 - `git ls-files docs/` shows only files with clear, non-overlapping purpose.
 - `.gitignore` no longer has a "pending merge" section for docs.
 - `docs/README.md` points users at both layers and explains the difference.
+
+## Resolution (2026-06-06): retired, not merged
+
+Premise no longer held. The parked legacy `docs/*.md` were never committed and had
+been deleted from disk — the curated fork content was gone and unrecoverable. The
+only surviving copies are in `gsd-core`, which is the un-curated upstream superset
+(its FEATURES.md alone is 3020 lines), not the fork's trimmed set. So there was
+nothing left to merge.
+
+Resolved by retiring the legacy tree instead:
+- Stripped the stale "Legacy docs pending merge" block from `.gitignore`.
+- Wrote `docs/README.md` as a one-tier index for `SYSTEM-MAP.md` + `system/`, noting
+  the legacy docs are retired in favor of `/gsd2:document` (sourced, regenerated).
+- `docs/system/` is now the canonical, auto-generated documentation tree.

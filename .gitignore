@@ -32,21 +32,6 @@ gaps.md
 improve.md
 philosophy.md
 
-# Legacy docs pending merge into docs/system/ (see todo)
-# Keep SYSTEM-MAP.md and docs/system/ tracked; everything else in docs/ is local-only for now.
-docs/AGENTS.md
-docs/ARCHITECTURE.md
-docs/CLI-TOOLS.md
-docs/COMMANDS.md
-docs/CONFIGURATION.md
-docs/FEATURES.md
-docs/USER-GUIDE.md
-docs/README.md
-docs/context-monitor.md
-docs/RESEARCH-agent-best-practices.md
-docs/RESEARCH-workflow-optimization.md
-docs/superpowers/
-
 # Installed skills
 .github/agents/gsd-*
 .github/skills/gsd-*
