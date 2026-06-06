@@ -44,12 +44,12 @@ created: 2026-06-06
 | 07-01 T3 | 01 | 1 | SC1 | Smoke | `git check-ignore -q .worktrees` | .gitignore | ⬜ pending |
 | 07-02 T1 | 02 | 1 | SC3 | Unit (TDD) | `node --test tests/frontmatter.test.cjs` + `diff -q` | get-shit-done/bin/lib/frontmatter.cjs | ⬜ pending |
 | 07-02 T2 | 02 | 1 | SC3 | Unit | `init todos --raw` returns depends_on; `diff -q` x3 | init.cjs, add-todo.md | ⬜ pending |
-| 07-03 T1 | 03 | 1 | SC4 | Unit (TDD) | `node --test tests/verify-health.test.cjs` + `diff -q` | get-shit-done/bin/lib/verify.cjs | ⬜ pending |
-| 07-03 T2 | 03 | 1 | SC4 | Grep | `grep -iE "symmetry\|drift" health.md` + `diff -q` | get-shit-done/workflows/health.md | ⬜ pending |
+| 07-03 T1 | 03 | 1 | SC4 | Unit (TDD) | `node --test tests/verify-health.test.cjs` + `diff -q` — covers BOTH file-tree drift AND settings.json hook/statusLine parity in one `validate health`; grep `settings.json`+`hooks\|statusLine` in verify.cjs symmetry fn | get-shit-done/bin/lib/verify.cjs | ⬜ pending |
+| 07-03 T2 | 03 | 1 | SC4 | Grep | `grep -iE "symmetry\|drift" health.md` + `grep -i settings.json health.md` + `diff -q` | get-shit-done/workflows/health.md | ⬜ pending |
 | 07-04 T1 | 04 | 2 | SC5 | Unit (TDD) | `node --test tests/roadmap.test.cjs` + `phase next-backlog-id --raw` | phase.cjs, gsd-tools.cjs | ⬜ pending |
 | 07-04 T2 | 04 | 2 | SC5 | Grep/FS | `grep -c 999` (==0), `test -d B1-*`, `test ! -d 999.*` | add-backlog.md, review-backlog.md, ROADMAP.md | ⬜ pending |
 | 07-05 T1 | 05 | 3 | SC2, SC3 | Unit (TDD) | `node --test tests/parallel-gate.test.cjs` + `diff -q` | get-shit-done/bin/lib/parallel-gate.cjs | ⬜ pending |
-| 07-06 T1 | 06 | 4 | SC1, SC4 | Grep + smoke | `grep worktree/validate health execute-phase.md` + `diff -q` | execute-phase.md | ⬜ pending |
+| 07-06 T1 | 06 | 4 | SC1, SC4 | Grep + smoke | `grep worktree/validate health execute-phase.md` + `diff -q` (reads 07-01-SUMMARY executor-targeting caveat first) | execute-phase.md | ⬜ pending |
 | 07-06 T2 | 06 | 4 | SC2 | Grep + smoke | `grep parallel-safe` in execute/discuss/plan; `grep worktree` quick.md; `diff -q` x4 | discuss/plan/quick/execute-phase.md | ⬜ pending |
 | 07-06 T3 | 06 | 4 | SC1, SC2, SC4 | Checkpoint (human) | `parallel-safe 6 7 --raw`→refuse; `validate health`→no drift; `worktree prune` | (workflow read-through) | ⬜ pending |
 
@@ -59,7 +59,7 @@ created: 2026-06-06
 1. SC1 — Quick-fix surfaces a reviewable merge, never a silent overwrite → 07-01 (worktree CLI conflict test) + 07-06 (execute-phase/quick wiring).
 2. SC2 — Gate decides safe/unsafe from `depends_on` + file-scope; HARD-refuses dependent discuss/plan → 07-05 (gate CLI) + 07-06 (workflow wiring).
 3. SC3 — Todos carry `depends_on`/`related_to` and the gate reads them → 07-02 (todo schema) + 07-05 (gate reads todo edges).
-4. SC4 — `/gsd2:health` reports source↔runtime drift in one invocation → 07-03 (symmetry check) + 07-06 (post-merge step).
+4. SC4 — `/gsd2:health` reports source↔runtime drift in one invocation → 07-03 (symmetry check: file-tree diff + settings.json hook/statusLine parity) + 07-06 (post-merge step).
 5. SC5 — Backlog ID scheme no longer reuses phase-number space → 07-04 (B-prefix migration).
 
 ---
