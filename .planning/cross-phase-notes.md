@@ -93,6 +93,16 @@
 - Phase 4 cross-phase note flagged "making TDD default-ON is a separate concern needing its own scoping." Phase 6 scoped it: default-ON where helpful (planner-tagged logic tasks), agent/prompt/workflow edits exempt, executor enforces Iron Law when tagged. Not blanket-mandatory.
 - Signal: [STRONG] — resolved.
 
+**⚠ PENDING MANUAL VERIFICATION (Success Criterion #3 — deferred to a real prod run)**
+- Phase 6 closed on automated checks only (all 14 structural grep/file assertions pass + 912/912 unit tests). The end-to-end behavioral proof was deferred — tracked in `06-HUMAN-UAT.md` (status: partial) and `06-VERIFICATION.md` (status: human_needed).
+- **What to verify during a future prod `plan → execute` run (with the `superpowers` plugin disabled):**
+  1. **TDD discipline fires:** on a `tdd=true` logic task, the executor refuses production code before a failing test and rejects a test that passes immediately (watch-it-fail). On an agent/prompt/workflow/reference task, the planner does NOT force-tag `tdd=true` (the exemption).
+  2. **receiving-code-review loads:** when acting on `gsd2:review` output or PR comments (via `review.md`/`ship.md`), the agent verifies-before-implementing and avoids performative agreement ("you're absolutely right").
+  3. **git-worktree technique available:** the reference is loadable for Phase 7 to wire in (Phase 7 owns the orchestration).
+  4. **No superpowers dependency:** none of the above requires the plugin to be installed/enabled.
+- Run `/gsd2:verify-work 6` after that run to record the result and clear the open UAT.
+- Signal: user chose "test in prod" (2026-06-06) — phase marked done, this note is the reminder.
+
 ---
 
 ### From Phase 7 discussion (2026-06-06)
