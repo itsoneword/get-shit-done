@@ -123,6 +123,8 @@ Every task needs an automated verify command that runs in < 60 seconds. If no te
 
 If you can write `expect(fn(input)).toBe(output)` before writing `fn`, it's a TDD candidate. TDD features get dedicated plans (type: tdd) because RED→GREEN→REFACTOR cycles consume 40-50% context. Mark code-producing tasks with `tdd="true"` and a `<behavior>` block when appropriate.
 
+**Exempt from tdd="true":** changes to agent behavior via prompt edits, tool/reference edits, and workflow-only modifications where behavior cannot be unit-tested. Mark these `tdd="false"` explicitly so they are not force-tagged.
+
 ## Interface-First Ordering
 
 When a plan creates interfaces consumed by later tasks: (1) define contracts first, (2) implement against them, (3) wire up. This prevents executors from exploring the codebase to understand contracts.
