@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 7 context gathered
-last_updated: "2026-06-06T18:29:49.817Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-06-06T18:33:45.105Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 ## Current Position
@@ -106,6 +106,7 @@ Recent decisions affecting current work:
 - [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: CSO rule encoded in artifact-authoring.md: description = WHEN (triggering conditions only), never a workflow summary — prevents Claude from skipping artifact body
 - [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: GSD form-factor bias: loops/skills over new commands; prefer reference + workflow-edit over new agent; new commands only for genuinely distinct lifecycles
 - [Phase 06]: 06-02: Reference-load at consumption point only (review.md present_results, ship.md optional_review) — no --reviews handler added to plan-phase.md
+- [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: Iron Law watch-it-fail enforcement inserted inline in RED step (compact); exempt from tdd written as plain text to satisfy grep acceptance criteria; gsd-local-patches third copy received only narrow Gap 1 exemption-clause edit
 
 ### Pending Todos
 
@@ -139,6 +140,7 @@ Recent decisions affecting current work:
 | Phase 05-plan-loop-convergence-and-verify-fix P01 | 15 | 2 tasks | 2 files |
 | Phase 06-skill-self-sufficiency-audit-and-port-superpo P03 | 30 | 3 tasks | 5 files |
 | Phase 06 P02 | 5 | 2 tasks | 6 files |
+| Phase 06-skill-self-sufficiency-audit-and-port-superpo P01 | 15 | 3 tasks | 9 files |
 
 ### Roadmap Evolution
 
@@ -147,7 +149,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-06T18:29:49.812Z
+Last session: 2026-06-06T18:33:45.098Z
 Last activity: 2026-06-06
-Stopped at: Phase 7 context gathered
-Resume file: .planning/v1.5/phases/07-parallel-multi-session-safety-planning-ergono/07-CONTEXT.md
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
