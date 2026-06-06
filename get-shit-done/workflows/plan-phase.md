@@ -688,7 +688,9 @@ Task(
 ## 11. Handle Checker Return
 
 - **`## VERIFICATION PASSED`:** Display confirmation, proceed to step 13.
-- **`## ISSUES FOUND`:** Display issues, check iteration count, proceed to step 12.
+- **`## ISSUES FOUND`:** Display issues, then:
+  1. **Capture the convergence count.** Parse the checker's `**Issues:** {X} blocker(s), {Y} warning(s), {Z} info` line tolerantly (regex on the integers — surrounding wording may vary). Compute `count = X + Y` (BLOCKER + WARNING only; **exclude** `info`/{Z} — info items are advisory and not a convergence signal). Append `count` to an **inline trajectory list** held in orchestrator working state: `C1` at the first check, `C2` at the next, `C3` at the third (e.g. `[5, 5, 5]` or `[5, 3, 1]`). This list is **inline only — never written to a file** (the loop runs entirely within this single `plan-phase` invocation; a stall is resolved in-session). Do not lose the prior values between cycles.
+  2. Check iteration count, proceed to step 12.
 
 ## 12. Revision Loop (Max 3 Iterations)
 
