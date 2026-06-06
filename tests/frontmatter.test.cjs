@@ -349,5 +349,60 @@ must_haves:
     // The nested array should be captured
     assert.ok(result[0].exports !== undefined, 'should have exports field');
   });
+
+  // ─── 2-space regression tests (FIX-01) ─────────────────────────────────────
+
+  test('extracts top-level 2-space artifacts block, not the nested one under a truth', () => {
+    const content = `---
+phase: 05
+must_haves:
+  truths:
+    - truth: "the loop works"
+      artifacts:
+        - path: nested/under/truth.cjs
+          provides: should NOT be returned by top-level query
+  artifacts:
+    - path: src/real-one.cjs
+      provides: top-level artifact A
+    - path: src/real-two.cjs
+      provides: top-level artifact B
+  key_links:
+    - from: a.cjs
+      to: b.cjs
+      via: require
+      pattern: "requireB"
+---
+body`;
+    const arts = parseMustHavesBlock(content, 'artifacts');
+    assert.strictEqual(arts.length, 2, 'must return the 2 TOP-LEVEL artifacts, not the 1 nested under truths[0]');
+    assert.strictEqual(arts[0].path, 'src/real-one.cjs');
+    assert.strictEqual(arts[1].path, 'src/real-two.cjs');
+    const links = parseMustHavesBlock(content, 'key_links');
+    assert.strictEqual(links.length, 1);
+    assert.strictEqual(links[0].from, 'a.cjs');
+    assert.strictEqual(links[0].pattern, 'requireB');
+  });
+
+  test('parses a real 2-space plan fixture if present (integration smoke)', () => {
+    const fixture = require('path').join(__dirname, '..', '.planning', 'quick', '260507-u0a-consolidate-gsd2-progress-into-single-in', '260507-u0a-PLAN.md');
+    const fs = require('fs');
+    if (fs.existsSync(fixture)) {
+      const real = fs.readFileSync(fixture, 'utf-8');
+      assert.strictEqual(parseMustHavesBlock(real, 'artifacts').length, 5, 'real fixture top-level artifacts');
+      assert.strictEqual(parseMustHavesBlock(real, 'key_links').length, 4, 'real fixture top-level key_links');
+    }
+  });
+
+  test('2-space simple-string truths', () => {
+    const content = `---
+must_haves:
+  truths:
+    - "first truth"
+    - "second truth"
+---`;
+    const truths = parseMustHavesBlock(content, 'truths');
+    assert.strictEqual(truths.length, 2);
+    assert.strictEqual(truths[0], 'first truth');
+  });
 });
 
