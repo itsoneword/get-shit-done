@@ -26,7 +26,7 @@ Every line of code written by an AI agent should trace back to a requirement tha
 
 **v1.4 Domain-Aware Planning — shipped 2026-05-13**
 
-Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port in progress — Phases 1 (Security Hooks), 2 (Autonomous Technical Resolution), 3 (Execution-Detail Enrichment), and 4 (Agent Observability Telemetry) complete. Phase 3 added codified bug-pattern and anti-pattern reference docs (incl. Python) hybrid-loaded into the verifier (eager) and planner (on-demand), so plans and verifications draw on a shared good/bad-code standard rather than improvising. Phase 4 added a `PostToolUse`/`PostToolUseFailure` (`matcher: Task|Agent`) telemetry hook that records every `gsd-*` subagent spawn — timestamp, agent type, scraped confidence verdict — to a gitignored `.planning/telemetry/agent-trace.jsonl`, plus a `gsd-tools trace` reader, all in code/config with zero prompt-file changes (verified live: hook fires, config gate suppresses, non-blocking).
+Domain router, AGENT-SPEC, documentation agent, verification harness, and milestone-partitioned layout all shipped. Planning directory migrated to `.planning/v1.4/phases/`. v1.5 Capability Port in progress — Phases 1 (Security Hooks), 2 (Autonomous Technical Resolution), 3 (Execution-Detail Enrichment), 4 (Agent Observability Telemetry), and 5 (Plan-Loop Convergence and Verify Fix) complete. Phase 4 added a `PostToolUse`/`PostToolUseFailure` (`matcher: Task|Agent`) telemetry hook that records every `gsd-*` subagent spawn — timestamp, agent type, scraped confidence verdict — to a gitignored `.planning/telemetry/agent-trace.jsonl`, plus a `gsd-tools trace` reader, all in code/config with zero prompt-file changes. Phase 5 made the plan-phase revision loop convergence-aware (a non-decreasing BLOCKER+WARNING trajectory across all 3 iterations now emits a `## STALL DETECTED` block and escalates rather than silently completing) and fixed the v1.4-carryover `parseMustHavesBlock` indent bug (dynamic child-indent detection so `verify artifacts`/`verify key-links` parse real 2-space plans). Next: Phase 6 (Skill Self-Sufficiency).
 
 ## Last Completed Milestone: v1.4 Domain-Aware Planning
 
@@ -56,6 +56,8 @@ Domain router, AGENT-SPEC, documentation agent, verification harness, and milest
 - Verifier-loop primitives (gsd-verifier/gsd-fixer loop mode, gsd-debugger investigator role, must_haves.verify schema, gsd-tools verify commands) — shipped Phase 04
 - verify_after task attribute and verify_loop sub-flow spliced into execute-phase — shipped Phase 04 (manual end-to-end dogfood deferred — see 04-HUMAN-UAT.md)
 - Agent observability telemetry (`PostToolUse`/`PostToolUseFailure` hook → JSONL spawn log with scraped confidence + `gsd-tools trace` reader, zero prompt changes) — shipped v1.5 Phase 4 (OBS-01, OBS-02)
+- Convergence-aware plan revision loop — stall detection (non-decreasing BLOCKER+WARNING trajectory over 3 cycles emits STALL DETECTED + escalates) — shipped v1.5 Phase 5 (CONV-01)
+- `parseMustHavesBlock` N-space indent fix — `verify artifacts`/`verify key-links` now parse real 2-space plans instead of returning "no blocks found" — shipped v1.5 Phase 5 (FIX-01)
 
 ### Active
 
@@ -65,8 +67,6 @@ _(milestone v1.5 Capability Port — see `.planning/REQUIREMENTS.md` for full RE
 - Autonomous technical-resolution loop wired into discuss/plan — reduces human round-trips (RSCH)
 - Anti-pattern/bug-pattern reference docs incl. Python (GUIDE)
 - Context-budget degradation tiers + utilization classifier (CTX)
-- Stall-detection in the plan revision loop (CONV)
-- `parseMustHavesBlock` 2-space-indent fix (FIX)
 
 ### Out of Scope
 
@@ -118,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 — Phase 4 (Agent Observability Telemetry) complete: PostToolUse/PostToolUseFailure hook logs every gsd-* spawn with scraped confidence to .planning/telemetry/agent-trace.jsonl; gsd-tools trace reader; zero prompt-file changes; verified live*
+*Last updated: 2026-06-06 — Phase 5 (Plan-Loop Convergence and Verify Fix) complete: convergence-aware plan revision loop (STALL DETECTED escalation on non-decreasing BLOCKER+WARNING trajectory, CONV-01) + parseMustHavesBlock dynamic N-space indent fix so verify artifacts/key-links parse real 2-space plans (FIX-01); verified 3/3 must-haves*
