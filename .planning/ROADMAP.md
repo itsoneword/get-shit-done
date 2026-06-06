@@ -90,7 +90,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
 | 5. Plan-Loop Convergence and Verify Fix | 2/2 | Complete   | 2026-06-06 |
 | 6. Skill Self-Sufficiency | 2/3 | In Progress|  |
-| 7. Parallel Multi-Session Safety & Planning Ergonomics | 0/TBD | Not started | - |
+| 7. Parallel Multi-Session Safety & Planning Ergonomics | 1/6 | In Progress|  |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
 
@@ -160,7 +160,7 @@ Promoted out of backlog. The doctor symmetry-check is now scope item 4 of **Phas
 
 **Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
 **Requirements:** TBD
-**Plans:** 2/3 plans executed
+**Plans:** 1/6 plans executed
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)
