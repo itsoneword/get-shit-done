@@ -40,7 +40,7 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 
 ### Execution Enrichment — Plan Convergence (CONV)
 
-- [ ] **CONV-01**: Stall-detection in the existing plan revision loop — escalate when BLOCKER+WARNING counts stop decreasing across cycles
+- [x] **CONV-01**: Stall-detection in the existing plan revision loop — escalate when BLOCKER+WARNING counts stop decreasing across cycles
 
 ### Verify Fix (FIX)
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTX-02 | doctor (TBD) | Reshaped |
 | OBS-01 | Phase 4 | Complete |
 | OBS-02 | Phase 4 | Complete |
-| CONV-01 | Phase 5 | Pending |
+| CONV-01 | Phase 5 | Complete |
 | FIX-01 | Phase 5 | Pending |
 
 **Coverage:**
