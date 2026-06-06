@@ -64,7 +64,6 @@ describe('generate-claude-md', () => {
 
 describe('new-project workflow includes CLAUDE.md generation', () => {
   const workflowPath = path.join(__dirname, '..', 'get-shit-done', 'workflows', 'new-project.md');
-  const commandsPath = path.join(__dirname, '..', 'docs', 'COMMANDS.md');
 
   test('new-project workflow generates CLAUDE.md before final commit', () => {
     const content = fs.readFileSync(workflowPath, 'utf-8');
@@ -73,12 +72,12 @@ describe('new-project workflow includes CLAUDE.md generation', () => {
   });
 
   test('new-project artifacts mention CLAUDE.md', () => {
+    // docs/COMMANDS.md was retired (df0c60f, legacy docs/ tree retirement); the
+    // workflow artifact manifest remains the source of truth for CLAUDE.md.
     const workflowContent = fs.readFileSync(workflowPath, 'utf-8');
-    const commandsContent = fs.readFileSync(commandsPath, 'utf-8');
 
     assert.ok(workflowContent.includes('| Project guide  | `CLAUDE.md`'));
     assert.ok(workflowContent.includes('- `CLAUDE.md`'));
-    assert.ok(commandsContent.includes('`CLAUDE.md`'));
   });
 });
 
