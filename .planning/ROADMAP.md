@@ -16,6 +16,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - [x] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes (completed 2026-06-05)
 - [ ] **Phase 5: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix
 - [ ] **Phase 6: Skill Self-Sufficiency** - Audit all 14 superpowers skills vs GSD coverage, then port only the genuine gaps (execution-time TDD discipline, receiving-code-review rigor, skill-authoring guidance, worktree-isolation default) into GSD as native commands/references so the external plugin dependency can be dropped — removal itself is a follow-up
+- [ ] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + merge so concurrent sessions and quick-fixes stop silently overwriting each other (axis A — file coupling); a parallel-safety gate combining `depends_on` (axis B — decision coupling) + file-scope disjointness (reuses Phase 4 dep-graph) to greenlight/refuse concurrent work and forbid parallel discussion of dependent phases; `depends_on`/`related_to` on todo frontmatter; absorbs the doctor source↔runtime symmetry-check (ex-999.1, verifies no drift post-merge); rethinks the confusing 999.x backlog ID scheme
 
 ## Phase Details
 
@@ -79,7 +80,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -89,6 +90,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
 | 5. Plan-Loop Convergence and Verify Fix | 0/2 | Not started | - |
 | 6. Skill Self-Sufficiency | 0/TBD | Not started | - |
+| 7. Parallel Multi-Session Safety & Planning Ergonomics | 0/TBD | Not started | - |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
 
@@ -103,16 +105,47 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   3. Running a representative GSD workflow (plan→execute) exercises the ported TDD/review/worktree behavior without any superpowers skill being available
 **Plans**: TBD (run /gsd2:plan-phase 6 to break down)
 
+### Phase 7: Parallel Multi-Session Safety & Planning Ergonomics
+
+**Goal**: GSD makes it safe and ergonomic to run several sessions at once — start a quick-fix while a phase executes, or work two independent phases in parallel — and finish faster than serial, without the silent-overwrite mess that today's shared working tree produces. Folds in the doctor symmetry-check and tidies the planning ID model these multi-session workflows depend on.
+
+**Depends on**: Relates to Phase 6 (which ports *worktree-isolation as a default* — Phase 7 builds the multi-session orchestration + merge on top of that primitive). Not a hard block — user intends to start Phase 7 before Phase 6 closes; sequencing to be confirmed at discuss time.
+
+**Discussion focus** (captured 2026-06-06 from a design conversation — to be expanded at discuss-phase):
+
+The core insight is that parallel work has **two independent coupling axes**, and they need different mechanisms — conflating them is the trap:
+
+- **Axis A — file/write coupling.** Two tasks edit the same file. Solved by **worktree isolation**: each task runs in its own `git worktree add <dir>`, merged back at the end. This does not *prevent* conflicts — it makes them *explicit and reviewable at merge* instead of silent overwrites mid-run (today's "hard to tell if harm was done" problem). Must be a separate **worktree** (separate directory), not just a branch in the shared tree — a branch alone doesn't isolate files on disk.
+- **Axis B — decision/knowledge coupling.** Task B's *correctness* depends on a decision made in task A's discussion (e.g. phase 1's discussion picks an approach that invalidates phase 2's assumption). Worktrees do **nothing** for this — the trees merge clean while the logic is built on stale ground. The only safe handling is *sequencing*: refuse to run discussion/planning of dependent phases in parallel. GSD already models these edges as `depends_on`.
+
+Mapping cases to the dominant axis:
+- *Quick-fix while a phase runs* → axis A dominates, axis B ≈ 0 → **safest, highest value; worktree-isolate and merge.**
+- *Execute two already-planned phases* → axis A → safe **iff** `depends_on` shows no edge.
+- *Discuss/plan two phases at once* → axis B dominates → worktrees don't help → **keep serial** (planning artifacts live in separate phase folders so they rarely collide on A anyway; the real risk is decisions).
+
+Where isolation lives (NOT in agent prose — an LLM "remembering" to make a worktree is too fragile for a load-bearing guarantee): deterministically in **`execute-phase`** (workflow does the `git worktree add` → wave → merge) for agent-driven work, and as a **session-launch convention** (each session opened in its own worktree dir) for human-driven quick-fixes that no agent instruction would catch.
+
+**Scope (to refine at discuss/plan):**
+1. Worktree-isolated execution + merge in `execute-phase` (and the quick path) — axis A.
+2. Parallel-safety gate: combine `depends_on` (axis B) + file-scope disjointness (reuse the Phase 4 file-level dependency graph + caller analysis, axis A) → greenlight / refuse a proposed parallel set; explicitly forbid parallel discussion of dependent phases.
+3. `depends_on` / `related_to` on **todo** frontmatter (formalize — precedent exists: a todo already carries an informal `related:` line) so the same gate covers quick tasks, not just phases.
+4. Doctor source↔runtime symmetry-check (absorbed from ex-999.1): `diff -rq get-shit-done .claude/get-shit-done` + settings.json hook/statusLine registration parity — and post-merge drift verification for the worktree flow.
+5. Backlog ID scheme rethink: `999.x` conflates "backlog/unsequenced" with "phase number" and reads oddly next to `vX.Y` milestones and `1,2,3` phases. Candidate direction (decide at discuss): non-phase backlog IDs (e.g. `B1, B2` in a backlog list) that only receive a real phase number when promoted into a milestone — to be designed, not pre-decided.
+
+**Success Criteria** (what must be TRUE):
+  1. A quick-fix run in a parallel session no longer silently overwrites a concurrently-executing phase — conflicts surface as a reviewable merge.
+  2. A documented gate decides, from `depends_on` + file-scope, whether a proposed parallel set is safe, and refuses parallel discussion of dependent phases.
+  3. Todos carry `depends_on`/`related_to` and the gate reads them.
+  4. The doctor command reports source↔runtime drift in one invocation.
+  5. The backlog ID scheme no longer reuses the phase-number space (or a deliberate decision to keep `999.x` is recorded with rationale).
+
+**Plans**: TBD (run /gsd2:plan-phase 7 to break down)
+
 ## Backlog
 
-### Phase 999.1: Doctor — source↔runtime symmetry check (BACKLOG)
+### Phase 999.1: Doctor — source↔runtime symmetry check → FOLDED INTO PHASE 7 (2026-06-06)
 
-**Goal:** A `gsd-tools doctor` self-check detects drift between committed source (`get-shit-done/`, `commands/`, `hooks/`) and the gitignored runtime (`.claude/`) — e.g. `diff -rq get-shit-done .claude/get-shit-done` plus settings.json hook/statusLine registration parity. Replaces per-plan `cp`/`diff -q` discipline with one command. Surfaced 2026-06-05 (statusline-change forensics). Related: Phase 6 worktree-isolation gap.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd2:review-backlog when ready)
+Promoted out of backlog. The doctor symmetry-check is now scope item 4 of **Phase 7** (it verifies no source↔runtime drift after worktree merges, so it belongs with the parallel-safety work). See Phase 7 details above.
 
 ### Phase 999.2: Terse output default + verbose opt-in (BACKLOG)
 
