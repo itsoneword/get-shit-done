@@ -142,7 +142,13 @@ Where isolation lives (NOT in agent prose — an LLM "remembering" to make a wor
   4. The doctor command reports source↔runtime drift in one invocation.
   5. The backlog ID scheme no longer reuses the phase-number space (or a deliberate decision to keep `999.x` is recorded with rationale).
 
-**Plans**: TBD (run /gsd2:plan-phase 7 to break down)
+**Plans**: 6 across 4 waves
+  - 07-01 (W1) — gsd-tools worktree CLI primitive (add/merge/remove/prune) + Wave-0 smoke + tests (SC1)
+  - 07-02 (W1) — todo depends_on/related_to frontmatter schema + init parse + add-todo template (SC3)
+  - 07-03 (W1) — source↔runtime symmetry-check folded into /gsd2:health (+--repair), exported for reuse (SC4)
+  - 07-04 (W2) — backlog ID migration 999.x → B1,B2 (next-backlog-id allocator + commands + dir migration) (SC5)
+  - 07-05 (W3) — parallel-safe gate CLI (axis-B refuse / axis-A warn / greenlight), reads phase + todo edges (SC2,SC3)
+  - 07-06 (W4) — wire worktree+merge+symmetry into execute-phase; gate into execute/discuss/plan; auto-worktree into quick (SC1,SC2,SC4)
 
 ## Backlog
 
