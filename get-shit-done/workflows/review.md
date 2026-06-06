@@ -171,6 +171,8 @@ To incorporate feedback into planning:
   /gsd2:plan-phase {N} --reviews
 ```
 
+When acting on this feedback, load `@~/.claude/get-shit-done/references/receiving-code-review.md` before implementing any suggestion — verify each item against codebase reality first, and push back with technical reasoning where a suggestion is wrong for this codebase.
+
 Clean up temp files.
 </step>
 

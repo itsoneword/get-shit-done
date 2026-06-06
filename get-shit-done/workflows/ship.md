@@ -93,6 +93,8 @@ AskUserQuestion:
 ```
 # If "Request review": gh pr edit ${PR_NUMBER} --add-reviewer "${REVIEWER}"
 # If "Self-review": report PR URL, suggest reviewing at {url}/files
+
+When external PR review comments are received (now or after merge), load `@~/.claude/get-shit-done/references/receiving-code-review.md` before responding — verify each comment, acknowledge without performative agreement, and push back with technical reasoning where warranted.
 </step>
 
 <step name="track_shipping">
