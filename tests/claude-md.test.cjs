@@ -7,6 +7,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
+const { summarizeSidecar } = require('../get-shit-done/bin/lib/profile-output.cjs');
 
 describe('generate-claude-md', () => {
   let tmpDir;
@@ -103,5 +104,62 @@ describe('map-codebase workflow auto-syncs CLAUDE.md', () => {
       /commit "docs: map existing codebase" --files \.planning\/codebase\/\*\.md CLAUDE\.md/.test(content),
       'commit step should include CLAUDE.md'
     );
+  });
+});
+
+describe('summarizeSidecar markdown-aware filter', () => {
+  test('strips empty-valued bullets (label with no body)', () => {
+    const out = summarizeSidecar('- **Service design:**\n- **Auth:** JWT in middleware');
+    assert.ok(!out.includes('Service design'), 'empty-label bullet should be dropped');
+    assert.ok(out.includes('**Auth:** JWT in middleware'), 'bullet with a body is kept');
+  });
+
+  test('strips placeholder-body bullets ([..] and TBD)', () => {
+    const out = summarizeSidecar('- Pattern: [Patterns observed]\n- Strategy: TBD\n- Real: actual value');
+    assert.ok(!out.includes('Patterns observed'), '[..] placeholder body dropped');
+    assert.ok(!/Strategy: TBD/.test(out), 'TBD placeholder body dropped');
+    assert.ok(out.includes('Real: actual value'), 'real bullet kept');
+  });
+
+  test('drops headings with no content before next heading / EOF', () => {
+    const out = summarizeSidecar('## Import Organization\n\n## Error Handling\n\nWrap in Result type.');
+    assert.ok(!out.includes('Import Organization'), 'empty heading dropped');
+    assert.ok(out.includes('Error Handling'), 'heading with content kept');
+    assert.ok(out.includes('Wrap in Result type.'));
+  });
+
+  test('preserves fenced code block contents verbatim', () => {
+    const src = '## Data Flow\n\n```js\nconst x = 1;\nfoo(x);\n```';
+    const out = summarizeSidecar(src);
+    assert.ok(out.includes('const x = 1;'), 'fence content preserved');
+    assert.ok(out.includes('foo(x);'), 'all fence lines preserved');
+    assert.ok(out.includes('```'), 'fence markers kept');
+  });
+
+  test('demotes heading levels one step, capped at 6', () => {
+    const out = summarizeSidecar('## Architecture\n\ntext\n\n### Subsection\n\nmore\n\n###### Deep\n\nx');
+    assert.ok(/^### Architecture$/m.test(out), '## demoted to ###');
+    assert.ok(/^#### Subsection$/m.test(out), '### demoted to ####');
+    assert.ok(/^###### Deep$/m.test(out), '###### stays capped at 6');
+  });
+
+  test('strips H1 and Analysis Date metadata line', () => {
+    const out = summarizeSidecar('# STACK\n\n**Analysis Date:** 2026-01-01\n\n- Node 20');
+    assert.ok(!/^# STACK/m.test(out), 'H1 dropped');
+    assert.ok(!/Analysis Date/.test(out), 'Analysis Date metadata dropped');
+    assert.ok(out.includes('- Node 20'), 'real content kept');
+  });
+
+  test('caps content lines and appends pointer when requested', () => {
+    const src = ['- a', '- b', '- c', '- d', '- e'].join('\n');
+    const out = summarizeSidecar(src, { maxContentLines: 2, pointerPath: '.planning/codebase/STACK.md' });
+    const bullets = out.split('\n').filter(l => /^- /.test(l));
+    assert.equal(bullets.length, 2, 'capped to 2 content lines');
+    assert.ok(out.includes('> For current detail: `.planning/codebase/STACK.md`'), 'pointer appended');
+  });
+
+  test('returns empty string for empty input', () => {
+    assert.equal(summarizeSidecar(''), '');
+    assert.equal(summarizeSidecar(null), '');
   });
 });
