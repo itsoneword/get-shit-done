@@ -18,10 +18,12 @@ files:
 All pieces landed.
 - Pieces 1, 2, 4a: already committed in v1.4.6 (`summarizeSidecar`, hybrid shape + pointers, map-codebase auto-sync).
 - Piece 3: covered by mapper content-rules (`agents/gsd-codebase-mapper.md` "the output feeds CLAUDE.md" block) — templates keep `[..]` placeholders but the rule mandates deleting them; not stripped from templates verbatim.
-- Piece 4b/4c: `sidecar_impact` PLAN.md frontmatter (planner) + `sync_sidecars` step in `execute-phase.md` (targeted mapper + files_modified drift heuristic). Frontmatter validator is permissive (required-only), so no shared schema change. Implemented in `agents/gsd-planner.md`, not the flagged `commands/gsd2/plan-phase.md`.
+- Piece 4b/4c: `sidecar_impact` PLAN.md frontmatter (planner) + `sync_sidecars` step in `execute-phase.md`. Drift heuristic uses `git diff --name-only <phase-base> HEAD` (base ref captured at `validate_phase`), falling back to plan `files_modified` only if the ref is lost on resume — so it catches unanticipated/deviation changes, not just planner-declared files. Frontmatter validator is permissive (required-only), so no shared schema change. Implemented in `agents/gsd-planner.md`, not the flagged `commands/gsd2/plan-phase.md`.
 - Piece 5: `summarizeSidecar` unit tests added to `tests/claude-md.test.cjs` (not a new file).
 
-Note: `sidecar_impact` is declared but only enforced by execute-phase prose; no automated test of the targeted-spawn path (workflow is markdown, not unit-testable here).
+Notes / known limits:
+- `sidecar_impact` and the `sync_sidecars` step are execute-phase prose, not unit-testable here — no automated test of the targeted-spawn path.
+- Generator's `PLACEHOLDER_BULLET` regex matches `: [..]`/`: TBD` forms but NOT bare `- [Patterns observed]` (mapper template ~line 233); bare-bracket placeholders are stopped only by the mapper guideline, not the generator.
 
 ## Problem
 

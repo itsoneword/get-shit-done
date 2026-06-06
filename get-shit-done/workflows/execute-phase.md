@@ -142,6 +142,11 @@ Update STATE.md for phase start:
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" state begin-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
 ```
 This updates Status, Last Activity, Current focus, Current Position, and plan counts so STATE.md reflects the active phase immediately.
+
+Capture the phase base ref so the drift heuristic in `sync_sidecars` can diff actual changes (not just planner-declared files). Keep `PHASE_BASE` in orchestrator context for the rest of the run:
+```bash
+PHASE_BASE=$(git rev-parse HEAD 2>/dev/null)
+```
 </step>
 
 <step name="discover_and_group_plans">
@@ -768,14 +773,18 @@ DECLARED=$(for p in {phase_dir}/*-PLAN.md; do
 done | grep -oE 'STACK|ARCHITECTURE|CONVENTIONS|INTEGRATIONS|STRUCTURE|TESTING|CONCERNS' | sort -u)
 ```
 
-**2. Drift heuristic (safety net).** Independently, match the phase's changed files against glob rules — this catches sidecars a plan forgot to declare. Source the file set from the plans' `files_modified`:
+**2. Drift heuristic (safety net).** Independently, match the phase's *actual* changed files against glob rules — this is the case `sidecar_impact` exists to backstop: implementation touched files planning never anticipated (deviations), so a plan can't have declared them. Use the phase base ref captured at `validate_phase`; fall back to the union of plan `files_modified` only if the ref was lost (e.g. resumed run):
 ```bash
-CHANGED=$(for p in {phase_dir}/*-PLAN.md; do
-  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter get "$p" files_modified --raw 2>/dev/null
-done)
+if [ -n "$PHASE_BASE" ] && git cat-file -e "$PHASE_BASE" 2>/dev/null; then
+  CHANGED=$(git diff --name-only "$PHASE_BASE" HEAD 2>/dev/null)
+else
+  CHANGED=$(for p in {phase_dir}/*-PLAN.md; do
+    node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" frontmatter get "$p" files_modified --raw 2>/dev/null
+  done)
+fi
 DRIFT=""
 echo "$CHANGED" | grep -qE 'package\.json|package-lock|requirements\.txt|Cargo\.toml|go\.mod|pyproject\.toml|Gemfile' && DRIFT="$DRIFT STACK"
-echo "$CHANGED" | grep -qE '(^|/)src/(routes|app)/|(^|/)(app|lib|services|modules)/' && DRIFT="$DRIFT ARCHITECTURE"
+echo "$CHANGED" | grep -qE '(^|/)src/(routes|app|services|modules)/|^(app|src)/' && DRIFT="$DRIFT ARCHITECTURE"
 echo "$CHANGED" | grep -qE '\.eslintrc|\.prettierrc|jest\.config|vitest\.config|\.test\.|_test\.|(^|/)tests?/' && DRIFT="$DRIFT CONVENTIONS"
 DRIFT=$(echo "$DRIFT" | tr ' ' '\n' | grep -v '^$' | sort -u)
 ```
