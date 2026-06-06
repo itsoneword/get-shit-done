@@ -89,7 +89,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
 | 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
 | 5. Plan-Loop Convergence and Verify Fix | 2/2 | Complete   | 2026-06-06 |
-| 6. Skill Self-Sufficiency | 0/TBD | Not started | - |
+| 6. Skill Self-Sufficiency | 0/3 | Planned | - |
 | 7. Parallel Multi-Session Safety & Planning Ergonomics | 0/TBD | Not started | - |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
@@ -103,7 +103,10 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
   1. A written coverage audit maps each of the 14 superpowers skills to either an existing GSD command/reference (covered) or a concrete port target (gap), with rationale
   2. Each genuine gap is ported into GSD as a native artifact (reference doc, command, or workflow edit) that an agent loads through normal GSD flow — no dependency on the superpowers plugin being installed
   3. Running a representative GSD workflow (plan→execute) exercises the ported TDD/review/worktree behavior without any superpowers skill being available
-**Plans**: TBD (run /gsd2:plan-phase 6 to break down)
+**Plans**: 3 (all Wave 1, parallel — file-disjoint)
+  - 06-01 — Gap 1: execution-time TDD discipline (tdd.md Iron Law + executor/execute-plan watch-it-fail + planner exemption)
+  - 06-02 — Gap 2: receiving-code-review reference + review.md/ship.md wiring
+  - 06-03 — 14-skill audit + Gap 3 artifact-authoring guide + Gap 4 git-worktree technique
 
 ### Phase 7: Parallel Multi-Session Safety & Planning Ergonomics
 
