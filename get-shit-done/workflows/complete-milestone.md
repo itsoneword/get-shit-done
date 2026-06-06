@@ -376,6 +376,23 @@ git branch -d "$branch" 2>/dev/null || git branch -D "$branch"
 
 </step>
 
+<step name="version_bump_note">
+
+**Only if this repo IS the GSD framework itself** (a `scripts/build-hooks.js` and a
+`package.json` whose name is the GSD package exist — does not apply to normal projects
+using GSD): before tagging, bump GSD's own version so `package.json`, the `hooks/dist/*.js`
+headers, the runtime `VERSION`, and `CHANGELOG.md` move in lockstep (skipping this is what
+desynced 1.4.6):
+
+```bash
+npm run release -- [X.Y].0 "One-line milestone summary"
+# then stage the result with the milestone commit below
+```
+
+For all other projects, skip this step — your project's versioning is independent of GSD's.
+
+</step>
+
 <step name="git_tag">
 
 ```bash
