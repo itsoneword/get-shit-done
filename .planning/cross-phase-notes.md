@@ -92,3 +92,21 @@
 **Closes the Phase 4 TDD-default note**
 - Phase 4 cross-phase note flagged "making TDD default-ON is a separate concern needing its own scoping." Phase 6 scoped it: default-ON where helpful (planner-tagged logic tasks), agent/prompt/workflow edits exempt, executor enforces Iron Law when tagged. Not blanket-mandatory.
 - Signal: [STRONG] — resolved.
+
+---
+
+### From Phase 7 discussion (2026-06-06)
+
+**For Phase 6 (sequencing — now a HARD dependency):**
+- User overrode the roadmap's "may start Phase 7 before Phase 6 closes." Phase 6 must hard-close first: the worktree-isolation *technique* reference Phase 6 ships must be final before Phase 7's `execute-phase` wires it.
+- Signal: [STRONG, user-override] — explicit override of the recommended/roadmap default.
+- Context: scope-confirmation question; user chose "All 5, but Phase 6 must close first."
+
+**For the future semantic "doctor" phase (Phase 3 note — keep distinct):**
+- Phase 7's doctor is ONLY the structural source↔runtime symmetry-check (`diff -rq` + settings.json parity), folded into `/gsd2:health`. It deliberately does NOT claim the `/gsd2:doctor` command name.
+- The `/gsd2:doctor` name stays reserved for the future *semantic stale-decision healer* (detects documented-then-overwritten decisions, archives superseded ones). Do not let a downstream agent merge the two.
+- Signal: [STRONG] — explicit naming boundary set this session to avoid premature command-name capture.
+
+**Reactivates SEC-DEFER-01 (worktree-path-guard hard-block hook):**
+- Phase 7 makes worktree isolation load-bearing → SEC-DEFER-01's descope premise ("user doesn't rely on worktree isolation") is fully void. The `worktree-path-guard` PreToolUse hard-block (exit 2 on paths escaping a linked worktree) becomes a sensible follow-up once worktree execution is routine. Not required to ship Phase 7.
+- Signal: [STRONG] — second explicit reversal of SEC-DEFER-01 (first flagged in Phase 6 notes).
