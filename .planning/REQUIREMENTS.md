@@ -44,7 +44,7 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 
 ### Verify Fix (FIX)
 
-- [ ] **FIX-01**: `parseMustHavesBlock` handles 2-space indentation so `verify artifacts` / `verify key-links` work on real plans (v1.4 carry-over blocker)
+- [x] **FIX-01**: `parseMustHavesBlock` handles 2-space indentation so `verify artifacts` / `verify key-links` work on real plans (v1.4 carry-over blocker)
 
 ### Agent Observability (OBS)
 
@@ -107,7 +107,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBS-01 | Phase 4 | Complete |
 | OBS-02 | Phase 4 | Complete |
 | CONV-01 | Phase 5 | Complete |
-| FIX-01 | Phase 5 | Pending |
+| FIX-01 | Phase 5 | Complete |
 
 **Coverage:**
 - v1.5 requirements: 15 total
