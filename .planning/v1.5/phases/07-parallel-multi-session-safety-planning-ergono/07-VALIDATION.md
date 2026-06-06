@@ -69,6 +69,7 @@ created: 2026-06-06
 - [ ] Smoke-test `git worktree add` succeeds in this environment (07-01 Task 1 — verify before building full worktree orchestration; RESEARCH Open Question 3)
 - [ ] `createTempGitRepo()` helper added to tests/helpers.cjs (07-01 Task 1)
 - [ ] Worktree conflict/merge integration test scaffold (tests/worktree.test.cjs — 07-01 Task 1/2)
+- [ ] Write-isolation probe: a file written into the worktree dir lands on the worktree branch, NOT the main tree (07-01 Task 1 — load-bearing SC1 mechanism; executor-targeting caveat recorded for 07-06)
 
 ---
 
