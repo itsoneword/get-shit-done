@@ -130,3 +130,22 @@
 - Phase 8's validated-example corpus is structured to be reusable as Phase 9 reference/eval material (real code, per-pattern retrievable).
 - Open scoping for Phase 9: what counts as a gradable GSD "task"; which prose artifacts are the optimization target (agent instructions vs command/workflow prose vs references); optimizer model; reuse `microsoft/SkillOpt` directly vs GSD-native reimplementation.
 - Signal: [STRONG] — phase split was an explicit user decision; substrate gap confirmed via primary-source research.
+
+### From Phase 9 discussion (2026-06-08)
+
+**Phase 9 RESHAPED — SkillOpt batch-optimizer → online feedback-driven skill evolution:**
+- The Phase 8 note above (eval substrate, scorer, benchmark-substrate sub-phase) is **superseded**. At discuss, the user reframed: the goal is a *self-evolving skill model during development*, not offline batch optimization. Loop: observe real failure → reflect → propose bounded edit → human-ratify → commit to source + lessons ledger.
+- The two blocking tensions (small-N data, cheap-vs-faithful scorer) **dissolve** in the online model — the task+signal come free from real bugs; no synthetic dataset; gameability evaporates (real signal, human ratifies). What's dropped: the quantitative held-out gate (replaced by human ratify + advisor-critic).
+- Signal: [STRONG] — explicit user reframe with a concrete motivating example.
+
+**For Phase 8 (corpus): dependency downgraded from HARD to SOFT.**
+- Phase 8's corpus was framed as Phase 9's eval substrate. Post-reshape there is no scorer/benchmark, so the corpus is **no longer a blocker** for Phase 9 — it remains a *soft* reference (good-code grounding when proposing edits). Phase 8 can ship on its own merits; Phase 9 does not gate on it.
+- Signal: [STRONG] — direct consequence of the reshape.
+
+**For Phase 4 (telemetry): now load-bearing for Phase 9.**
+- `agent-trace.jsonl` is the **attribution substrate** — Phase 9's loop reads it to infer which agent produced a failing artifact and propose the edit target. Telemetry usefulness now extends beyond observability into the self-improvement loop.
+- Signal: [STRONG] — explicit attribution decision.
+
+**For the future semantic `/gsd2:doctor`: inherits lesson/skill-edit consolidation.**
+- Phase 9 deliberately does NOT build consolidation. Dedup, merging redundant lessons, and pruning stale skill edits are delegated to the doctor (already scoped as the stale-decision healer). The doctor's remit grows: stale *documented decisions* AND stale *self-taught skill edits* in the `.planning/lessons/` ledger.
+- Signal: [STRONG] — explicit delegation.
