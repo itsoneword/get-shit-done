@@ -697,3 +697,274 @@ describe('validate health --repair command', () => {
     assert.strictEqual(output.repairable_count, 0, `Expected no repairable issues for W002: ${JSON.stringify(output)}`);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Source↔runtime symmetry check (SC4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('source-runtime symmetry check', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalRoadmap(tmpDir, ['1']);
+    writeMinimalStateMd(tmpDir, '# Session State\n\nPhase 1 in progress.\n');
+    writeValidConfigJson(tmpDir);
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '01-a'), { recursive: true });
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  // Helper: create identical source + runtime trees
+  function writeIdenticalTrees(dir, files = {}) {
+    const srcDir = path.join(dir, 'get-shit-done');
+    const runtimeDir = path.join(dir, '.claude', 'get-shit-done');
+    fs.mkdirSync(path.join(srcDir, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(runtimeDir, 'bin'), { recursive: true });
+    for (const [relPath, content] of Object.entries(files)) {
+      fs.writeFileSync(path.join(srcDir, relPath), content);
+      fs.writeFileSync(path.join(runtimeDir, relPath), content);
+    }
+    return { srcDir, runtimeDir };
+  }
+
+  // ─── No drift: identical trees + valid settings.json ──────────────────────
+
+  test('no symmetry error when source and runtime trees are identical and settings.json is present with expected hooks', () => {
+    writeIdenticalTrees(tmpDir, { 'bin/foo.cjs': 'module.exports = {};\n' });
+    // Write a valid settings.json with all expected hook scripts present
+    const settingsDir = path.join(tmpDir, '.claude');
+    fs.mkdirSync(settingsDir, { recursive: true });
+    // Also create hook scripts referenced in settings
+    const hooksDir = path.join(tmpDir, '.claude', 'hooks');
+    fs.mkdirSync(hooksDir, { recursive: true });
+    const hookScripts = [
+      'gsd2-check-update.js',
+      'gsd2-context-monitor.js',
+      'gsd2-read-injection-scanner.js',
+      'gsd2-agent-trace.js',
+      'gsd2-prompt-guard.js',
+      'gsd2-read-guard.js',
+      'gsd2-statusline.js',
+    ];
+    for (const h of hookScripts) {
+      fs.writeFileSync(path.join(hooksDir, h), '// hook\n');
+    }
+    const settings = {
+      hooks: {
+        SessionStart: [{ hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-check-update.js` }] }],
+        PostToolUse: [
+          { hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-context-monitor.js` }] },
+          { matcher: 'Read', hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-read-injection-scanner.js` }] },
+          { matcher: 'Task|Agent', hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-agent-trace.js` }] },
+        ],
+        PreToolUse: [
+          { matcher: 'Write|Edit', hooks: [
+            { type: 'command', command: `node .claude/hooks/gsd2-prompt-guard.js` },
+            { type: 'command', command: `node .claude/hooks/gsd2-read-guard.js` },
+          ]},
+        ],
+        PostToolUseFailure: [
+          { matcher: 'Task|Agent', hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-agent-trace.js` }] },
+        ],
+      },
+      statusLine: { type: 'command', command: `node .claude/hooks/gsd2-statusline.js` },
+    };
+    fs.writeFileSync(path.join(settingsDir, 'settings.json'), JSON.stringify(settings, null, 2));
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      !output.errors.some(e => e.code === 'E-DRIFT' || (e.message && e.message.includes('source-runtime'))),
+      `Should not report drift: ${JSON.stringify(output.errors)}`
+    );
+    assert.ok(
+      !output.errors.some(e => e.code === 'E-SETTINGS-DRIFT' || (e.message && e.message.includes('settings'))),
+      `Should not report settings drift: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  // ─── File-tree drift: missing runtime file ─────────────────────────────────
+
+  test('reports E-DRIFT when a source file is missing from runtime', () => {
+    const srcDir = path.join(tmpDir, 'get-shit-done', 'bin');
+    const runtimeDir = path.join(tmpDir, '.claude', 'get-shit-done', 'bin');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(runtimeDir, { recursive: true });
+    // Source has foo.cjs; runtime does not
+    fs.writeFileSync(path.join(srcDir, 'foo.cjs'), 'module.exports = {};\n');
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.errors.some(e => e.code === 'E-DRIFT' || (e.message && e.message.includes('source-runtime'))),
+      `Expected E-DRIFT or source-runtime error: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  // ─── File-tree drift: different content ───────────────────────────────────
+
+  test('reports E-DRIFT when a source file differs from runtime file', () => {
+    const srcDir = path.join(tmpDir, 'get-shit-done', 'bin');
+    const runtimeDir = path.join(tmpDir, '.claude', 'get-shit-done', 'bin');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(runtimeDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'bar.cjs'), 'module.exports = { version: 2 };\n');
+    fs.writeFileSync(path.join(runtimeDir, 'bar.cjs'), 'module.exports = { version: 1 };\n');
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.errors.some(e => e.code === 'E-DRIFT' || (e.message && e.message.includes('source-runtime'))),
+      `Expected E-DRIFT for differing files: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  // ─── Agents exclusion: PATH-TOKEN RULE ────────────────────────────────────
+
+  test('does NOT report drift for agents/ files that legitimately differ (PATH-TOKEN RULE)', () => {
+    const srcAgentsDir = path.join(tmpDir, 'get-shit-done', 'agents');
+    const runtimeAgentsDir = path.join(tmpDir, '.claude', 'get-shit-done', 'agents');
+    fs.mkdirSync(srcAgentsDir, { recursive: true });
+    fs.mkdirSync(runtimeAgentsDir, { recursive: true });
+    // Source uses ~/.claude/ token; runtime uses absolute path — intentionally different
+    fs.writeFileSync(path.join(srcAgentsDir, 'my-agent.md'), 'agent: ~/.claude/get-shit-done/bin/gsd-tools.cjs\n');
+    fs.writeFileSync(path.join(runtimeAgentsDir, 'my-agent.md'), 'agent: /home/user/.claude/get-shit-done/bin/gsd-tools.cjs\n');
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      !output.errors.some(e => e.code === 'E-DRIFT' || (e.message && e.message.includes('source-runtime'))),
+      `Should NOT report drift for agents/ files: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  // ─── Settings.json parity drift ───────────────────────────────────────────
+
+  test('reports E-SETTINGS-DRIFT when settings.json is missing a required hook registration', () => {
+    writeIdenticalTrees(tmpDir, { 'bin/foo.cjs': 'module.exports = {};\n' });
+    // Create hooks dir but write an incomplete settings.json (missing statusLine)
+    const settingsDir = path.join(tmpDir, '.claude');
+    fs.mkdirSync(settingsDir, { recursive: true });
+    const hooksDir = path.join(tmpDir, '.claude', 'hooks');
+    fs.mkdirSync(hooksDir, { recursive: true });
+    const hookScripts = ['gsd2-check-update.js', 'gsd2-context-monitor.js', 'gsd2-read-injection-scanner.js', 'gsd2-agent-trace.js', 'gsd2-prompt-guard.js', 'gsd2-read-guard.js'];
+    for (const h of hookScripts) {
+      fs.writeFileSync(path.join(hooksDir, h), '// hook\n');
+    }
+    // Settings missing statusLine entry and gsd2-statusline.js
+    const settings = {
+      hooks: {
+        SessionStart: [{ hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-check-update.js` }] }],
+        PostToolUse: [
+          { hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-context-monitor.js` }] },
+          { matcher: 'Read', hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-read-injection-scanner.js` }] },
+          { matcher: 'Task|Agent', hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-agent-trace.js` }] },
+        ],
+        PreToolUse: [
+          { matcher: 'Write|Edit', hooks: [
+            { type: 'command', command: `node .claude/hooks/gsd2-prompt-guard.js` },
+            { type: 'command', command: `node .claude/hooks/gsd2-read-guard.js` },
+          ]},
+        ],
+        PostToolUseFailure: [
+          { matcher: 'Task|Agent', hooks: [{ type: 'command', command: `node .claude/hooks/gsd2-agent-trace.js` }] },
+        ],
+        // statusLine intentionally missing
+      },
+    };
+    fs.writeFileSync(path.join(settingsDir, 'settings.json'), JSON.stringify(settings, null, 2));
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.errors.some(e => e.code === 'E-SETTINGS-DRIFT' || (e.message && e.message.includes('settings'))),
+      `Expected E-SETTINGS-DRIFT for missing statusLine: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  test('does not report settings drift when .claude/settings.json is absent (skip cleanly)', () => {
+    writeIdenticalTrees(tmpDir, { 'bin/foo.cjs': 'module.exports = {};\n' });
+    // No .claude/settings.json — should skip the settings parity check
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      !output.errors.some(e => e.code === 'E-SETTINGS-DRIFT' || (e.message && e.message.includes('settings'))),
+      `Should not report settings drift when settings.json absent: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  test('does not report file-tree drift when .claude/get-shit-done/ is absent (skip cleanly with info)', () => {
+    // Only source tree exists; runtime tree absent
+    const srcDir = path.join(tmpDir, 'get-shit-done', 'bin');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'foo.cjs'), 'module.exports = {};\n');
+    // No .claude/get-shit-done/
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      !output.errors.some(e => e.code === 'E-DRIFT'),
+      `Should not report E-DRIFT when runtime dir absent: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  // ─── Repair: --repair re-syncs drifted files, excludes agents/ ──────────
+
+  test('--repair copies source files to runtime and records repair entry; agents/ NOT touched', () => {
+    const srcDir = path.join(tmpDir, 'get-shit-done');
+    const runtimeDir = path.join(tmpDir, '.claude', 'get-shit-done');
+    fs.mkdirSync(path.join(srcDir, 'bin'), { recursive: true });
+    fs.mkdirSync(path.join(runtimeDir, 'bin'), { recursive: true });
+    // Drifted file: runtime has old content
+    fs.writeFileSync(path.join(srcDir, 'bin', 'drifted.cjs'), 'new content\n');
+    fs.writeFileSync(path.join(runtimeDir, 'bin', 'drifted.cjs'), 'old content\n');
+    // Agent file: source and runtime differ (intentional)
+    fs.mkdirSync(path.join(srcDir, 'agents'), { recursive: true });
+    fs.mkdirSync(path.join(runtimeDir, 'agents'), { recursive: true });
+    fs.writeFileSync(path.join(srcDir, 'agents', 'my-agent.md'), 'agent: ~/.claude/gsd-tools.cjs\n');
+    fs.writeFileSync(path.join(runtimeDir, 'agents', 'my-agent.md'), 'agent: /home/user/.claude/gsd-tools.cjs\n');
+    const agentRuntimeContent = fs.readFileSync(path.join(runtimeDir, 'agents', 'my-agent.md'), 'utf-8');
+
+    const result = runGsdTools('validate health --repair', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+
+    // Runtime drifted.cjs should now match source
+    const runtimeContent = fs.readFileSync(path.join(runtimeDir, 'bin', 'drifted.cjs'), 'utf-8');
+    assert.strictEqual(runtimeContent, 'new content\n', 'runtime file should be updated by repair');
+
+    // Agent file should remain untouched
+    const agentAfterRepair = fs.readFileSync(path.join(runtimeDir, 'agents', 'my-agent.md'), 'utf-8');
+    assert.strictEqual(agentAfterRepair, agentRuntimeContent, 'agents/ file should NOT be touched by repair');
+
+    // A repair entry should have been recorded
+    assert.ok(
+      Array.isArray(output.repairs_performed),
+      `Expected repairs_performed: ${JSON.stringify(output)}`
+    );
+    assert.ok(
+      output.repairs_performed.some(r => r.action === 'syncSourceRuntime' && r.success === true),
+      `Expected syncSourceRuntime repair: ${JSON.stringify(output.repairs_performed)}`
+    );
+  });
+});
