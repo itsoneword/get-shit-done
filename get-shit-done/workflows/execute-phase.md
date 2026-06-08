@@ -147,6 +147,12 @@ Capture the phase base ref so the drift heuristic in `sync_sidecars` can diff ac
 ```bash
 PHASE_BASE=$(git rev-parse HEAD 2>/dev/null)
 ```
+
+**Prune leftover worktrees** from any previous crashed run so stale worktree state does not interfere:
+```bash
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree prune
+```
+If the command exits non-zero (e.g., sandbox denies it), log the warning and continue — a stale worktree from a prior crash will be caught by `git worktree list` later.
 </step>
 
 <step name="discover_and_group_plans">
@@ -201,6 +207,78 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
    **⚠ model= is REQUIRED.** Agent definitions carry no `model:` frontmatter; omitting this param causes the agent to inherit the orchestrator's model (which is often Opus), burning 5× the token cost. If `executor_model` is `"inherit"`, omit the param instead of passing the string — the Agent tool only accepts `sonnet|opus|haiku`.
 
+   **Worktree isolation (attempt) and in-place fallback:**
+
+   Before spawning each executor, attempt to create a per-plan worktree:
+
+   ```bash
+   WORKTREE_DIR=".worktrees/${PHASE_NUMBER}-${PLAN_ID}"
+   WORKTREE_BRANCH="worktree/${PHASE_NUMBER}-${PLAN_ID}"
+   WORKTREE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree add "$WORKTREE_DIR" "$WORKTREE_BRANCH" 2>&1)
+   WORKTREE_MODE=$(echo "$WORKTREE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.fallback==='in-place'?'false':'true')}catch{process.stdout.write('false')}")
+   ```
+
+   If `WORKTREE_MODE` is `true`: the executor should write files under `$WORKTREE_DIR` as its root (worktree-relative paths). However, **note the executor-targeting caveat from Wave 0 (07-01-SUMMARY.md):** this Claude Code environment resets subagent cwd between bash calls, so a Task-spawned executor writing to an absolute repo-root path (e.g., `get-shit-done/references/foo.md`) lands in the MAIN tree regardless of the worktree — defeating isolation. **Therefore, when spawning in-process Task() executors, treat `WORKTREE_MODE=true` as a best-effort hint and not a guarantee.** The honest mechanism for this runtime is the in-place fallback path below.
+
+   If `WORKTREE_MODE` is `false` (sandbox denial, git failure, or the above caveat applies): fall back to in-place execution (current shared-tree behavior). Remind the executor to use `--no-verify` on commits to avoid hook contention.
+
+   **Worktree mode prompt (WORKTREE_MODE=true):**
+
+   ```
+   Task(
+     subagent_type="gsd-executor",
+     model="{executor_model}",  # MUST pass — from init JSON executor_model field
+     prompt="
+       <objective>
+       Execute plan {plan_number} of phase {phase_number}-{phase_name}.
+       Commit each task atomically. Create SUMMARY.md. Update STATE.md and ROADMAP.md.
+       </objective>
+
+       <worktree_isolation>
+       This executor has been assigned a dedicated worktree at: {WORKTREE_DIR}
+       Write all files relative to {WORKTREE_DIR} as your working root. Do NOT write
+       to absolute paths under the main repo root — those would bypass isolation and
+       land in the main tree. If you cannot resolve your work under {WORKTREE_DIR},
+       report this in your SUMMARY.md so the orchestrator can address it.
+       </worktree_isolation>
+
+       <execution_context>
+       @~/.claude/get-shit-done/workflows/execute-plan.md
+       @~/.claude/get-shit-done/templates/summary.md
+       @~/.claude/get-shit-done/references/checkpoints.md
+       @~/.claude/get-shit-done/references/tdd.md
+       </execution_context>
+
+       <files_to_read>
+       Read these files at execution start using the Read tool:
+       - {phase_dir}/{plan_file} (Plan)
+       - .planning/PROJECT.md (Project context — core value, requirements, evolution rules)
+       - .planning/STATE.md (State)
+       - .planning/config.json (Config, if exists)
+       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines)
+       - .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each)
+       </files_to_read>
+
+       <mcp_tools>
+       If CLAUDE.md or project instructions reference MCP tools (e.g. jCodeMunch, context7),
+       prefer those over Grep/Glob for code navigation when available — they save tokens
+       by providing structured code indexes. Check tool availability first; fall back to
+       Grep/Glob if MCP tools are not accessible.
+       </mcp_tools>
+
+       <success_criteria>
+       - [ ] All tasks executed
+       - [ ] Each task committed individually
+       - [ ] SUMMARY.md created in plan directory
+       - [ ] STATE.md updated with position and decisions
+       - [ ] ROADMAP.md updated with plan progress (via `roadmap update-plan-progress`)
+       </success_criteria>
+     "
+   )
+   ```
+
+   **In-place fallback prompt (WORKTREE_MODE=false):**
+
    ```
    Task(
      subagent_type="gsd-executor",
@@ -212,9 +290,10 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
        </objective>
 
        <parallel_execution>
-       You are running as a PARALLEL executor agent. Use --no-verify on all git
-       commits to avoid pre-commit hook contention with other agents. The
-       orchestrator validates hooks once after all agents complete.
+       You are running as a PARALLEL executor agent in in-place mode (no dedicated
+       worktree). Use --no-verify on all git commits to avoid pre-commit hook
+       contention with other agents. The orchestrator validates hooks once after all
+       agents complete.
        For gsd-tools commits: add --no-verify flag.
        For direct git commits: use git commit --no-verify -m "..."
        </parallel_execution>
@@ -267,6 +346,43 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
    - SUMMARY.md exists AND commits found: agent completed successfully. Log: `"Plan {ID} completed (verified via spot-check)"` and proceed.
    - SUMMARY.md missing after reasonable wait: check `git log --oneline -5` for recent activity. If commits still appearing, wait longer. If no activity, report as failed and route to failure handler.
+
+3.5. **Merge worktree branches back (worktree mode only):**
+
+   After all agents in the wave have completed (spot-checks passed), merge each worktree branch back into the phase branch **sequentially, one per-merge clean check at a time** (Pitfall 2: N-way merges can each conflict with each other even when each was individually clean against the base — do NOT assume a single global clean state):
+
+   ```bash
+   for PLAN_ID in ${WAVE_PLAN_IDS}; do
+     WORKTREE_BRANCH="worktree/${PHASE_NUMBER}-${PLAN_ID}"
+     WORKTREE_DIR=".worktrees/${PHASE_NUMBER}-${PLAN_ID}"
+
+     # Per-merge clean check — each merge evaluated independently:
+     MERGE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree merge "$WORKTREE_BRANCH")
+     MERGE_CLEAN=$(echo "$MERGE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(String(r.clean))}catch{process.stdout.write('false')}")
+     CONFLICT_FILES=$(echo "$MERGE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write((r.conflict_files||[]).join(' '))}catch{process.stdout.write('')}")
+
+     if [ "$MERGE_CLEAN" = "true" ]; then
+       # Clean merge — remove worktree and branch
+       node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree remove "$WORKTREE_DIR"
+     else
+       # Conflict detected — PAUSE and surface for human review
+       echo "## MERGE CONFLICT: Plan ${PLAN_ID}"
+       echo "Conflicting files: ${CONFLICT_FILES}"
+       git diff HEAD
+       echo ""
+       echo "The unmerged state is left reviewable. Resolve the conflicts, then:"
+       echo "  git add <resolved-files> && git merge --continue"
+       echo "Then re-run worktree remove: node gsd-tools.cjs worktree remove ${WORKTREE_DIR}"
+       # STOP — do NOT auto-abort, do NOT auto-advance to next plan's merge.
+       # Wait for user to resolve before proceeding with remaining merges.
+       break
+     fi
+   done
+   ```
+
+   **Skip this sub-step if in-place fallback mode** (no worktrees were created for this wave).
+
+   **Worktree remove on failure:** Even if an executor failed (SUMMARY.md missing), always clean up its worktree: `node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree remove "$WORKTREE_DIR" --force`. Prevents stale worktree accumulation.
 
 4. **Post-wave hook validation (parallel mode only):**
 
@@ -512,6 +628,33 @@ After all waves:
 ### Issues Encountered
 [Aggregate from SUMMARYs, or "None"]
 ```
+</step>
+
+<step name="post_merge_drift_check">
+After all waves complete and worktree branches are merged (or after in-place execution), run the source↔runtime symmetry-check to catch any drift the merges may have introduced:
+
+```bash
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" validate health
+```
+
+Parse output for `symmetry` findings. If the health check reports source↔runtime drift:
+
+```
+## Post-Merge Drift Detected
+
+The symmetry check found source/runtime divergence after merge. This typically means
+a merge introduced changes to `get-shit-done/` files that were not mirrored to `.claude/get-shit-done/`.
+
+Drift details:
+{output from validate health}
+
+To repair: cp -r get-shit-done/* .claude/get-shit-done/ (with agent-file exclusion)
+Or run: /gsd2:health --repair
+```
+
+Surface this for the user before proceeding to `close_parent_artifacts`. Drift after a successful merge is not a blocker — it is reviewable and repairable — but it should not be silently ignored.
+
+**Skip this step if validate health is not available** (e.g., early phases before 07-03 shipped the symmetry check). `gsd-tools validate health` exits non-zero only on hard errors; missing-symmetry-check is a soft finding in the output text.
 </step>
 
 <step name="close_parent_artifacts">
