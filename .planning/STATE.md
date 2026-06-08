@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: unknown
-stopped_at: Completed 09-01-PLAN.md
+status: milestone-executed (v1.5.0 shipped; human UAT pending for phases 02/06/09)
+stopped_at: v1.5.0 released and pushed to origin/main
 last_updated: "2026-06-08T16:44:09.983Z"
 last_activity: 2026-06-08
 progress:
@@ -15,8 +15,8 @@ progress:
 
 ## Current Position
 
-Phase: 09 (skillopt-style-self-improving-skills) — EXECUTING
-Plan: 2 of 2
+Milestone v1.5 — all 9 phases executed (27/27 plans). v1.5.0 released and pushed to origin/main.
+Pending: human UAT for phases 02/06/09; milestone archival via /gsd2:complete-milestone.
 
 ## Project Reference
 

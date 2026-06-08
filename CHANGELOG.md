@@ -2,6 +2,30 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.5.0] - 2026-06-08
+
+Milestone **v1.5** complete — all 9 phases executed. Theme: GSD becomes more autonomous, self-sufficient, observable, and self-improving. (Supersedes the 1.4.7 dev checkpoint; consolidates phases 1–9.)
+
+### Added
+
+- **Security guard hooks** (Phase 1) — 3 standalone advisory guard hooks ported under `gsd2-*` naming, config-gated, no build dependency.
+- **Autonomous technical-resolution loop** (Phase 2) — research→self-critique confidence loop wired into discuss/plan so technical/domain unknowns resolve without bouncing to the human; resolved decisions written back to CONTEXT.md with confidence + source tags.
+- **Anti-pattern / bug-pattern references** (Phase 3) — universal-anti-patterns and common-bug-patterns docs (incl. Python), hybrid-loaded into planner/verifier.
+- **Agent observability & telemetry** (Phase 4) — `PostToolUse(Task|Agent)` hook logs every gsd-* subagent spawn + scraped confidence verdict to `.planning/telemetry/agent-trace.jsonl`, with a `gsd-tools trace` reader. Zero prompt-file changes.
+- **Skill self-sufficiency** (Phase 6) — audited all 14 superpowers skills vs GSD coverage; ported the genuine gaps as native artifacts: TDD execution discipline (Iron Law + watch-it-fail), receiving-code-review rigor, artifact-authoring guidance, and a git-worktree technique reference — dropping the external plugin dependency.
+- **Parallel multi-session safety** (Phase 7) — worktree-isolated execution + merge so concurrent sessions / quick-fixes stop silently overwriting each other (axis A); a parallel-safety gate combining `depends_on` (axis B) + file-scope disjointness that hard-refuses parallel discussion of dependent phases and warns on file overlap; `depends_on`/`related_to` on todo frontmatter; a source↔runtime symmetry-check folded into `/gsd2:health` (`diff -rq` + settings.json hook/statusLine parity) and run post-merge.
+- **Validated Example Corpus** (Phase 8) — curated corpus of validated handwritten code examples, indexed by pattern with per-example commentary, replacing plausible-but-untested LLM-generated examples; serves as the reference substrate for Phase 9.
+- **Self-improving skills** (Phase 9) — `/gsd2:teach` captures a lesson from a real failure, attributes the culprit prose artifact via Phase 4 telemetry, proposes a *bounded* edit gated on human ratification, and commits to source; lessons persist in a `.planning/lessons/` ledger.
+
+### Changed
+
+- **Plan-loop convergence** (Phase 5) — stall-detection in the plan revision loop (STALL DETECTED vs Max-iterations branches) plus a `parseMustHavesBlock` 2-space-indent fix.
+- **Backlog ID scheme** (Phase 7) — migrated `999.x` → B-prefixed IDs (`B1, B2…`) outside the phase-number space, allocated by `phase next-backlog-id`; items receive a real phase number only on promotion into a milestone.
+
+### Notes
+
+- Outstanding human-run UAT remains for phases 02, 06, and 09 (live-behavior checks; not code gaps). Milestone archival via `/gsd2:complete-milestone` is a separate follow-up.
+
 ## [1.4.7] - 2026-06-06
 
 Development checkpoint for in-progress milestone v1.5. Bumps version to keep `package.json`, hook `dist` headers, and runtime `VERSION` in lockstep (previously desynced at 1.4.6). Captures v1.5 work landed so far: standalone security guard hooks, the autonomous technical-resolution loop wired into discuss/plan, anti-pattern/bug-pattern reference docs, and the agent-observability telemetry hook + `gsd-tools trace` reader.
