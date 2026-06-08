@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-06-08T12:12:11.286Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-06-08T12:19:39.934Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 9
   completed_phases: 7
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 ## Current Position
 
 Phase: 08 (validated-example-corpus) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Project Reference
 
@@ -120,6 +120,8 @@ Recent decisions affecting current work:
 - [Phase 07]: parallel-gate: related_to on todos is context-only — does NOT trigger axis-B refuse; only depends_on triggers refuse
 - [Phase 08]: counters: vocabulary uses exact ## header strings from common-bug-patterns.md (Phase 9 join key) — not slug form
 - [Phase 08]: INDEX is strictly 4-column (pattern_id / constraint / language / file) — guards fat-INDEX anti-pattern
+- [Phase 08]: requests v2.31.0 flat layout: requests/adapters.py (not src/), lines 500-519 chosen for except-wrap chain
+- [Phase 08]: pydantic BaseModel.__init__ (240-260) chosen over model_validate (678-724) — compact parse contract, within excerpt size budget
 
 ### Pending Todos
 
@@ -160,6 +162,7 @@ Recent decisions affecting current work:
 | Phase 07 P04 | 35 | 2 tasks | 6 files |
 | Phase 07 P05 | 51min | 1 tasks | 4 files |
 | Phase 08-validated-example-corpus P01 | 8 | 2 tasks | 3 files |
+| Phase 08 P02 | 10 | 2 tasks | 3 files |
 
 ### Roadmap Evolution
 
@@ -169,7 +172,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-08T12:12:11.277Z
+Last session: 2026-06-08T12:19:39.926Z
 Last activity: 2026-06-08
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
