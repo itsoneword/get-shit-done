@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { escapeRegex, loadConfig, normalizePhaseName, comparePhaseNum, findPhaseInternal, getArchivedPhaseDirs, generateSlugInternal, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, replaceInCurrentMilestone, toPosixPath, output, error, phasesDir, relPhasesPath } = require('./core.cjs');
+const { escapeRegex, loadConfig, normalizePhaseName, comparePhaseNum, findPhaseInternal, getArchivedPhaseDirs, generateSlugInternal, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, replaceInCurrentMilestone, toPosixPath, output, error, phasesDir, relPhasesPath, planningPaths } = require('./core.cjs');
 const { extractFrontmatter } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
 
@@ -147,6 +147,54 @@ function cmdPhaseNextDecimal(cwd, basePhase, raw) {
   } catch (e) {
     error('Failed to calculate next decimal phase: ' + e.message);
   }
+}
+
+function cmdPhaseNextBacklogId(cwd, raw) {
+  const phasesRoot = phasesDir(cwd);
+  const bPattern = /^B(\d+)-/;
+  const existing = [];
+
+  // Scan phases dir for B{N}-* directories
+  if (fs.existsSync(phasesRoot)) {
+    try {
+      const entries = fs.readdirSync(phasesRoot, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const m = entry.name.match(bPattern);
+        if (m) existing.push(parseInt(m[1], 10));
+      }
+    } catch (_) {
+      // non-fatal: treat as empty
+    }
+  }
+
+  // Also scan ROADMAP.md ## Backlog for ### B{N}: headings
+  const paths = planningPaths(cwd);
+  if (fs.existsSync(paths.roadmap)) {
+    try {
+      const content = fs.readFileSync(paths.roadmap, 'utf-8');
+      const backlogIdx = content.indexOf('## Backlog');
+      if (backlogIdx !== -1) {
+        const backlogSection = content.slice(backlogIdx);
+        const headingPattern = /###\s+B(\d+)\s*:/g;
+        let hm;
+        while ((hm = headingPattern.exec(backlogSection)) !== null) {
+          existing.push(parseInt(hm[1], 10));
+        }
+      }
+    } catch (_) {
+      // non-fatal
+    }
+  }
+
+  const maxN = existing.length > 0 ? Math.max(...existing) : 0;
+  const next = `B${maxN + 1}`;
+
+  output(
+    { next, existing: existing.map(n => `B${n}`) },
+    raw,
+    next
+  );
 }
 
 function cmdFindPhase(cwd, phase, raw) {
@@ -984,6 +1032,7 @@ function cmdPhaseComplete(cwd, phaseNum, raw) {
 module.exports = {
   cmdPhasesList,
   cmdPhaseNextDecimal,
+  cmdPhaseNextBacklogId,
   cmdFindPhase,
   cmdPhasePlanIndex,
   cmdPhaseAdd,

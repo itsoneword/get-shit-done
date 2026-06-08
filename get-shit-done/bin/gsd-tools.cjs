@@ -501,6 +501,8 @@ async function main() {
       const subcommand = args[1];
       if (subcommand === 'next-decimal') {
         phase.cmdPhaseNextDecimal(cwd, args[2], raw);
+      } else if (subcommand === 'next-backlog-id') {
+        phase.cmdPhaseNextBacklogId(cwd, raw);
       } else if (subcommand === 'add') {
         const idIdx = args.indexOf('--id');
         let customId = null;
@@ -522,7 +524,7 @@ async function main() {
       } else if (subcommand === 'complete') {
         phase.cmdPhaseComplete(cwd, args[2], raw);
       } else {
-        error('Unknown phase subcommand. Available: next-decimal, add, insert, remove, complete');
+        error('Unknown phase subcommand. Available: next-decimal, next-backlog-id, add, insert, remove, complete');
       }
       break;
     }
