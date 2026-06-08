@@ -76,6 +76,15 @@
  *     [--branch <branch>] [--force]
  *   worktree prune                     git worktree prune (clean stale entries)
  *
+ * Parallel Safety Gate (SC2 + SC3 — concurrent session safety):
+ *   parallel-safe <A> <B>              Decide if units A and B can run concurrently
+ *                                      A/B: phase number OR todo slug
+ *                                      → JSON: {safe, axis_b_coupled, axis_a_overlap,
+ *                                               overlap_files, decision, reason}
+ *                                      decision: "refuse" (axis-B depends_on edge — unrecoverable)
+ *                                              | "warn"   (axis-A file overlap only — reviewable)
+ *                                              | "greenlight" (disjoint on both axes)
+ *
  * Validation:
  *   validate consistency               Check phase numbering, disk/roadmap sync
  *   validate health [--repair]         Check .planning/ integrity, optionally repair
@@ -173,6 +182,7 @@ const profilePipeline = require('./lib/profile-pipeline.cjs');
 const trace = require('./lib/trace.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
+const parallelGate = require('./lib/parallel-gate.cjs');
 
 // ─── CLI Router ───────────────────────────────────────────────────────────────
 
@@ -592,6 +602,11 @@ async function main() {
 
     case 'worktree': {
       worktree.cmdWorktree(cwd, args, raw);
+      break;
+    }
+
+    case 'parallel-safe': {
+      parallelGate.cmdParallelSafe(cwd, args[1], args[2], raw);
       break;
     }
 
