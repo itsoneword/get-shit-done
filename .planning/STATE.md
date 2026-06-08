@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-06-06T20:50:52.078Z"
-last_activity: 2026-06-06
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-06-08T08:01:31.791Z"
+last_activity: 2026-06-08
 progress:
   total_phases: 9
   completed_phases: 6
   total_plans: 21
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 ## Current Position
 
 Phase: 07 (parallel-multi-session-safety-planning-ergono) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 
 ## Project Reference
 
@@ -109,6 +109,9 @@ Recent decisions affecting current work:
 - [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: Iron Law watch-it-fail enforcement inserted inline in RED step (compact); exempt from tdd written as plain text to satisfy grep acceptance criteria; gsd-local-patches third copy received only narrow Gap 1 exemption-clause edit
 - [Phase 07-parallel-multi-session-safety-planning-ergono]: cmdWorktreeMerge exits 0 on conflict ({clean:false}) — conflict is a detected state not a command error; 07-06 JSON-parses to decide auto-merge vs pause
 - [Phase 07-parallel-multi-session-safety-planning-ergono]: Executor-targeting caveat: on-disk isolation proven but subagent cwd resets between bash calls so executor writing absolute repo-root paths lands in MAIN tree; 07-06 must fall back to in-place + checkpoint
+- [Phase 07-parallel-multi-session-safety-planning-ergono]: extractFrontmatter reuse in cmdInitTodos for depends_on/related_to parsing — handles both inline and block YAML forms; already imported, no new dep
+- [Phase 07-parallel-multi-session-safety-planning-ergono]: todo schema: required=[created,title,area], optional=[depends_on,related_to,files] — existing todos without new fields remain valid
+- [Phase 07-parallel-multi-session-safety-planning-ergono]: SC3 substrate only in 07-02 — gate reads todo edges in 07-05; mark-complete deferred to 07-05
 
 ### Pending Todos
 
@@ -144,6 +147,7 @@ Recent decisions affecting current work:
 | Phase 06 P02 | 5 | 2 tasks | 6 files |
 | Phase 06-skill-self-sufficiency-audit-and-port-superpo P01 | 15 | 3 tasks | 9 files |
 | Phase 07-parallel-multi-session-safety-planning-ergono P01 | 17min | 3 tasks | 5 files |
+| Phase 07-parallel-multi-session-safety-planning-ergono P02 | 7 | 2 tasks | 4 files |
 
 ### Roadmap Evolution
 
@@ -152,7 +156,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-06T20:50:52.072Z
-Last activity: 2026-06-06
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-06-08T08:01:31.785Z
+Last activity: 2026-06-08
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
