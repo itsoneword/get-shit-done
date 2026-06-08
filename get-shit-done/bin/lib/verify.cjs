@@ -761,6 +761,131 @@ function cmdValidateConsistency(cwd, raw) {
   output({ passed, errors, warnings, warning_count: warnings.length }, raw, passed ? 'passed' : 'failed');
 }
 
+// ─── Check 9: Source↔runtime symmetry (SC4) ──────────────────────────────────
+//
+// SUB-CHECK A — file-tree: get-shit-done/ vs .claude/get-shit-done/ (excludes agents/)
+// SUB-CHECK B — settings.json: hooks + statusLine registration parity
+//
+// Returns { fileMismatches: [], settingsMismatches: [], runtimeAbsent: bool, settingsAbsent: bool }
+// so cmdValidateHealth can call addIssue per mismatch and push repair entries.
+//
+// PATH-TOKEN RULE: source agent files use ~/.claude/ token; runtime uses absolute path.
+// Any file path containing /agents/ or starting with agents/ is excluded from file-tree diff.
+//
+// EXPECTED HOOKS (derived from install.js — what the framework registers):
+//   SessionStart:        gsd2-check-update.js
+//   PostToolUse:         gsd2-context-monitor.js (no matcher)
+//   PostToolUse[Read]:   gsd2-read-injection-scanner.js
+//   PostToolUse[Task|Agent]: gsd2-agent-trace.js
+//   PreToolUse[Write|Edit]:  gsd2-prompt-guard.js + gsd2-read-guard.js
+//   PostToolUseFailure[Task|Agent]: gsd2-agent-trace.js
+//   statusLine:          gsd2-statusline.js
+//
+function checkSourceRuntimeSymmetry(cwd) {
+  const srcRoot = path.join(cwd, 'get-shit-done');
+  const runtimeRoot = path.join(cwd, '.claude', 'get-shit-done');
+  const settingsPath = path.join(cwd, '.claude', 'settings.json');
+
+  const result = {
+    fileMismatches: [],    // { relPath, reason: 'missing'|'content' }
+    settingsMismatches: [], // { entry: string, reason: string }
+    runtimeAbsent: false,
+    settingsAbsent: false,
+  };
+
+  // ── SUB-CHECK A: file-tree diff ──────────────────────────────────────────
+  if (!fs.existsSync(runtimeRoot)) {
+    result.runtimeAbsent = true;
+    // Skip file-tree diff — not an error, just not installed yet
+    // (will emit info in caller)
+  } else {
+    // Walk source tree recursively; for each file check runtime counterpart
+    function walkDir(dir, baseDir) {
+      let entries;
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const entry of entries) {
+        const srcFull = path.join(dir, entry.name);
+        const relPath = path.relative(baseDir, srcFull);
+
+        // PATH-TOKEN RULE: exclude any path under agents/
+        // Normalize to forward slashes for cross-platform safety
+        const relFwd = relPath.replace(/\\/g, '/');
+        if (relFwd === 'agents' || relFwd.startsWith('agents/')) continue;
+
+        if (entry.isDirectory()) {
+          walkDir(srcFull, baseDir);
+        } else {
+          const runtimeFull = path.join(runtimeRoot, relPath);
+          if (!fs.existsSync(runtimeFull)) {
+            result.fileMismatches.push({ relPath, reason: 'missing' });
+          } else {
+            // Byte comparison
+            const srcBuf = fs.readFileSync(srcFull);
+            const runtimeBuf = fs.readFileSync(runtimeFull);
+            if (!srcBuf.equals(runtimeBuf)) {
+              result.fileMismatches.push({ relPath, reason: 'content' });
+            }
+          }
+        }
+      }
+    }
+    walkDir(srcRoot, srcRoot);
+  }
+
+  // ── SUB-CHECK B: settings.json hook/statusLine parity ───────────────────
+  // Expected hook script names (basename only — any command containing the name counts)
+  const EXPECTED_HOOKS = [
+    { event: 'SessionStart',        script: 'gsd2-check-update.js',           matcher: null },
+    { event: 'PostToolUse',         script: 'gsd2-context-monitor.js',        matcher: null },
+    { event: 'PostToolUse',         script: 'gsd2-read-injection-scanner.js', matcher: 'Read' },
+    { event: 'PostToolUse',         script: 'gsd2-agent-trace.js',            matcher: 'Task|Agent' },
+    { event: 'PreToolUse',          script: 'gsd2-prompt-guard.js',           matcher: 'Write|Edit' },
+    { event: 'PreToolUse',          script: 'gsd2-read-guard.js',             matcher: 'Write|Edit' },
+    { event: 'PostToolUseFailure',  script: 'gsd2-agent-trace.js',            matcher: 'Task|Agent' },
+  ];
+  const EXPECTED_STATUSLINE = 'gsd2-statusline.js';
+
+  if (!fs.existsSync(settingsPath)) {
+    result.settingsAbsent = true;
+    // Skip settings parity check — skip cleanly (info in caller)
+  } else {
+    let settings;
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    } catch {
+      // Corrupt settings.json — report as settings drift
+      result.settingsMismatches.push({ entry: 'settings.json', reason: 'JSON parse error — cannot verify parity' });
+      return result;
+    }
+
+    // Check each expected hook
+    for (const expected of EXPECTED_HOOKS) {
+      const eventEntries = (settings.hooks || {})[expected.event] || [];
+      const found = eventEntries.some(entry => {
+        const hooks = entry.hooks || [];
+        return hooks.some(h => h.command && h.command.includes(expected.script));
+      });
+      if (!found) {
+        result.settingsMismatches.push({
+          entry: `hooks.${expected.event}[${expected.script}]`,
+          reason: `${expected.script} not registered in settings.json hooks.${expected.event}`,
+        });
+      }
+    }
+
+    // Check statusLine
+    const sl = settings.statusLine;
+    if (!sl || !sl.command || !sl.command.includes(EXPECTED_STATUSLINE)) {
+      result.settingsMismatches.push({
+        entry: 'statusLine',
+        reason: `settings.json statusLine not pointing to ${EXPECTED_STATUSLINE}`,
+      });
+    }
+  }
+
+  return result;
+}
+
 function cmdValidateHealth(cwd, options, raw) {
   // Guard: detect if CWD is the home directory (likely accidental)
   const resolved = path.resolve(cwd);
@@ -980,6 +1105,40 @@ function cmdValidateHealth(cwd, options, raw) {
     }
   }
 
+  // ─── Check 9: Source↔runtime symmetry ────────────────────────────────────
+  {
+    const symmetry = checkSourceRuntimeSymmetry(cwd);
+
+    if (symmetry.runtimeAbsent) {
+      addIssue('info', 'I003', 'source↔runtime check: .claude/get-shit-done/ not found (not installed?)', 'Run the installer to create the runtime copy');
+    } else {
+      for (const m of symmetry.fileMismatches) {
+        addIssue(
+          'error',
+          'E-DRIFT',
+          `source-runtime drift: ${m.relPath} (${m.reason === 'missing' ? 'missing in runtime' : 'content differs'})`,
+          'Run /gsd2:health --repair to re-sync source→runtime',
+          true
+        );
+        if (!repairs.includes('syncSourceRuntime')) repairs.push('syncSourceRuntime');
+      }
+    }
+
+    if (symmetry.settingsAbsent) {
+      addIssue('info', 'I004', 'source↔runtime check: .claude/settings.json not found — skipping hook/statusLine parity check', 'Run the installer to register hooks');
+    } else {
+      for (const m of symmetry.settingsMismatches) {
+        addIssue(
+          'error',
+          'E-SETTINGS-DRIFT',
+          `settings.json parity drift: ${m.entry} — ${m.reason}`,
+          'Re-run the GSD installer to restore hook registrations',
+          false // settings.json parity is not auto-repairable (installer owns it)
+        );
+      }
+    }
+  }
+
   // ─── Perform repairs if requested ─────────────────────────────────────────
   const repairActions = [];
   if (options.repair && repairs.length > 0) {
@@ -1049,6 +1208,40 @@ function cmdValidateHealth(cwd, options, raw) {
             }
             break;
           }
+          case 'syncSourceRuntime': {
+            // Repair: copy source get-shit-done/ → .claude/get-shit-done/, excluding agents/
+            const srcRoot = path.join(cwd, 'get-shit-done');
+            const runtimeRoot = path.join(cwd, '.claude', 'get-shit-done');
+            let syncCount = 0;
+            function syncDir(dir, baseDir) {
+              let entries;
+              try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+              for (const entry of entries) {
+                const srcFull = path.join(dir, entry.name);
+                const relPath = path.relative(baseDir, srcFull);
+                const relFwd = relPath.replace(/\\/g, '/');
+                // PATH-TOKEN RULE: skip agents/
+                if (relFwd === 'agents' || relFwd.startsWith('agents/')) continue;
+                const runtimeFull = path.join(runtimeRoot, relPath);
+                if (entry.isDirectory()) {
+                  try { fs.mkdirSync(runtimeFull, { recursive: true }); } catch { /* ok */ }
+                  syncDir(srcFull, baseDir);
+                } else {
+                  try {
+                    fs.copyFileSync(srcFull, runtimeFull);
+                    syncCount++;
+                  } catch (err) {
+                    repairActions.push({ action: 'syncSourceRuntime', success: false, error: err.message, file: relPath });
+                  }
+                }
+              }
+            }
+            if (fs.existsSync(srcRoot)) {
+              syncDir(srcRoot, srcRoot);
+              repairActions.push({ action: 'syncSourceRuntime', success: true, files_synced: syncCount });
+            }
+            break;
+          }
         }
       } catch (err) {
         repairActions.push({ action: repair, success: false, error: err.message });
@@ -1092,4 +1285,6 @@ module.exports = {
   cmdValidateHealth,
   // Internal helpers exported for downstream tooling/tests
   parseVerifyCommands,
+  // Exported for execute-phase post-merge reuse (Plan 07-06)
+  checkSourceRuntimeSymmetry,
 };
