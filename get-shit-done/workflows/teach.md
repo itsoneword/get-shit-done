@@ -139,28 +139,39 @@ Before writing, ASSERT:
 
 Use the `Edit` tool (surgical replacement — NOT `Write`) to apply the change to `{attributed_file}`.
 
-Then commit source + ledger together:
+Then commit the **source file ONLY** (not the ledger — see why below):
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit \
   "teach({attributed_agent}): {one-line edit summary}" \
-  --files {attributed_file} .planning/lessons/lessons.jsonl
+  --files {attributed_file}
 ```
 
-Capture the commit hash.
+Capture the commit hash — this is the revertable source commit.
 
-Update the ledger record to `applied`:
+Update the ledger record to `applied`, then commit the ledger **separately**:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" lesson update {LSN} \
   --disposition applied --commit {hash}
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit \
+  "teach({attributed_agent}): record lesson {LSN} applied" \
+  --files .planning/lessons/lessons.jsonl
 ```
+
+**Why two commits (do NOT combine):** the undo path is `git revert {hash}` on the source
+commit. If the ledger record lived in that same commit, the later `applied` mutation would
+rewrite the very line the revert tries to reverse-patch — `git revert` would conflict and
+abort. A source-only apply commit keeps the undo clean; the ledger is an append-only audit
+log committed on its own (TEACH-02: source-only edit AND an applied ledger record).
 </step>
 
 <step name="discard">
 **Step 7 — Discard (on N).**
 
-Update the ledger record to `rejected`:
+Update the ledger record to `rejected`, then commit the ledger so the tree stays clean:
 ```bash
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" lesson update {LSN} --disposition rejected
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit \
+  "teach: record lesson {LSN} rejected" --files .planning/lessons/lessons.jsonl
 ```
 
 Change no source file. Confirm: `Lesson {LSN} recorded as rejected. No source file changed.`
@@ -174,8 +185,12 @@ Print:
 Applied. Commit {hash}. Lesson {LSN}.
 Run `npm run dev` to propagate this edit to the current runtime.
 
-To undo: git revert {hash} && npm run dev
-(The lesson stays in the ledger with disposition=reverted — it is NOT deleted.)
+To undo:
+  git revert {hash}
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" lesson update {LSN} --disposition reverted
+  npm run dev
+(The lesson stays in the ledger with disposition=reverted — it is NOT deleted. The
+revert targets the source-only apply commit, so it never conflicts with the ledger.)
 ```
 </step>
 
