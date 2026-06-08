@@ -94,7 +94,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 6. Skill Self-Sufficiency | 2/3 | In Progress|  |
 | 7. Parallel Multi-Session Safety & Planning Ergonomics | 6/6 | Complete   | 2026-06-08 |
 | 8. Validated Example Corpus | 4/4 | Complete   | 2026-06-08 |
-| 9. SkillOpt-Style Self-Improving Skills | 0/0 | Not planned |  |
+| 9. SkillOpt-Style Self-Improving Skills | 1/2 | In Progress|  |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
 
@@ -204,7 +204,7 @@ Locked decisions: **capture** = manual `/teach` (primary, trusted) + auto-miner 
 
 **Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
 **Requirements:** TBD
-**Plans:** 4/4 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)

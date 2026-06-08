@@ -3,27 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Phase 9 context gathered (reshaped to feedback-driven)
-last_updated: "2026-06-08T14:23:58.510Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-06-08T15:57:08.564Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 9
   completed_phases: 8
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 27
+  completed_plans: 26
 ---
 
 ## Current Position
 
-Phase: 08 (validated-example-corpus) — EXECUTING
-Plan: 4 of 4
+Phase: 09 (skillopt-style-self-improving-skills) — EXECUTING
+Plan: 2 of 2
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 08 — validated-example-corpus
+**Current focus:** Phase 09 — skillopt-style-self-improving-skills
 
 ## Performance Metrics
 
@@ -126,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 07-parallel-multi-session-safety-planning-ergono]: Executor-targeting fallback: subagent cwd resets so absolute-path writes land in main tree; 07-06 falls back to in-place + checkpoint
 - [Phase 08-validated-example-corpus]: INDEX rows written in Wave 3 integration plan to avoid file-ownership collision between parallel Wave 2 plans
 - [Phase 08-validated-example-corpus]: gsd-planner.md pointer uses ~/.claude/ token; agent file not cp'd to runtime
+- [Phase 09-skillopt-style-self-improving-skills]: cmdScan is ledger-recurrence-ONLY in v1; BLOCKER/telemetry scanning deferred per scope guard
+- [Phase 09-skillopt-style-self-improving-skills]: attributeFile() is a pure function with .claude/ and gsd-local-patches/ path guards; AGENT_FILE_MAP static table for agent_type -> source file
 
 ### Pending Todos
 
@@ -170,6 +172,7 @@ Recent decisions affecting current work:
 | Phase 08 P03 | 7 | 2 tasks | 3 files |
 | Phase 07-parallel-multi-session-safety-planning-ergono P06 | multi-session | 3 tasks | 4 files |
 | Phase 08-validated-example-corpus P04 | 8 | 2 tasks | 2 files |
+| Phase 09-skillopt-style-self-improving-skills P01 | 16 | 3 tasks | 3 files |
 
 ### Roadmap Evolution
 
@@ -179,7 +182,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-08T14:06:24.689Z
+Last session: 2026-06-08T15:57:08.558Z
 Last activity: 2026-06-08
-Stopped at: Phase 9 context gathered (reshaped to feedback-driven)
-Resume file: .planning/v1.5/phases/09-skillopt-style-self-improving-skills/09-CONTEXT.md
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
