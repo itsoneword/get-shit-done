@@ -180,6 +180,7 @@ const init = require('./lib/init.cjs');
 const frontmatter = require('./lib/frontmatter.cjs');
 const profilePipeline = require('./lib/profile-pipeline.cjs');
 const trace = require('./lib/trace.cjs');
+const lesson = require('./lib/lesson.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
 const parallelGate = require('./lib/parallel-gate.cjs');
@@ -831,6 +832,66 @@ async function main() {
       const autoFlag = args.includes('--auto');
       const forceFlag = args.includes('--force');
       profileOutput.cmdGenerateClaudeMd(cwd, { output: outputPath, auto: autoFlag, force: forceFlag }, raw);
+      break;
+    }
+
+    case 'lesson': {
+      const sub = args[1];
+
+      switch (sub) {
+        case 'append': {
+          const jsonString = args[2];
+          if (!jsonString) { process.stderr.write('lesson append <json> is required\n'); process.exit(1); }
+          lesson.cmdAppend(cwd, jsonString);
+          break;
+        }
+        case 'list': {
+          const aIdx = args.indexOf('--agent');
+          const dIdx = args.indexOf('--disposition');
+          const lIdx = args.indexOf('--last');
+          const opts = {
+            agent: aIdx !== -1 ? args[aIdx + 1] : null,
+            disposition: dIdx !== -1 ? args[dIdx + 1] : null,
+            last: lIdx !== -1 ? parseInt(args[lIdx + 1], 10) : 20,
+          };
+          lesson.cmdList(cwd, opts, raw);
+          break;
+        }
+        case 'update': {
+          const id = args[2];
+          if (!id) { process.stderr.write('lesson update <id> is required\n'); process.exit(1); }
+          const dIdx = args.indexOf('--disposition');
+          const cIdx = args.indexOf('--commit');
+          lesson.cmdUpdate(cwd, id, {
+            disposition: dIdx !== -1 ? args[dIdx + 1] : null,
+            commit: cIdx !== -1 ? args[cIdx + 1] : null,
+          });
+          break;
+        }
+        case 'bump-recurrence': {
+          const id = args[2];
+          if (!id) { process.stderr.write('lesson bump-recurrence <id> is required\n'); process.exit(1); }
+          lesson.cmdBumpRecurrence(cwd, id);
+          break;
+        }
+        case 'attribute': {
+          const aIdx = args.indexOf('--agent');
+          const lIdx = args.indexOf('--last');
+          const opts = {
+            agent: aIdx !== -1 ? args[aIdx + 1] : null,
+            last: lIdx !== -1 ? parseInt(args[lIdx + 1], 10) : 50,
+          };
+          lesson.cmdAttribute(cwd, opts, raw);
+          break;
+        }
+        case 'scan': {
+          lesson.cmdScan(cwd, {});
+          break;
+        }
+        default:
+          process.stderr.write(`lesson: unknown subcommand: ${sub}\n`);
+          process.exit(1);
+      }
       break;
     }
 
