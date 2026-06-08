@@ -93,7 +93,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 5. Plan-Loop Convergence and Verify Fix | 2/2 | Complete   | 2026-06-06 |
 | 6. Skill Self-Sufficiency | 2/3 | In Progress|  |
 | 7. Parallel Multi-Session Safety & Planning Ergonomics | 5/6 | In Progress|  |
-| 8. Validated Example Corpus | 0/0 | Not planned |  |
+| 8. Validated Example Corpus | 0/4 | Planned |  |
 | 9. SkillOpt-Style Self-Improving Skills | 0/0 | Not planned |  |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
@@ -169,7 +169,11 @@ Build a small internal catalog *by pattern, not by repo* (e.g. CLI parsing, asyn
   2. The corpus is loaded into at least one GSD flow (e.g. planner/verifier reference) through the normal references mechanism
   3. The corpus is structured so Phase 9 can consume it as validated reference/eval material
 
-**Plans**: TBD (run `/gsd2:plan-phase 8` to break down)
+**Plans**: 4 across 3 waves
+  - 08-01 (W1) — corpus structure: entry _TEMPLATE.md (front-matter schema + commentary sections, counters locked to common-bug-patterns.md headers) + SELECTION-CRITERIA.md + slim INDEX.md schema (SC1)
+  - 08-02 (W2) — curate 3 Python seed entries (error-propagation/requests, validation-layer/pydantic, resource-management/cpython) with real attributed excerpts (SC1, SC3)
+  - 08-03 (W2) — curate 3 Node/TS seed entries (async-retry/undici, validation-layer/zod, config-env/fastify-or-node) with real attributed excerpts (SC1, SC3)
+  - 08-04 (W3) — populate INDEX rows + wire on-demand pointer into gsd-planner.md code_quality_reference + propagate runtime copy (SC2)
 
 ### Phase 9: SkillOpt-Style Self-Improving Skills
 
