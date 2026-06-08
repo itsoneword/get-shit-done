@@ -16,8 +16,8 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - [x] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes (completed 2026-06-05)
 - [x] **Phase 5: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix (completed 2026-06-06)
 - [ ] **Phase 6: Skill Self-Sufficiency** - Audit all 14 superpowers skills vs GSD coverage, then port only the genuine gaps (execution-time TDD discipline, receiving-code-review rigor, skill-authoring guidance, worktree-isolation default) into GSD as native commands/references so the external plugin dependency can be dropped — removal itself is a follow-up
-- [ ] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + merge so concurrent sessions and quick-fixes stop silently overwriting each other (axis A — file coupling); a parallel-safety gate combining `depends_on` (axis B — decision coupling) + file-scope disjointness (reuses Phase 4 dep-graph) to greenlight/refuse concurrent work and forbid parallel discussion of dependent phases; `depends_on`/`related_to` on todo frontmatter; absorbs the doctor source↔runtime symmetry-check (folded from backlog, verifies no drift post-merge); migrates the confusing backlog ID scheme to B-prefixed IDs (B1, B2…) outside the phase-number space
-- [ ] **Phase 8: Validated Example Corpus** - Build a curated corpus of *validated handwritten* code examples mined from strong real-world reference projects, indexed by pattern (not by repo), with per-example commentary on what it solves and what not to cargo-cult — so GSD guidance stops leaning on plausible-but-untested LLM-generated examples. Also serves as the validated reference/eval substrate that Phase 9 needs. Absorbs CODE-EXAMPLES.md / IDEAS.md #7. (Split from the original combined Phase 8 on 2026-06-08.)
+- [x] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + merge so concurrent sessions and quick-fixes stop silently overwriting each other (axis A — file coupling); a parallel-safety gate combining `depends_on` (axis B — decision coupling) + file-scope disjointness (reuses Phase 4 dep-graph) to greenlight/refuse concurrent work and forbid parallel discussion of dependent phases; `depends_on`/`related_to` on todo frontmatter; absorbs the doctor source↔runtime symmetry-check (folded from backlog, verifies no drift post-merge); migrates the confusing backlog ID scheme to B-prefixed IDs (B1, B2…) outside the phase-number space (completed 2026-06-08)
+- [x] **Phase 8: Validated Example Corpus** - Build a curated corpus of *validated handwritten* code examples mined from strong real-world reference projects, indexed by pattern (not by repo), with per-example commentary on what it solves and what not to cargo-cult — so GSD guidance stops leaning on plausible-but-untested LLM-generated examples. Also serves as the validated reference/eval substrate that Phase 9 needs. Absorbs CODE-EXAMPLES.md / IDEAS.md #7. (Split from the original combined Phase 8 on 2026-06-08.) (completed 2026-06-08)
 - [ ] **Phase 9: SkillOpt-Style Self-Improving Skills** - Build a GSD-native, full eval-harness + optimizer loop in the spirit of Microsoft's SkillOpt: a graded train/val/test set of real GSD tasks, an automated scorer (verifier/convergence/telemetry-derived), and an optimizer that proposes bounded edits to GSD skill/command/reference prose, accepting only validation-gated improvements. Large — likely needs its own benchmark-substrate sub-phase; consumes Phase 8's corpus as validated reference material. Absorbs the SkillOpt todo. (Split from the original combined Phase 8 on 2026-06-08.)
 
 ## Phase Details
@@ -92,8 +92,8 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
 | 5. Plan-Loop Convergence and Verify Fix | 2/2 | Complete   | 2026-06-06 |
 | 6. Skill Self-Sufficiency | 2/3 | In Progress|  |
-| 7. Parallel Multi-Session Safety & Planning Ergonomics | 5/6 | In Progress|  |
-| 8. Validated Example Corpus | 3/4 | In Progress|  |
+| 7. Parallel Multi-Session Safety & Planning Ergonomics | 6/6 | Complete   | 2026-06-08 |
+| 8. Validated Example Corpus | 4/4 | Complete   | 2026-06-08 |
 | 9. SkillOpt-Style Self-Improving Skills | 0/0 | Not planned |  |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
@@ -200,7 +200,7 @@ The hard prerequisite — and the core challenge of this phase — is an **eval 
 
 **Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
 **Requirements:** TBD
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)
