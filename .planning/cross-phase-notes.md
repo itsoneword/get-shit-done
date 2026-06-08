@@ -120,3 +120,13 @@
 **Reactivates SEC-DEFER-01 (worktree-path-guard hard-block hook):**
 - Phase 7 makes worktree isolation load-bearing → SEC-DEFER-01's descope premise ("user doesn't rely on worktree isolation") is fully void. The `worktree-path-guard` PreToolUse hard-block (exit 2 on paths escaping a linked worktree) becomes a sensible follow-up once worktree execution is routine. Not required to ship Phase 7.
 - Signal: [STRONG] — second explicit reversal of SEC-DEFER-01 (first flagged in Phase 6 notes).
+
+### From Phase 8 discussion (2026-06-08)
+
+**For Phase 9: SkillOpt-Style Self-Improving Skills**
+- The hard prerequisite is an eval substrate GSD lacks: a graded `train/val/test` set of real GSD tasks + an automated scorer. SkillOpt (arXiv 2605.23904, github.com/microsoft/SkillOpt) gates every bounded skill-doc edit on a strict held-out validation improvement — no benchmark, no loop.
+- Candidate score signals to investigate: verifier BLOCKER/WARNING counts, plan-loop convergence iterations (Phase 5), telemetry confidence verdicts (Phase 4 `agent-trace.jsonl`).
+- Likely needs its own **benchmark-substrate sub-phase** before the optimizer loop is buildable. Flag at Phase 9 discuss.
+- Phase 8's validated-example corpus is structured to be reusable as Phase 9 reference/eval material (real code, per-pattern retrievable).
+- Open scoping for Phase 9: what counts as a gradable GSD "task"; which prose artifacts are the optimization target (agent instructions vs command/workflow prose vs references); optimizer model; reuse `microsoft/SkillOpt` directly vs GSD-native reimplementation.
+- Signal: [STRONG] — phase split was an explicit user decision; substrate gap confirmed via primary-source research.
