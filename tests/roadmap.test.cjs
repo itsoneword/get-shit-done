@@ -830,3 +830,78 @@ describe('roadmap update-plan-progress command', () => {
 // phase add command
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// phase next-backlog-id command
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('phase next-backlog-id command', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('returns B1 when no B* backlog dirs exist', () => {
+    const result = runGsdTools('phase next-backlog-id --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+    assert.strictEqual(result.output, 'B1', `Expected B1, got: ${result.output}`);
+  });
+
+  test('returns B2 when B1 dir already exists', () => {
+    const phasesPath = path.join(tmpDir, '.planning', 'phases');
+    fs.mkdirSync(path.join(phasesPath, 'B1-some-item'), { recursive: true });
+
+    const result = runGsdTools('phase next-backlog-id --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+    assert.strictEqual(result.output, 'B2', `Expected B2, got: ${result.output}`);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// roadmap phase-space separation: B-prefixed headings not parsed as phases
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('roadmap phase-space separation', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('B1 backlog heading in ## Backlog section is NOT parsed as a phase', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+## Phases
+
+### Phase 1: Foundation
+**Goal:** Set up project
+**Plans:** 1 plans
+
+## Backlog
+
+### B1: Terse output default (BACKLOG)
+**Goal:** Some backlog goal
+**Plans:** 0 plans
+`
+    );
+
+    const result = runGsdTools('roadmap analyze', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    const phases = output.phases || [];
+    const b1Phase = phases.find(p => p.number === 'B1');
+    assert.strictEqual(b1Phase, undefined, 'B1 should NOT appear in parsed phases list');
+  });
+});
+
