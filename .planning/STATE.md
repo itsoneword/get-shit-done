@@ -3,27 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: "07-06 Task 2 complete — paused at Task 3 checkpoint:human-verify"
-last_updated: "2026-06-08T11:15:41.515Z"
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-06-08T12:12:11.286Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 9
-  completed_phases: 6
-  total_plans: 21
-  completed_plans: 20
+  completed_phases: 7
+  total_plans: 25
+  completed_plans: 22
 ---
 
 ## Current Position
 
-Phase: 07 (parallel-multi-session-safety-planning-ergono) — EXECUTING
-Plan: 6 of 6
+Phase: 08 (validated-example-corpus) — EXECUTING
+Plan: 2 of 4
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 07 — parallel-multi-session-safety-planning-ergono
+**Current focus:** Phase 08 — validated-example-corpus
 
 ## Performance Metrics
 
@@ -118,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 07]: Shell out for roadmap analyze + phase-plan-index (process.exit in output() makes in-process calls corrupt stdout)
 - [Phase 07]: parallel-gate: resolve todo file existence FIRST then fall back to phase-number form (date-prefixed slugs start with digit)
 - [Phase 07]: parallel-gate: related_to on todos is context-only — does NOT trigger axis-B refuse; only depends_on triggers refuse
+- [Phase 08]: counters: vocabulary uses exact ## header strings from common-bug-patterns.md (Phase 9 join key) — not slug form
+- [Phase 08]: INDEX is strictly 4-column (pattern_id / constraint / language / file) — guards fat-INDEX anti-pattern
 
 ### Pending Todos
 
@@ -157,6 +159,7 @@ Recent decisions affecting current work:
 | Phase 07 P03 | 25 | 2 tasks | 5 files |
 | Phase 07 P04 | 35 | 2 tasks | 6 files |
 | Phase 07 P05 | 51min | 1 tasks | 4 files |
+| Phase 08-validated-example-corpus P01 | 8 | 2 tasks | 3 files |
 
 ### Roadmap Evolution
 
@@ -166,7 +169,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-08T11:15:41.508Z
+Last session: 2026-06-08T12:12:11.277Z
 Last activity: 2026-06-08
-Stopped at: 07-06 Task 2 complete — paused at Task 3 checkpoint:human-verify
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
