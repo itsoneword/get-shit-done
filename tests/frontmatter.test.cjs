@@ -406,3 +406,91 @@ must_haves:
   });
 });
 
+// ─── FRONTMATTER_SCHEMAS todo entry (SC3) ───────────────────────────────────
+
+describe('FRONTMATTER_SCHEMAS todo schema (SC3)', () => {
+  test('todo key exists in FRONTMATTER_SCHEMAS', () => {
+    assert.ok(FRONTMATTER_SCHEMAS.todo !== undefined, 'FRONTMATTER_SCHEMAS must have a todo key');
+  });
+
+  test('todo schema has created, title, area in required', () => {
+    const schema = FRONTMATTER_SCHEMAS.todo;
+    assert.ok(schema, 'todo schema must exist');
+    assert.ok(Array.isArray(schema.required), 'schema.required must be an array');
+    assert.ok(schema.required.includes('created'), 'required must include created');
+    assert.ok(schema.required.includes('title'), 'required must include title');
+    assert.ok(schema.required.includes('area'), 'required must include area');
+  });
+
+  test('todo schema lists depends_on and related_to in optional', () => {
+    const schema = FRONTMATTER_SCHEMAS.todo;
+    assert.ok(schema, 'todo schema must exist');
+    assert.ok(Array.isArray(schema.optional), 'schema.optional must be an array');
+    assert.ok(schema.optional.includes('depends_on'), 'optional must include depends_on');
+    assert.ok(schema.optional.includes('related_to'), 'optional must include related_to');
+  });
+
+  test('todo with depends_on block-list parses into array', () => {
+    const content = `---
+created: 2026-06-08T10:00:00Z
+title: Test task
+area: tooling
+depends_on:
+  - phase:6
+  - 260507-u0a
+related_to:
+  - phase:7
+---
+
+## Problem
+
+Test.
+`;
+    const fm = extractFrontmatter(content);
+    assert.ok(Array.isArray(fm.depends_on), 'depends_on should be an array');
+    assert.ok(fm.depends_on.includes('phase:6'), 'should contain phase:6');
+    assert.ok(fm.depends_on.includes('260507-u0a'), 'should contain 260507-u0a');
+    assert.ok(Array.isArray(fm.related_to), 'related_to should be an array');
+    assert.ok(fm.related_to.includes('phase:7'), 'should contain phase:7');
+  });
+
+  test('todo with inline depends_on array parses correctly', () => {
+    const content = `---
+created: 2026-06-08T10:00:00Z
+title: Test task
+area: tooling
+depends_on: [phase:6]
+related_to: [260507-u0a]
+---
+`;
+    const fm = extractFrontmatter(content);
+    assert.ok(Array.isArray(fm.depends_on), 'depends_on should be an array');
+    assert.ok(fm.depends_on.includes('phase:6'), 'should contain phase:6');
+    assert.ok(Array.isArray(fm.related_to), 'related_to should be an array');
+    assert.ok(fm.related_to.includes('260507-u0a'), 'should contain 260507-u0a');
+  });
+
+  test('todo without depends_on/related_to still validates (fields are optional)', () => {
+    // A todo with only the required fields should produce an empty array or undefined
+    // for depends_on/related_to — no schema error.
+    const content = `---
+created: 2026-06-08T10:00:00Z
+title: Simple task
+area: tooling
+---
+`;
+    const fm = extractFrontmatter(content);
+    // Fields simply absent — gate reads them as empty
+    assert.ok(fm.depends_on === undefined || Array.isArray(fm.depends_on),
+      'depends_on absent or array');
+    assert.ok(fm.related_to === undefined || Array.isArray(fm.related_to),
+      'related_to absent or array');
+    // No required fields missing: schema validation should pass
+    const schema = FRONTMATTER_SCHEMAS.todo;
+    if (schema) {
+      const missing = schema.required.filter(f => fm[f] === undefined);
+      assert.strictEqual(missing.length, 0, 'all required fields present');
+    }
+  });
+});
+
