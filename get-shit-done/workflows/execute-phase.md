@@ -120,6 +120,42 @@ Interactive mode is best for small phases, bug fixes, verification gaps, and lea
 Skip to handle_branching step (interactive plans execute inline after grouping).
 </step>
 
+<step name="parallel_safety_check">
+Before branching, determine whether another phase is currently executing and whether running this phase concurrently is safe.
+
+**Detect a concurrently running phase (Pitfall 1 — use both signals; STATE.md status is stale-prone):**
+
+```bash
+# Signal 1: git worktree list (authoritative — shows live linked worktrees)
+OTHER_PHASE_FROM_WORKTREE=$(git worktree list --porcelain | grep "^branch" | grep "refs/heads/phase-" | grep -v "refs/heads/phase-${PHASE_NUMBER}" | head -1 | sed 's|.*refs/heads/phase-||')
+
+# Signal 2: STATE.md status field (may be stale after a crash)
+CURRENT_PHASE_FROM_STATE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get-state current_phase 2>/dev/null || echo "")
+STATE_STATUS=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get-state status 2>/dev/null || echo "")
+```
+
+Use `OTHER_PHASE_FROM_WORKTREE` as primary signal; fall back to `CURRENT_PHASE_FROM_STATE` if worktree list shows no running phase but STATE.md status indicates executing.
+
+**Same-phase re-entry skip (Pitfall 4):** If the detected running phase is the SAME as the proposed phase (`OTHER_PHASE == THIS_PHASE` or `CURRENT_PHASE_FROM_STATE == PHASE_NUMBER`), skip the gate entirely — continuing one phase's next wave is not a new parallel set and must not be refused. Log: "Same-phase re-entry detected — skipping parallel-safety check."
+
+**When a DIFFERENT phase P is detected as running:**
+
+```bash
+GATE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" parallel-safe "${OTHER_PHASE}" "${PHASE_NUMBER}" --raw)
+GATE_DECISION=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.decision)}catch{process.stdout.write('greenlight')}")
+GATE_REASON=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.reason||'')}catch{process.stdout.write('')}")
+OVERLAP_FILES=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write((r.overlap_files||[]).join(', '))}catch{process.stdout.write('')}")
+```
+
+| Decision | Action |
+|----------|--------|
+| `refuse` (axis B — depends_on coupling) | **STOP.** Do not proceed. Print: "Axis-B coupling detected between Phase ${OTHER_PHASE} and Phase ${PHASE_NUMBER}: ${GATE_REASON}. Running these phases in parallel risks silent decision overwrites. Finish Phase ${OTHER_PHASE} first." |
+| `warn` (axis A — file overlap only) | **Warn and continue.** Worktrees make the overlap reviewable at merge. Print: "Axis-A overlap with Phase ${OTHER_PHASE} — shared files: ${OVERLAP_FILES}. Proceeding (worktrees provide merge isolation). Review the merge output carefully." |
+| `greenlight` | Continue silently. |
+
+**If no running phase is detected:** Continue silently.
+</step>
+
 <step name="handle_branching">
 Check `branching_strategy` from init:
 

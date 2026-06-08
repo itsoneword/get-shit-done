@@ -68,6 +68,33 @@ PHASE_INFO=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-ph
 
 **If `found` is false:** Error with available phases. **If `found` is true:** Extract `phase_number`, `phase_name`, `goal` from JSON.
 
+## 3.3. Parallel-Safety Check
+
+Before spawning research or planning agents, verify it is safe to plan this phase concurrently with any active plan session.
+
+Planning a phase that has a `depends_on` coupling with a phase currently being planned produces contradictory plan assumptions — decisions from one CONTEXT.md cannot safely be treated as locked while the other phase's planner is still resolving them. This is the plan-phase equivalent of the discuss-phase hard-refuse.
+
+```bash
+ACTIVE_PLAN_PHASE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get-state current_plan_phase 2>/dev/null || echo "")
+```
+
+If `ACTIVE_PLAN_PHASE` is set and different from `phase_number`:
+
+```bash
+GATE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" parallel-safe "${ACTIVE_PLAN_PHASE}" "${phase_number}" --raw)
+GATE_DECISION=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.decision)}catch{process.stdout.write('greenlight')}")
+GATE_REASON=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.reason||'')}catch{process.stdout.write('')}")
+OVERLAP_FILES=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write((r.overlap_files||[]).join(', '))}catch{process.stdout.write('')}")
+```
+
+| Decision | Action |
+|----------|--------|
+| `refuse` (axis B) | **HARD REFUSE.** Print: "Phase ${phase_number} has a depends_on coupling with Phase ${ACTIVE_PLAN_PHASE} which is currently being planned. Parallel planning of coupled phases produces contradictory plan assumptions — this is unrecoverable. Finish planning Phase ${ACTIVE_PLAN_PHASE} first." Exit immediately — do not spawn research or planners. |
+| `warn` (axis A) | **Warn only.** Phase folders are separate so plan files are distinct. Print the file-overlap warning and continue. |
+| `greenlight` | Continue silently. |
+
+**This restates the roadmap success criterion: plan-phase HARD-refuses parallel planning of depends_on-coupled phases.**
+
 ## 3.5. Handle PRD Express Path
 
 **Skip if:** No `--prd` flag in arguments.

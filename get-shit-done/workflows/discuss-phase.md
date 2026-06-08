@@ -125,6 +125,31 @@ If no plans: continue to build_understanding.
 <step name="build_understanding">
 Build grounded understanding BEFORE talking to user. This determines what to ask about.
 
+**0. Parallel-safety check — run before reading anything.**
+
+Before spending context on codebase reading, check whether another phase's discussion is concurrently active. A discussion session cannot be safely resumed in parallel when there is a `depends_on` coupling (axis B) — the CONTEXT.md decisions from both phases would interleave and produce contradictory planning inputs.
+
+```bash
+# Check for a concurrently active discussion (STATE.md is the signal here — discuss sessions do not leave worktrees)
+ACTIVE_DISCUSS_PHASE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get-state current_discuss_phase 2>/dev/null || echo "")
+```
+
+If `ACTIVE_DISCUSS_PHASE` is set and different from `PHASE_NUMBER`:
+
+```bash
+GATE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" parallel-safe "${ACTIVE_DISCUSS_PHASE}" "${PHASE_NUMBER}" --raw)
+GATE_DECISION=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.decision)}catch{process.stdout.write('greenlight')}")
+GATE_REASON=$(echo "$GATE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.reason||'')}catch{process.stdout.write('')}")
+```
+
+| Decision | Action |
+|----------|--------|
+| `refuse` (axis B) | **HARD REFUSE.** Do not proceed. Print: "Phase ${PHASE_NUMBER} has a depends_on coupling with Phase ${ACTIVE_DISCUSS_PHASE} which is currently being discussed. Running parallel discussion of coupled phases produces contradictory CONTEXT.md decisions — this is unrecoverable at planning time. Finish the Phase ${ACTIVE_DISCUSS_PHASE} discussion first, then discuss Phase ${PHASE_NUMBER}." Exit. |
+| `warn` (axis A) | **Warn only.** Print the overlap warning and continue — separate phase folders mean the output files are distinct and the overlap is low-risk. |
+| `greenlight` | Continue silently. |
+
+**This restates the roadmap success criterion: discuss-phase HARD-refuses parallel discussion of depends_on-coupled phases.** Axis-A overlap is warn-only because discuss sessions write to separate phase folders.
+
 **1. Read project-level files**
 ```bash
 cat .planning/PROJECT.md 2>/dev/null

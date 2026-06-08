@@ -52,7 +52,43 @@ Parse JSON: `planner_model`, `executor_model`, `checker_model`, `verifier_model`
 </step>
 
 <step name="branch">
-**Branch (skip if `branch_name` empty/null):**
+**Worktree auto-detection** — check whether a phase is currently executing before deciding the isolation strategy:
+
+```bash
+# Count linked worktrees (excluding the main worktree):
+LINKED_WORKTREES=$(git worktree list --porcelain | grep "^worktree " | grep -v "$(git rev-parse --show-toplevel)" | wc -l)
+STATE_STATUS=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get-state status 2>/dev/null || echo "")
+```
+
+**If `LINKED_WORKTREES > 0` OR `STATE_STATUS` indicates executing:**
+
+A phase is currently running. Create a worktree for this quick task to avoid silent overwrites of in-progress files:
+
+```bash
+QUICK_WORKTREE_DIR=".worktrees/quick-${quick_id}"
+QUICK_WORKTREE_BRANCH="quick/${quick_id}"
+WORKTREE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree add "$QUICK_WORKTREE_DIR" "$QUICK_WORKTREE_BRANCH" 2>&1)
+WORKTREE_OK=$(echo "$WORKTREE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(r.fallback==='in-place'?'false':'true')}catch{process.stdout.write('false')}")
+```
+
+If `WORKTREE_OK=true`: run the quick task in `$QUICK_WORKTREE_DIR` (this is a human-driven task — the human controls writes, so worktree isolation IS effective here). After the executor completes, merge back:
+
+```bash
+MERGE_RESULT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree merge "$QUICK_WORKTREE_BRANCH")
+MERGE_CLEAN=$(echo "$MERGE_RESULT" | node -e "try{const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));process.stdout.write(String(r.clean))}catch{process.stdout.write('false')}")
+if [ "$MERGE_CLEAN" = "true" ]; then
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree remove "$QUICK_WORKTREE_DIR"
+else
+  echo "Merge conflict in quick task ${quick_id}. Conflicting files: $(echo "$MERGE_RESULT" | node -e "...")"
+  echo "Resolve manually, then: node gsd-tools.cjs worktree remove $QUICK_WORKTREE_DIR"
+fi
+```
+
+If `WORKTREE_OK=false` (sandbox blocks worktree creation): fall back to in-place execution. Print: "Warning: worktree creation failed — running in-place while a phase is executing. Merge conflicts must be resolved manually."
+
+**If no concurrent phase detected (`LINKED_WORKTREES == 0` AND status not executing):**
+
+Use the standard branch strategy (skip if `branch_name` is empty/null):
 
 ```bash
 git checkout -b "$branch_name" 2>/dev/null || git checkout "$branch_name"
