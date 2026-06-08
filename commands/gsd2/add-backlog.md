@@ -1,6 +1,6 @@
 ---
 name: gsd2:add-backlog
-description: Add an idea to the backlog parking lot (999.x numbering)
+description: Add an idea to the backlog parking lot (B-prefixed (B1, B2…) numbering)
 argument-hint: <description>
 allowed-tools:
   - Read
@@ -9,9 +9,11 @@ allowed-tools:
 ---
 
 <objective>
-Add a backlog item to the roadmap using 999.x numbering. Backlog items are
-unsequenced ideas that aren't ready for active planning — they live outside
-the normal phase sequence and accumulate context over time.
+Add a backlog item to the roadmap using B-prefixed (B1, B2…) numbering. Backlog
+items are unsequenced ideas that aren't ready for active planning — they live
+outside the phase-number space and accumulate context over time. IDs are
+allocated by `next-backlog-id` and only receive a real phase number when
+promoted into a milestone.
 </objective>
 
 <process>
@@ -23,9 +25,9 @@ the normal phase sequence and accumulate context over time.
 
 2. **Find next backlog number:**
    ```bash
-   NEXT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase next-decimal 999 --raw)
+   NEXT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase next-backlog-id --raw)
    ```
-   If no 999.x phases exist, start at 999.1.
+   If no B* backlog dirs exist, starts at B1.
 
 3. **Create the phase directory** (resolves to partitioned `.planning/{milestone}/phases/` when STATE.md has a milestone, else `.planning/phases/` legacy fallback):
    ```bash
@@ -40,7 +42,7 @@ the normal phase sequence and accumulate context over time.
    ```markdown
    ## Backlog
 
-   ### Phase {NEXT}: {description} (BACKLOG)
+   ### {NEXT}: {description} (BACKLOG)
 
    **Goal:** [Captured for future planning]
    **Requirements:** TBD
@@ -57,21 +59,21 @@ the normal phase sequence and accumulate context over time.
 
 6. **Report:**
    ```
-   ## 📋 Backlog Item Added
+   Backlog Item Added
 
-   Phase {NEXT}: {description}
+   {NEXT}: {description}
    Directory: {partition_root}/phases/{NEXT}-{slug}/
 
    This item lives in the backlog parking lot.
-   Use /gsd2:discuss-phase {NEXT} to explore it further.
+   Use /gsd2:discuss-phase with the description to explore it further.
    Use /gsd2:review-backlog to promote items to active milestone.
    ```
 
 </process>
 
 <notes>
-- 999.x numbering keeps backlog items out of the active phase sequence
+- B-prefixed (B1, B2…) IDs keep backlog items outside the phase-number space
 - Phase directories are created immediately, so /gsd2:discuss-phase and /gsd2:plan-phase work on them
 - No `Depends on:` field — backlog items are unsequenced by definition
-- Sparse numbering is fine (999.1, 999.3) — always uses next-decimal
+- Sparse numbering is fine (B1, B3) — always uses next-backlog-id
 </notes>

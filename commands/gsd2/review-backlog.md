@@ -8,7 +8,7 @@ allowed-tools:
 ---
 
 <objective>
-Review all 999.x backlog items and optionally promote them into the active
+Review all B* backlog items and optionally promote them into the active
 milestone sequence or remove stale entries.
 </objective>
 
@@ -16,22 +16,22 @@ milestone sequence or remove stale entries.
 
 1. **List backlog items:**
    ```bash
-   ls -d .planning/**/phases/999* 2>/dev/null || echo "No backlog items found"
+   ls -d .planning/**/phases/B[0-9]* 2>/dev/null || echo "No backlog items found"
    ```
 
-2. **Read ROADMAP.md** and extract all 999.x phase entries:
+2. **Read ROADMAP.md** and extract all B* entries from the `## Backlog` section:
    ```bash
    cat .planning/ROADMAP.md
    ```
    Show each backlog item with its description, any accumulated context (CONTEXT.md, RESEARCH.md), and creation date.
 
 3. **Present the list to the user** via AskUserQuestion:
-   - For each backlog item, show: phase number, description, accumulated artifacts
+   - For each backlog item, show: backlog ID (B1, B2…), description, accumulated artifacts
    - Options per item: **Promote** (move to active), **Keep** (leave in backlog), **Remove** (delete)
 
 4. **For items to PROMOTE:**
    - Find the next sequential phase number in the active milestone
-   - Rename the directory from `999.x-slug` to `{new_num}-slug`:
+   - Rename the directory from `B{n}-slug` to `{new_num}-slug`:
      ```bash
      NEW_NUM=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" phase add "${DESCRIPTION}" --raw)
      ```
@@ -51,10 +51,10 @@ milestone sequence or remove stale entries.
 
 7. **Report summary:**
    ```
-   ## 📋 Backlog Review Complete
+   Backlog Review Complete
 
    Promoted: {list of promoted items with new phase numbers}
-   Kept: {list of items remaining in backlog}
+   Kept: {list of B* items remaining in backlog}
    Removed: {list of deleted items}
    ```
 

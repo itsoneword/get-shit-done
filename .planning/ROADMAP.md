@@ -16,8 +16,9 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 - [x] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes (completed 2026-06-05)
 - [x] **Phase 5: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix (completed 2026-06-06)
 - [ ] **Phase 6: Skill Self-Sufficiency** - Audit all 14 superpowers skills vs GSD coverage, then port only the genuine gaps (execution-time TDD discipline, receiving-code-review rigor, skill-authoring guidance, worktree-isolation default) into GSD as native commands/references so the external plugin dependency can be dropped — removal itself is a follow-up
-- [ ] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + merge so concurrent sessions and quick-fixes stop silently overwriting each other (axis A — file coupling); a parallel-safety gate combining `depends_on` (axis B — decision coupling) + file-scope disjointness (reuses Phase 4 dep-graph) to greenlight/refuse concurrent work and forbid parallel discussion of dependent phases; `depends_on`/`related_to` on todo frontmatter; absorbs the doctor source↔runtime symmetry-check (ex-999.1, verifies no drift post-merge); rethinks the confusing 999.x backlog ID scheme
-- [ ] **Phase 8: Skill Self-Improvement & Validated Example Corpus** - Two GSD-enhancement threads, both already partly seeded in the current version: (1) research Microsoft's SkillOpt-style self-improving-skills work and port the best applicable ideas into a GSD-native loop that optimizes skills/commands/reference prose against real execution traces and verifier outcomes rather than one-shot prompt rewrites; (2) build a curated corpus of *validated handwritten* code examples mined from strong real-world reference projects, so guidance stops leaning on plausible-but-untested LLM-generated examples. Absorbs the SkillOpt todo + CODE-EXAMPLES.md / IDEAS.md #7
+- [ ] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + merge so concurrent sessions and quick-fixes stop silently overwriting each other (axis A — file coupling); a parallel-safety gate combining `depends_on` (axis B — decision coupling) + file-scope disjointness (reuses Phase 4 dep-graph) to greenlight/refuse concurrent work and forbid parallel discussion of dependent phases; `depends_on`/`related_to` on todo frontmatter; absorbs the doctor source↔runtime symmetry-check (ex-B1, verifies no drift post-merge); migrates the confusing backlog ID scheme to B-prefixed IDs (B1, B2…) outside the phase-number space
+- [ ] **Phase 8: Validated Example Corpus** - Build a curated corpus of *validated handwritten* code examples mined from strong real-world reference projects, indexed by pattern (not by repo), with per-example commentary on what it solves and what not to cargo-cult — so GSD guidance stops leaning on plausible-but-untested LLM-generated examples. Also serves as the validated reference/eval substrate that Phase 9 needs. Absorbs CODE-EXAMPLES.md / IDEAS.md #7. (Split from the original combined Phase 8 on 2026-06-08.)
+- [ ] **Phase 9: SkillOpt-Style Self-Improving Skills** - Build a GSD-native, full eval-harness + optimizer loop in the spirit of Microsoft's SkillOpt: a graded train/val/test set of real GSD tasks, an automated scorer (verifier/convergence/telemetry-derived), and an optimizer that proposes bounded edits to GSD skill/command/reference prose, accepting only validation-gated improvements. Large — likely needs its own benchmark-substrate sub-phase; consumes Phase 8's corpus as validated reference material. Absorbs the SkillOpt todo. (Split from the original combined Phase 8 on 2026-06-08.)
 
 ## Phase Details
 
@@ -81,7 +82,7 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -92,7 +93,8 @@ v1.5 closes the fork's execution-detail gap by selectively porting four capabili
 | 5. Plan-Loop Convergence and Verify Fix | 2/2 | Complete   | 2026-06-06 |
 | 6. Skill Self-Sufficiency | 2/3 | In Progress|  |
 | 7. Parallel Multi-Session Safety & Planning Ergonomics | 3/6 | In Progress|  |
-| 8. Skill Self-Improvement & Validated Example Corpus | 0/0 | Not planned |  |
+| 8. Validated Example Corpus | 0/0 | Not planned |  |
+| 9. SkillOpt-Style Self-Improving Skills | 0/0 | Not planned |  |
 
 ### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
 
@@ -134,52 +136,63 @@ Where isolation lives (NOT in agent prose — an LLM "remembering" to make a wor
 1. Worktree-isolated execution + merge in `execute-phase` (and the quick path) — axis A.
 2. Parallel-safety gate: combine `depends_on` (axis B) + file-scope disjointness (reuse the Phase 4 file-level dependency graph + caller analysis, axis A) → greenlight / refuse a proposed parallel set; explicitly forbid parallel discussion of dependent phases.
 3. `depends_on` / `related_to` on **todo** frontmatter (formalize — precedent exists: a todo already carries an informal `related:` line) so the same gate covers quick tasks, not just phases.
-4. Doctor source↔runtime symmetry-check (absorbed from ex-999.1): `diff -rq get-shit-done .claude/get-shit-done` + settings.json hook/statusLine registration parity — and post-merge drift verification for the worktree flow.
-5. Backlog ID scheme rethink: `999.x` conflates "backlog/unsequenced" with "phase number" and reads oddly next to `vX.Y` milestones and `1,2,3` phases. Candidate direction (decide at discuss): non-phase backlog IDs (e.g. `B1, B2` in a backlog list) that only receive a real phase number when promoted into a milestone — to be designed, not pre-decided.
+4. Doctor source↔runtime symmetry-check (absorbed from ex-B1-candidate): `diff -rq get-shit-done .claude/get-shit-done` + settings.json hook/statusLine registration parity — and post-merge drift verification for the worktree flow.
+5. Backlog ID scheme migration: B-prefixed IDs (B1, B2…) outside the phase-number space, allocated by `phase next-backlog-id` — items only receive a real phase number when promoted into a milestone.
 
 **Success Criteria** (what must be TRUE):
   1. A quick-fix run in a parallel session no longer silently overwrites a concurrently-executing phase — conflicts surface as a reviewable merge.
   2. A documented gate decides, from `depends_on` + file-scope, whether a proposed parallel set is safe, and refuses parallel discussion of dependent phases.
   3. Todos carry `depends_on`/`related_to` and the gate reads them.
   4. The doctor command reports source↔runtime drift in one invocation.
-  5. The backlog ID scheme no longer reuses the phase-number space (or a deliberate decision to keep `999.x` is recorded with rationale).
+  5. The backlog ID scheme no longer reuses the phase-number space — B-prefixed IDs (B1, B2…) are allocated outside it.
 
 **Plans**: 6 across 4 waves
   - 07-01 (W1) — gsd-tools worktree CLI primitive (add/merge/remove/prune) + Wave-0 smoke + tests (SC1)
   - 07-02 (W1) — todo depends_on/related_to frontmatter schema + init parse + add-todo template (SC3)
   - 07-03 (W1) — source↔runtime symmetry-check folded into /gsd2:health (+--repair), exported for reuse (SC4)
-  - 07-04 (W2) — backlog ID migration 999.x → B1,B2 (next-backlog-id allocator + commands + dir migration) (SC5)
+  - 07-04 (W2) — backlog ID migration to B-prefixed IDs (next-backlog-id allocator + commands + dir migration) (SC5)
   - 07-05 (W3) — parallel-safe gate CLI (axis-B refuse / axis-A warn / greenlight), reads phase + todo edges (SC2,SC3)
   - 07-06 (W4) — wire worktree+merge+symmetry into execute-phase; gate into execute/discuss/plan; auto-worktree into quick (SC1,SC2,SC4)
 
-### Phase 8: Skill Self-Improvement & Validated Example Corpus
+### Phase 8: Validated Example Corpus
 
-**Goal**: GSD's own guidance layer stops being static and LLM-generated-by-default. Two enhancement threads, both already partly seeded in the current version, mature into deliberate capability: (1) a GSD-native self-improvement loop for skills/commands/reference prose, informed by Microsoft's SkillOpt direction; (2) a curated corpus of validated handwritten code examples drawn from real reference projects, replacing synthetic examples as the ground-truth layer.
+**Goal**: GSD guidance draws on a curated corpus of *validated, human-maintained* code examples mined from strong real-world reference projects — indexed by pattern, with commentary — instead of leaning on plausible-but-untested LLM-generated examples. The corpus is structured to also serve as the validated reference/eval substrate Phase 9 will consume.
 
-**Depends on**: Nothing technically. Sequenced after Phase 7. Relates to Phase 6 (skill self-sufficiency) and Phase 3 (reference docs) — this phase improves *how* those artifacts are authored and validated over time.
+**Depends on**: Nothing technically. Sequenced after Phase 7. Relates to Phase 3 (reference docs — same `references/` hybrid-load scheme) and Phase 6 (skill self-sufficiency). Feeds Phase 9.
 
-**Discussion focus** (captured 2026-06-08 from todo + reference capture — to be expanded at discuss-phase):
+**Discussion focus** (captured 2026-06-08; split from the original combined Phase 8 per user decision — the SkillOpt loop moved to Phase 9):
 
-Two scope items, kept in one phase because they reinforce each other (a self-improvement loop is only as good as the examples it optimizes against):
-
-1. **Skill self-improvement (SkillOpt-informed).** Research what Microsoft's SkillOpt actually did — treat skills/prompts/instructions as artifacts that improve over time, learn from real failures and successful executions rather than one-shot design, and evaluate changes against concrete tasks instead of aesthetic prompt rewrites. Then port only the applicable ideas into GSD: map where the loop fits best (agent instructions vs command/workflow prompts vs reference artifacts), and use real execution traces (Phase 4 telemetry), verifier failures, and revision-loop outcomes as the optimization signal. Decide the delivery shape: research-only design note vs bounded command vs future-milestone seed. Source: `.planning/todos/pending/2026-06-07-evaluate-skillopt-style-self-improving-skills.md`.
-
-2. **Validated example corpus.** Identify good real-world reference projects to mine validated, human-maintained code examples from, instead of relying on LLM-generated examples that look plausible while missing edge cases and real-world tradeoffs. Build a small internal catalog *by pattern, not by repo* (CLI parsing, async retry, validation layer, config loading, telemetry hook, planner-prompt structure), with commentary over raw dumps, connected to the failure modes the verifier/debug loops repeatedly catch. This corpus also feeds the evaluation/reference layer of scope item 1. Source: `.planning/reference/CODE-EXAMPLES.md` (candidate sources + selection criteria already drafted), `IDEAS.md` #7.
+Build a small internal catalog *by pattern, not by repo* (e.g. CLI parsing, async retry, validation layer, config loading, telemetry hook, planner-prompt structure), with per-example commentary on what constraint it solves and what NOT to cargo-cult — connected to the failure modes the verifier/debug loops repeatedly catch. Source: `.planning/reference/CODE-EXAMPLES.md` (candidate sources + selection criteria already drafted), `IDEAS.md` #7. Open questions for discuss: corpus shape (excerpt vs link-only — licensing), how examples enter GSD's flow (which agents/refs consume it), what "validated" means operationally, and the initial bucket/language scope.
 
 **Success Criteria** (what must be TRUE — to refine at discuss/plan):
-  1. A written design note maps the SkillOpt-informed self-improvement loop onto GSD's artifact types and names the optimization signal (traces/verifier/revision outcomes), with a decided delivery shape (note vs command vs seed)
-  2. A validated-example corpus exists as a pattern-indexed catalog with selection criteria, sourced from real reference projects (not synthetic), with per-example commentary on what it solves and what not to cargo-cult
-  3. The two threads are connected — the corpus is usable as the evaluation/reference layer for the self-improvement loop rather than optimizing against synthetic examples
+  1. A validated-example corpus exists as a pattern-indexed catalog with explicit selection criteria, sourced from real reference projects (not synthetic), with per-example commentary on what it solves and what not to cargo-cult
+  2. The corpus is loaded into at least one GSD flow (e.g. planner/verifier reference) through the normal references mechanism
+  3. The corpus is structured so Phase 9 can consume it as validated reference/eval material
 
 **Plans**: TBD (run `/gsd2:plan-phase 8` to break down)
 
+### Phase 9: SkillOpt-Style Self-Improving Skills
+
+**Goal**: GSD's skill/command/reference prose stops being static — a GSD-native optimizer loop, in the spirit of Microsoft's SkillOpt, evolves it against a graded benchmark of real GSD tasks, accepting only validation-gated improvements.
+
+**Depends on**: Phase 8 (consumes the validated-example corpus as reference/eval material). Builds on Phase 4 telemetry (`agent-trace.jsonl`) and Phase 5 convergence signals as candidate scorers.
+
+**Discussion focus** (captured 2026-06-08 — to be expanded at its own discuss-phase):
+
+This is the ambitious thread, deliberately split out because it's large (the user picked "full eval harness + loop"). SkillOpt ([arXiv 2605.23904](https://arxiv.org/abs/2605.23904), [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt)) treats a single skill doc as the trainable state of a frozen agent: `rollout → reflect → bounded edit → validation-gate → update`, across epochs, accepting an edit only when a held-out score strictly improves.
+
+The hard prerequisite — and the core challenge of this phase — is an **eval substrate GSD does not yet have**: a `train/val/test` set of real GSD tasks plus an **automated scorer**. GSD's emitted artifacts (CONTEXT.md, PLAN.md, code) are not trivially auto-gradable like SkillOpt's QA benchmarks. Candidate score signals to investigate: verifier BLOCKER/WARNING counts, plan-loop convergence iterations (Phase 5), telemetry confidence verdicts (Phase 4). Likely needs its own **benchmark-substrate sub-phase** before the optimizer loop is buildable. Open scoping for discuss: what counts as a gradable GSD "task," which prose artifacts are the optimization target (agent instructions vs command/workflow prose vs references), the optimizer model, and whether to reuse `microsoft/SkillOpt` directly vs. a GSD-native reimplementation.
+
+**Success Criteria** (what must be TRUE — to refine at its own discuss/plan):
+  1. A graded benchmark of real GSD tasks exists with an automated scorer (built on verifier/convergence/telemetry signals)
+  2. An optimizer proposes bounded add/delete/replace edits to a target GSD skill/command/reference artifact and accepts only validation-gated improvements
+  3. At least one GSD artifact is measurably improved by the loop against held-out tasks, with the before/after score recorded
+
+**Plans**: TBD (run `/gsd2:plan-phase 9` to break down)
+
 ## Backlog
 
-### Phase 999.1: Doctor — source↔runtime symmetry check → FOLDED INTO PHASE 7 (2026-06-06)
-
-Promoted out of backlog. The doctor symmetry-check is now scope item 4 of **Phase 7** (it verifies no source↔runtime drift after worktree merges, so it belongs with the parallel-safety work). See Phase 7 details above.
-
-### Phase 999.2: Terse output default + verbose opt-in (BACKLOG)
+### B1: Terse output default + verbose opt-in (BACKLOG)
 
 **Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
 **Requirements:** TBD
