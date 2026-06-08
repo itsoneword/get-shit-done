@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-06-08T09:31:08.967Z"
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-06-08T10:08:28.401Z"
 last_activity: 2026-06-08
 progress:
-  total_phases: 10
+  total_phases: 9
   completed_phases: 6
   total_plans: 21
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 ## Current Position
 
 Phase: 07 (parallel-multi-session-safety-planning-ergono) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 
 ## Project Reference
 
@@ -113,6 +113,8 @@ Recent decisions affecting current work:
 - [Phase 07-parallel-multi-session-safety-planning-ergono]: todo schema: required=[created,title,area], optional=[depends_on,related_to,files] — existing todos without new fields remain valid
 - [Phase 07-parallel-multi-session-safety-planning-ergono]: SC3 substrate only in 07-02 — gate reads todo edges in 07-05; mark-complete deferred to 07-05
 - [Phase 07]: Expected hooks list derived from install.js; settings.json parity report-only (installer owns settings.json); checkSourceRuntimeSymmetry exported for 07-06 post-merge reuse
+- [Phase 07]: Backlog command source tracked in commands/gsd2/ (not runtime-only as plan claimed); edited source + copied to .claude/ runtime
+- [Phase 07]: next-backlog-id allocator unions dir scan + ROADMAP ## Backlog heading scan to handle sparse/deletion edge cases
 
 ### Pending Todos
 
@@ -150,6 +152,7 @@ Recent decisions affecting current work:
 | Phase 07-parallel-multi-session-safety-planning-ergono P01 | 17min | 3 tasks | 5 files |
 | Phase 07-parallel-multi-session-safety-planning-ergono P02 | 7 | 2 tasks | 4 files |
 | Phase 07 P03 | 25 | 2 tasks | 5 files |
+| Phase 07 P04 | 35 | 2 tasks | 6 files |
 
 ### Roadmap Evolution
 
@@ -159,7 +162,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-06-08T09:31:08.958Z
+Last session: 2026-06-08T10:08:28.395Z
 Last activity: 2026-06-08
-Stopped at: Completed 07-03-PLAN.md
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
