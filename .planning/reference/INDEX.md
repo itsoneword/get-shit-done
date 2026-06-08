@@ -8,6 +8,8 @@ GSD's discuss → plan → execute loop.
   skills inventory + overlap, node layer, porting candidates). Cite during discuss/plan.
 - **IDEAS.md** — the user's parked enhancement ideas (graph links, convergence loop,
   good-practices, prune, etc.).
+- **CODE-EXAMPLES.md** — curated note on replacing synthetic examples with validated
+  handwritten OSS code sources for future references / skill-improvement work.
 - **NEXT-MILESTONE-SEED.md** — kickoff intent for v1.5 (feed to `/gsd2:new-milestone`).
 
 ## Live source clones (read-only reference, OUTSIDE this repo)
