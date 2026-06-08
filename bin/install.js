@@ -1915,6 +1915,10 @@ function cleanupOrphanedFiles(configDir) {
   const orphanedFiles = [
     'hooks/gsd-notify.sh',  // Removed in v1.6.x
     'hooks/statusline.js',  // Renamed to gsd-statusline.js in v1.9.0
+    'hooks/gsd-statusline.js',       // Renamed to gsd2-statusline.js in v1.5
+    'hooks/gsd-check-update.js',     // Renamed to gsd2-check-update.js in v1.5
+    'hooks/gsd-context-monitor.js',  // Renamed to gsd2-context-monitor.js in v1.5
+    'hooks/gsd-workflow-guard.js',   // Renamed to gsd2-workflow-guard.js in v1.5
   ];
 
   for (const relPath of orphanedFiles) {
