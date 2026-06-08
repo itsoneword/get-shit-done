@@ -76,6 +76,10 @@ For niche domains (3D, games, audio, ML), suggest `/gsd2:research-phase` before 
 When making code-quality judgments, choosing between implementation patterns, or flagging anti-patterns in plan tasks:
 Read ~/.claude/get-shit-done/references/universal-anti-patterns.md
 
+For pattern-specific validated examples from battle-tested real-world code:
+Read ~/.claude/get-shit-done/references/validated-examples/INDEX.md — then load the specific pattern file(s) relevant to the task.
+Load only the pattern(s) you need; never load all entries.
+
 Skip if the phase is trivial glue/config with no design decisions.
 </code_quality_reference>
 
