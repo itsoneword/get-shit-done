@@ -161,7 +161,7 @@ counters:
 | `source_repo` / `source_file` / `source_lines` | Attribution | Licensing compliance |
 | `source_permalink` | Attribution | Pinned version link, not drifting HEAD |
 | `license` | Attribution | Required for licensing posture |
-| `counters` | Phase 9 eval | Maps entry to failure categories from `common-bug-patterns.md`. This is the eval-substrate bridge: Phase 9 tests "does the agent avoid failure category X?" by checking if it used the pattern that counters X |
+| `counters` | Phase 9 eval | Maps entry to failure categories from `common-bug-patterns.md`. This is the eval-substrate bridge: Phase 9 tests "does the agent avoid failure category X?" by checking if it used the pattern that counters X. **Controlled vocabulary:** values must be the exact `## Section Header` slugs from `common-bug-patterns.md` (e.g., `Async / Timing`, `Error Handling`, `Python-Specific Bugs`, `Data Shape / API Contract`, `Environment / Config`, `Import / Module`). No invented namespaces — Phase 9 joins on these exact strings. If a section header changes, update all `counters` entries that reference it. |
 
 ### INDEX.md schema
 
@@ -302,10 +302,11 @@ Runtime copy (gitignored, propagated by install.js):
 **Why it happens:** Curation happens fast; attribution fields feel bureaucratic.
 **How to avoid:** Front matter is mandatory — plan tasks must include a verification step that greps for all required fields in every entry file.
 
-### Pitfall 4: install.js not updated
-**What goes wrong:** Entry files exist in `get-shit-done/references/` source but the runtime `.claude/` copy is stale; planner's `@~/.claude/...` path resolves to missing file.
-**Why it happens:** All prior Phase 3 reference docs were wired into install.js individually; a new subdirectory won't auto-propagate unless install.js handles it.
-**How to avoid:** Plan must include a task to verify install.js propagates `references/validated-examples/**` to `.claude/get-shit-done/references/validated-examples/`.
+### Pitfall 4: Assuming the runtime copy won't propagate
+**What goes wrong:** Curator creates entries in `get-shit-done/references/validated-examples/` but doesn't confirm the runtime copy at `.claude/get-shit-done/references/validated-examples/` will reflect them.
+**Why it happens:** Reasonable assumption that install.js might list files individually.
+**How it actually works (verified):** `bin/install.js` copies the entire `get-shit-done/` directory recursively via `copyWithPathReplacement(skillSrc, skillDest, ...)` (line 2854) — which recurses into subdirectories (line 1841). A new `references/validated-examples/` subdirectory is propagated automatically with no install.js changes needed.
+**How to avoid:** The plan's verify step should confirm the runtime subdirectory exists after running install, not that install.js references the path by name.
 
 ### Pitfall 5: Phase 9 fields missing from v1 entries
 **What goes wrong:** v1 entries omit `counters` front matter; Phase 9 can't build eval substrate without it.
@@ -330,7 +331,7 @@ The validations are structural and can be expressed as verify commands in `must_
 | Every entry file has required front matter fields | `for f in get-shit-done/references/validated-examples/*.md; do grep -q 'pattern_id:' "$f" && grep -q 'counters:' "$f" && grep -q 'license:' "$f" || echo "MISSING: $f"; done` | unit |
 | pattern_ids in INDEX match actual entry files | (glob check — each INDEX row's file path exists) | unit |
 | gsd-planner.md contains the validated-examples pointer | `grep -q 'validated-examples/INDEX.md' agents/gsd-planner.md` | unit |
-| install.js propagates the subdirectory | `grep -q 'validated-examples' get-shit-done/bin/install.js` | unit |
+| Runtime copy propagated by install | `test -d .claude/get-shit-done/references/validated-examples && ls .claude/get-shit-done/references/validated-examples/` | integration |
 | Runtime copy exists (after install) | `test -d .claude/get-shit-done/references/validated-examples` | integration |
 
 ### Wave 0 gaps
