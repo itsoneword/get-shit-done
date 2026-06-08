@@ -5,6 +5,9 @@ const path = require('path');
 const os = require('os');
 const readline = require('readline');
 const crypto = require('crypto');
+// Single source of truth for the path-token replacement (shared with verify.cjs's
+// symmetry-check so the two can never silently drift). Ships alongside this file.
+const { applyPathReplacement } = require('../get-shit-done/bin/lib/install-transform.cjs');
 
 // Colors
 const cyan = '\x1b[36m';
@@ -1844,12 +1847,8 @@ function copyWithPathReplacement(srcDir, destDir, pathPrefix, runtime, isCommand
       // Skip generic replacement for Copilot — convertClaudeToCopilotContent handles all paths
       let content = fs.readFileSync(srcPath, 'utf8');
       if (!isCopilot && !isAntigravity) {
-        const globalClaudeRegex = /~\/\.claude\//g;
-        const globalClaudeHomeRegex = /\$HOME\/\.claude\//g;
-        const localClaudeRegex = /\.\/\.claude\//g;
-        content = content.replace(globalClaudeRegex, pathPrefix);
-        content = content.replace(globalClaudeHomeRegex, pathPrefix);
-        content = content.replace(localClaudeRegex, `./${dirName}/`);
+        // Shared with verify.cjs's symmetry-check (single source of truth).
+        content = applyPathReplacement(content, pathPrefix, dirName);
       }
       content = processAttribution(content, getCommitAttribution(runtime));
 

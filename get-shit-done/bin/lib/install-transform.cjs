@@ -20,6 +20,30 @@
 const path = require('path');
 
 /**
+ * Apply the generic GSD path-token replacement to a string of .md content.
+ * This is the SINGLE SOURCE OF TRUTH for the substitution that
+ * install.js's copyWithPathReplacement performs for every non-copilot,
+ * non-antigravity runtime (claude/gemini/codex/cursor/opencode), and that
+ * verify.cjs's symmetry-check must reproduce.
+ *
+ * @param {string} content    Raw source file content
+ * @param {string} pathPrefix Absolute (local) or '~/'-rooted (global) install
+ *                            prefix, slash-normalised with a trailing '/'.
+ * @param {string} dirName    Runtime config dir name (e.g. '.claude', '.gemini')
+ * @returns {string} Content with tokens replaced
+ */
+function applyPathReplacement(content, pathPrefix, dirName) {
+  let c = content;
+  // Replace ~/.claude/ → <pathPrefix>
+  c = c.replace(/~\/\.claude\//g, pathPrefix);
+  // Replace $HOME/.claude/ → <pathPrefix>
+  c = c.replace(/\$HOME\/\.claude\//g, pathPrefix);
+  // Replace ./.claude/ → ./<dirName>/ (no-op when dirName === '.claude')
+  c = c.replace(/\.\/\.claude\//g, `./${dirName}/`);
+  return c;
+}
+
+/**
  * Apply the Claude local-install path-token transform to a string of .md content.
  *
  * @param {string} content   Raw source file content
@@ -30,16 +54,8 @@ const path = require('path');
 function applyClaudeLocalTransform(content, installDir) {
   // Normalise slashes and ensure trailing slash — mirrors install.js L2743
   const pathPrefix = installDir.replace(/\\/g, '/').replace(/\/?$/, '/');
-
-  let c = content;
-  // Replace ~/.claude/ → <pathPrefix>
-  c = c.replace(/~\/\.claude\//g, pathPrefix);
-  // Replace $HOME/.claude/ → <pathPrefix>
-  c = c.replace(/\$HOME\/\.claude\//g, pathPrefix);
-  // ./.claude/ is a no-op for Claude (dirName = '.claude'), but keep the rule
-  // explicit so it mirrors copyWithPathReplacement exactly.
-  c = c.replace(/\.\/\.claude\//g, './.claude/');
-  return c;
+  // dirName is '.claude' for a Claude install → ./.claude/ replacement is a no-op.
+  return applyPathReplacement(content, pathPrefix, '.claude');
 }
 
 /**
@@ -66,6 +82,7 @@ function claudeLocalInstallDir(cwd) {
 }
 
 module.exports = {
+  applyPathReplacement,
   applyClaudeLocalTransform,
   isTransformableFile,
   claudeLocalInstallDir,
