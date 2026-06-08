@@ -604,6 +604,10 @@ function cmdInitTodos(cwd, area, raw) {
 
         if (area && todoArea !== area) continue;
 
+        const fm = extractFrontmatter(content);
+        const depends_on = Array.isArray(fm.depends_on) ? fm.depends_on : [];
+        const related_to = Array.isArray(fm.related_to) ? fm.related_to : [];
+
         count++;
         todos.push({
           file,
@@ -611,6 +615,8 @@ function cmdInitTodos(cwd, area, raw) {
           title: titleMatch ? titleMatch[1].trim() : 'Untitled',
           area: todoArea,
           path: '.planning/todos/pending/' + file,
+          depends_on,
+          related_to,
         });
       } catch { /* intentionally empty */ }
     }

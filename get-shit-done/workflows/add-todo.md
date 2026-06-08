@@ -96,6 +96,8 @@ title: [title]
 area: [area]
 files:
   - [file:lines]
+depends_on: []        # todo slugs or phase refs (phase:7) this must follow
+related_to: []        # todo slugs or phase refs that provide context
 ---
 
 ## Problem
