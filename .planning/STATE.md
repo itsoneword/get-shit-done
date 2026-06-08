@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-06-08T15:57:08.564Z"
+stopped_at: 09-02 Task 3 checkpoint:human-verify (Tasks 1-2 complete)
+last_updated: "2026-06-08T16:30:00Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 9
@@ -128,6 +128,9 @@ Recent decisions affecting current work:
 - [Phase 08-validated-example-corpus]: gsd-planner.md pointer uses ~/.claude/ token; agent file not cp'd to runtime
 - [Phase 09-skillopt-style-self-improving-skills]: cmdScan is ledger-recurrence-ONLY in v1; BLOCKER/telemetry scanning deferred per scope guard
 - [Phase 09-skillopt-style-self-improving-skills]: attributeFile() is a pure function with .claude/ and gsd-local-patches/ path guards; AGENT_FILE_MAP static table for agent_type -> source file
+- [Phase 09-02-teach-command]: bounded-edit cap set at <=20 lines / one contiguous section — planner ASSUMPTION (no published SkillOpt number; GSD defines its own limit)
+- [Phase 09-02-teach-command]: /gsd2:teach workflow + command committed as SOURCE only; npm run dev propagates to .claude/ runtime; no manual copy step
+- [Phase 09-02-teach-command]: ratify gate is the only human round-trip; advisor-critic runs inline (no sub-agent); no auto-apply path exists
 
 ### Pending Todos
 
