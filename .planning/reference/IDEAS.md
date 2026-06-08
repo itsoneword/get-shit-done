@@ -27,5 +27,11 @@ fork, saved verbatim-ish for later discussion. Not scoped or committed yet.
    Compare with the newest gsd-core and "gsd-pi" — they reportedly have code
    examples and a different harness that could be beneficial.
 
+7. **Skill self-improvement + validated example corpus.** → PROMOTED TO v1.5 PHASE 8 (2026-06-08)
+   Explore Microsoft's SkillOpt-style direction for self-improving skills/prompts,
+   but ground it in validated handwritten code examples rather than mostly
+   LLM-generated examples. See `CODE-EXAMPLES.md` and `done/2026-06-07-evaluate-skillopt-...md`.
+   Now ROADMAP.md → Phase 8 (both threads). No longer a loose idea.
+
 ---
 _See `COMPARISON.md` (this folder) for the gsd2-vs-gsd-core analysis these ideas relate to._

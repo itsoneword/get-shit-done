@@ -153,6 +153,7 @@ Recent decisions affecting current work:
 
 - v1.5 roadmap created: 4 phases — Security Hooks, General Research Agent, Execution-Detail Enrichment, Plan-Loop Convergence and Verify Fix
 - Phase 6 added (2026-06-05): Skill Self-Sufficiency — audit all 14 superpowers skills vs GSD coverage and port the genuine gaps (execution-time TDD discipline, receiving-code-review, writing-skills, worktree-isolation default) so GSD is self-contained. superpowers plugin disabled by user this session; hard-removal is a follow-up. Sequenced after Phase 5, no hard dependency.
+- Phase 8 added (2026-06-08): Skill Self-Improvement & Validated Example Corpus — two enhancement threads, both partly seeded already: (1) SkillOpt-informed self-improvement loop for skills/commands/reference prose, optimizing against real execution traces/verifier outcomes; (2) curated corpus of validated handwritten code examples from real reference projects, replacing synthetic examples. Absorbs the SkillOpt todo + CODE-EXAMPLES.md / IDEAS.md #7. Sequenced after Phase 7, no hard dependency. (Note: `gsd-tools phase add` mis-numbered this 1000 because the 999.x backlog phases inflate the max-integer calc — manually corrected to 8; root cause is the same 999.x scheme Phase 7 scope item 5 fixes.)
 
 ## Session Continuity
 
