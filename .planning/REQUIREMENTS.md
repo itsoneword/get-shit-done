@@ -51,6 +51,18 @@ _Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution 
 - [x] **OBS-01**: A code-level hook (Claude Code `PostToolUse`, `matcher: Task|Agent`) logs every `gsd-*` subagent spawn — timestamp, agent type, spawning context — to a structured telemetry file, with zero changes to workflow/agent prompt files
 - [x] **OBS-02**: Telemetry captures agent-return confidence verdicts (scraped from return text) so a confidence-driven re-research (LOW → second spawn) is visible as correlated, timestamped entries; best-effort and non-blocking, with an optional reader to inspect the log
 
+### Self-Improving Skills (TEACH) — Phase 9
+
+_Online, feedback-driven skill evolution (reshaped 2026-06-08 from the dropped SkillOpt offline-batch optimizer). Materializes the intent of the reserved LEARN-01 ("extract-learnings + per-project intel store") under the TEACH- namespace; see reconciliation note below._
+
+- [ ] **TEACH-01**: A `/gsd2:teach` command exists — accepts a failure description, reads Phase 4 telemetry to propose an attribution target (agent_type → source file), and presents a bounded edit for ratification before any write. The attribution mapping is a unit-tested pure function (`gsd-tools lesson attribute`) that writes nothing.
+- [ ] **TEACH-02**: Ratified edits commit to `agents/` or `get-shit-done/` SOURCE only (never `.claude/` runtime); each ratified edit also writes an `applied` record (with commit hash) to `.planning/lessons/lessons.jsonl`.
+- [ ] **TEACH-03**: The lessons ledger supports the full lifecycle via `gsd-tools lesson` — append → list (filterable) → update disposition → bump-recurrence — with a recurrence counter the auto-miner reads.
+- [ ] **TEACH-04**: An auto-miner (`gsd-tools lesson scan`) nominates recurring failures (recurrence ≥ threshold, non-applied) but NEVER edits; scoped to ledger-recurrence only for v1 (BLOCKER/telemetry signals deferred). Every nomination routes through the `/teach` ratify gate.
+- [ ] **TEACH-05**: The loop is git-reversible — a bad ratified edit is undone with `git revert <commit>` + `npm run dev`, documented in the `/teach` confirmation output.
+
+> **LEARN-01 reconciliation:** REQUIREMENTS.md reserves `LEARN-01` (Learning Loop, idea #2/#3) for future milestones. Phase 9 (TEACH-01..05) materializes that intent. Open question for the human: mark LEARN-01 satisfied-by-TEACH, or keep it distinct (e.g. for a broader cross-project intel store). Left distinct here pending decision.
+
 ## Future Requirements
 
 Deferred to future milestones. Tracked but not in current roadmap.
@@ -108,12 +120,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBS-02 | Phase 4 | Complete |
 | CONV-01 | Phase 5 | Complete |
 | FIX-01 | Phase 5 | Complete |
+| TEACH-01 | Phase 9 | Planned |
+| TEACH-02 | Phase 9 | Planned |
+| TEACH-03 | Phase 9 | Planned |
+| TEACH-04 | Phase 9 | Planned |
+| TEACH-05 | Phase 9 | Planned |
 
 **Coverage:**
-- v1.5 requirements: 15 total
-- Mapped to phases: 15 ✓
+- v1.5 requirements: 20 total
+- Mapped to phases: 20 ✓
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-03*
-*Last updated: 2026-06-04 — added OBS-01/02 (Agent Observability, Phase 4); convergence renumbered to Phase 5*
+*Last updated: 2026-06-08 — added TEACH-01..05 (Self-Improving Skills, Phase 9); LEARN-01 reconciliation flagged*

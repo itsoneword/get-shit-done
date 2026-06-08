@@ -194,7 +194,9 @@ Locked decisions: **capture** = manual `/teach` (primary, trusted) + auto-miner 
   2. The loop attributes a captured lesson to a GSD prose artifact (using Phase 4 telemetry + the produced artifact) and proposes a *bounded* edit; nothing touches `get-shit-done/` source without human ratification
   3. At least one real lesson lands as a committed, ratified, bounded edit to the correct GSD artifact — the before/after prose change recorded — with the loop being git-reversible
 
-**Plans**: TBD (run `/gsd2:plan-phase 9` to break down)
+**Plans**: 2 plans, 2 waves (planned 2026-06-08)
+  - **09-01** (Wave 1, TDD): Lessons-ledger data layer — `tests/lesson.test.cjs` + `lib/lesson.cjs` + `gsd-tools lesson` subcommand (append/list/update/bump-recurrence/attribute/scan). Attribution = unit-tested pure function; auto-miner `scan` scoped to ledger-recurrence-only. Requirements TEACH-01 (data), TEACH-03, TEACH-04.
+  - **09-02** (Wave 2, execute, non-autonomous): `/gsd2:teach` command + `workflows/teach.md` loop (attribute → confirm → advisor-critic bounded edit → [y/N] ratify → source-only commit + ledger record + `npm run dev`); `/teach scan` nominations-only. Human-verify checkpoint demonstrates SC2 (no auto-apply) + SC3 (real ratified bounded edit) + git-reversibility. Requirements TEACH-01 (UX), TEACH-02, TEACH-05.
 
 ## Backlog
 
