@@ -9,6 +9,7 @@ const { execSync } = require('child_process');
 const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, output, error, phasesDir, relPhasesPath } = require('./core.cjs');
 const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
+const { applyClaudeLocalTransform, isTransformableFile, claudeLocalInstallDir } = require('./install-transform.cjs');
 
 // ─── Verify-loop primitives (Phase 4) ─────────────────────────────────────────
 
@@ -772,6 +773,16 @@ function cmdValidateConsistency(cwd, raw) {
 // PATH-TOKEN RULE: source agent files use ~/.claude/ token; runtime uses absolute path.
 // Any file path containing /agents/ or starting with agents/ is excluded from file-tree diff.
 //
+// TRANSFORM-AWARE COMPARISON:
+//   install.js (--local) rewrites source tokens (~/.claude/, $HOME/.claude/) into the
+//   absolute install path before writing to runtime.  Runtime is therefore NOT a verbatim
+//   copy of source — it is a TRANSFORM.  To avoid false positives we apply the same
+//   token→absolute substitution to source content before comparing.
+//   Only .md files are transformed (install.js copyWithPathReplacement L1842 rule).
+//   Non-.md files are verbatim-copied by install.js and byte-compared here.
+//   Token-form runtime files (un-transformed) correctly differ from transformed-source
+//   and are therefore flagged as drift — that is the intended behavior.
+//
 // EXPECTED HOOKS (derived from install.js — what the framework registers):
 //   SessionStart:        gsd2-check-update.js
 //   PostToolUse:         gsd2-context-monitor.js (no matcher)
@@ -785,6 +796,11 @@ function checkSourceRuntimeSymmetry(cwd) {
   const srcRoot = path.join(cwd, 'get-shit-done');
   const runtimeRoot = path.join(cwd, '.claude', 'get-shit-done');
   const settingsPath = path.join(cwd, '.claude', 'settings.json');
+
+  // Derive install path the same way install.js does for --local Claude:
+  //   targetDir = path.join(process.cwd(), '.claude')
+  //   pathPrefix = path.resolve(targetDir) + '/'
+  const installDir = claudeLocalInstallDir(cwd);
 
   const result = {
     fileMismatches: [],    // { relPath, reason: 'missing'|'content' }
@@ -819,10 +835,23 @@ function checkSourceRuntimeSymmetry(cwd) {
           if (!fs.existsSync(runtimeFull)) {
             result.fileMismatches.push({ relPath, reason: 'missing' });
           } else {
-            // Byte comparison
-            const srcBuf = fs.readFileSync(srcFull);
-            const runtimeBuf = fs.readFileSync(runtimeFull);
-            if (!srcBuf.equals(runtimeBuf)) {
+            // TRANSFORM-AWARE compare: for .md files apply the same
+            // token→absolute substitution that install.js applies at install
+            // time, then compare the result against the runtime file.
+            // For non-.md files, byte-compare verbatim (install.js copies them
+            // without transformation).
+            let match;
+            if (isTransformableFile(relFwd)) {
+              const srcContent = fs.readFileSync(srcFull, 'utf-8');
+              const transformedSrc = applyClaudeLocalTransform(srcContent, installDir);
+              const runtimeContent = fs.readFileSync(runtimeFull, 'utf-8');
+              match = transformedSrc === runtimeContent;
+            } else {
+              const srcBuf = fs.readFileSync(srcFull);
+              const runtimeBuf = fs.readFileSync(runtimeFull);
+              match = srcBuf.equals(runtimeBuf);
+            }
+            if (!match) {
               result.fileMismatches.push({ relPath, reason: 'content' });
             }
           }
@@ -1209,9 +1238,13 @@ function cmdValidateHealth(cwd, options, raw) {
             break;
           }
           case 'syncSourceRuntime': {
-            // Repair: copy source get-shit-done/ → .claude/get-shit-done/, excluding agents/
+            // Repair: write transformed source → .claude/get-shit-done/, excluding agents/
+            // Uses the same token→absolute transform that install.js (--local) applies so
+            // that repaired runtime files are correctly pathed — equivalent to a fresh
+            // `npm run dev` / `node bin/install.js --local`.
             const srcRoot = path.join(cwd, 'get-shit-done');
             const runtimeRoot = path.join(cwd, '.claude', 'get-shit-done');
+            const syncInstallDir = claudeLocalInstallDir(cwd);
             let syncCount = 0;
             function syncDir(dir, baseDir) {
               let entries;
@@ -1228,7 +1261,15 @@ function cmdValidateHealth(cwd, options, raw) {
                   syncDir(srcFull, baseDir);
                 } else {
                   try {
-                    fs.copyFileSync(srcFull, runtimeFull);
+                    if (isTransformableFile(relFwd)) {
+                      // .md files: apply path-token transform before writing
+                      const srcContent = fs.readFileSync(srcFull, 'utf-8');
+                      const transformed = applyClaudeLocalTransform(srcContent, syncInstallDir);
+                      fs.writeFileSync(runtimeFull, transformed, 'utf-8');
+                    } else {
+                      // Non-.md files: verbatim copy (install.js does the same)
+                      fs.copyFileSync(srcFull, runtimeFull);
+                    }
                     syncCount++;
                   } catch (err) {
                     repairActions.push({ action: 'syncSourceRuntime', success: false, error: err.message, file: relPath });

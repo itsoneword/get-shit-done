@@ -967,4 +967,83 @@ describe('source-runtime symmetry check', () => {
       `Expected syncSourceRuntime repair: ${JSON.stringify(output.repairs_performed)}`
     );
   });
+
+  // ─── Transform-aware comparison tests ─────────────────────────────────────
+  //
+  // Case (a): source has path tokens; runtime has absolute paths (correct install)
+  //   → transformed-source === runtime → NO E-DRIFT
+  //
+  // Case (b): source and runtime both use token form; but real non-path text differs
+  //   → transformed-source !== runtime → E-DRIFT flagged
+  //
+  // Case (c): source has path token; runtime was copied verbatim (token still present)
+  //   → transformed-source !== runtime (token vs absolute) → E-DRIFT flagged
+
+  test('(a) no E-DRIFT when runtime .md has absolute paths (correct install transform)', () => {
+    // Source: token form; runtime: what install.js would write (absolute path)
+    const srcDir = path.join(tmpDir, 'get-shit-done', 'workflows');
+    const runtimeDir = path.join(tmpDir, '.claude', 'get-shit-done', 'workflows');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(runtimeDir, { recursive: true });
+
+    // The transform replaces ~/.claude/ with <tmpDir>/.claude/
+    const installDir = path.resolve(path.join(tmpDir, '.claude')).replace(/\\/g, '/');
+    const srcContent = 'See: ~/.claude/get-shit-done/workflows/health.md\n';
+    const runtimeContent = srcContent.replace(/~\/\.claude\//g, installDir + '/');
+
+    fs.writeFileSync(path.join(srcDir, 'ship.md'), srcContent);
+    fs.writeFileSync(path.join(runtimeDir, 'ship.md'), runtimeContent);
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      !output.errors.some(e => e.code === 'E-DRIFT'),
+      `Should NOT report E-DRIFT for correctly-transformed runtime: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  test('(b) E-DRIFT reported when real non-path content differs (genuine drift)', () => {
+    // Both source and runtime use token-free content that genuinely differs
+    const srcDir = path.join(tmpDir, 'get-shit-done', 'workflows');
+    const runtimeDir = path.join(tmpDir, '.claude', 'get-shit-done', 'workflows');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(runtimeDir, { recursive: true });
+
+    fs.writeFileSync(path.join(srcDir, 'do.md'), '# Do\n\nNew instruction text.\n');
+    fs.writeFileSync(path.join(runtimeDir, 'do.md'), '# Do\n\nOld instruction text.\n');
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.errors.some(e => e.code === 'E-DRIFT'),
+      `Expected E-DRIFT for genuine non-path content drift: ${JSON.stringify(output.errors)}`
+    );
+  });
+
+  test('(c) E-DRIFT reported when runtime .md still has token form (un-transformed)', () => {
+    // Source: token form; runtime: also token form (was cp'd verbatim, not install-transformed)
+    // The check should flag this because transformed-source (absolute) !== runtime (token)
+    const srcDir = path.join(tmpDir, 'get-shit-done', 'workflows');
+    const runtimeDir = path.join(tmpDir, '.claude', 'get-shit-done', 'workflows');
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(runtimeDir, { recursive: true });
+
+    const tokenContent = 'See: ~/.claude/get-shit-done/workflows/health.md\n';
+    // Both source and runtime have token form — runtime was not transformed
+    fs.writeFileSync(path.join(srcDir, 'git-integration.md'), tokenContent);
+    fs.writeFileSync(path.join(runtimeDir, 'git-integration.md'), tokenContent);
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      output.errors.some(e => e.code === 'E-DRIFT'),
+      `Expected E-DRIFT for token-form (un-transformed) runtime: ${JSON.stringify(output.errors)}`
+    );
+  });
 });
