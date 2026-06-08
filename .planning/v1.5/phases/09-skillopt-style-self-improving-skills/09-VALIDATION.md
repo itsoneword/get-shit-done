@@ -1,8 +1,8 @@
 ---
 phase: 9
 slug: skillopt-style-self-improving-skills
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-08
 ---
@@ -36,11 +36,14 @@ created: 2026-06-08
 
 ## Per-Task Verification Map
 
-*Planner fills this from the final task breakdown.*
-
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| {N}-01-01 | 01 | 1 | REQ-{XX} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
+| 09-01-01 | 01 | 1 | TEACH-03/01/04 | unit (RED) | `node scripts/run-tests.cjs lesson` | ❌ W0 (this task creates it) | ⬜ pending |
+| 09-01-02 | 01 | 1 | TEACH-03 | unit (GREEN) | `node scripts/run-tests.cjs lesson` | ✅ (after 09-01-01) | ⬜ pending |
+| 09-01-03 | 01 | 1 | TEACH-01/04 | unit (GREEN) | `node scripts/run-tests.cjs lesson` then `npm test` | ✅ (after 09-01-01) | ⬜ pending |
+| 09-02-01 | 02 | 2 | TEACH-01/05 | structural grep | `grep -q "lesson attribute\|20 lines\|npm run dev\|git revert\|y/N\|gsd-local-patches" get-shit-done/workflows/teach.md` | ❌ W0 (this task creates it) | ⬜ pending |
+| 09-02-02 | 02 | 2 | TEACH-01 | structural grep | `grep -q "name: gsd2:teach" commands/gsd2/teach.md` | ❌ W0 (this task creates it) | ⬜ pending |
+| 09-02-03 | 02 | 2 | TEACH-02/05 (SC2+SC3) | manual checkpoint | human-verify (see Manual-Only Verifications) | N/A | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -75,4 +78,4 @@ created: 2026-06-08
 - [ ] Feedback latency < 60s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planned 2026-06-08 — map derived from 09-01/09-02 task breakdown; all tasks have automated verify or are the explicit Wave-0 creator; 09-02-03 is the manual ratify-gate checkpoint (SC2/SC3, non-automatable by design)
