@@ -117,3 +117,13 @@ None significant. The `grep -q "merge --abort"` acceptance criterion matched com
 ---
 *Phase: 07-parallel-multi-session-safety-planning-ergono*
 *Completed: 2026-06-06*
+
+## Self-Check: PASSED
+
+- `get-shit-done/bin/lib/worktree.cjs` — exists
+- `get-shit-done/bin/gsd-tools.cjs` — exists, contains `case 'worktree'`
+- `tests/worktree.test.cjs` — exists, 6 tests pass
+- `tests/helpers.cjs` — exports `createTempGitRepo`
+- `.gitignore` — contains `.worktrees/`
+- Foreign files (`03-01-SUMMARY.md`, `02-VERIFICATION.md`) — NOT committed, still modified/untracked
+- `--target` noop flag — removed from router, JSDoc, and help text; source↔runtime diff clean

@@ -70,8 +70,8 @@
  * Worktree Operations (SC1 — parallel executor isolation):
  *   worktree add <dir> <branch>        Create linked worktree; detect-existing + ignore-check
  *     [--base <branch>]                Sandbox failure → {ok:false, fallback:"in-place"}
- *   worktree merge <branch>            Merge branch; per-merge clean check
- *     [--target <branch>]              Returns {clean:bool, conflict_files:[]}; NEVER aborts on conflict
+ *   worktree merge <branch>            Merge branch into current; per-merge clean check
+ *                                     Returns {clean:bool, conflict_files:[]}; NEVER aborts on conflict
  *   worktree remove <dir>              Remove worktree + delete branch
  *     [--branch <branch>] [--force]
  *   worktree prune                     git worktree prune (clean stale entries)

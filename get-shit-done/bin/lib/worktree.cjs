@@ -138,14 +138,14 @@ function cmdWorktreeAdd(cwd, dir, branch, opts, raw) {
 }
 
 /**
- * gsd-tools worktree merge <branch> [--target <branch>]
+ * gsd-tools worktree merge <branch>
  *
- * Merges <branch> into the current branch (or --target) using --no-ff.
+ * Merges <branch> into the current branch using --no-ff.
  * Checks exit code PER-CALL (Pitfall 2 guard).
  * Returns {clean:bool, conflict_files:[]}.
  * NEVER aborts a conflicting merge — leaves conflict state for human review.
  */
-function cmdWorktreeMerge(cwd, branch, opts, raw) {
+function cmdWorktreeMerge(cwd, branch, _opts, raw) {
   if (!branch) { error('worktree merge: <branch> is required'); return; }
 
   const mergeResult = git(['merge', branch, '--no-ff'], cwd);
@@ -224,9 +224,7 @@ function cmdWorktree(cwd, args, raw) {
     }
     case 'merge': {
       const branch = args[2];
-      const targetIdx = args.indexOf('--target');
-      const opts = { target: targetIdx !== -1 ? args[targetIdx + 1] : undefined };
-      cmdWorktreeMerge(cwd, branch, opts, raw);
+      cmdWorktreeMerge(cwd, branch, {}, raw);
       break;
     }
     case 'remove': {
