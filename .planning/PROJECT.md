@@ -118,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-06 — Phase 6 (Skill Self-Sufficiency) complete: 14-skill superpowers audit + 4 gaps ported (execution-time TDD discipline, receiving-code-review, artifact-authoring, git-worktree technique) as native references/edits with source↔runtime twins; all automated checks + 912 unit tests pass. SC3 end-to-end behavioral proof deferred to a prod run (tracked in 06-HUMAN-UAT.md / cross-phase-notes "PENDING MANUAL VERIFICATION"; clear via /gsd2:verify-work 6)*
+*Last updated: 2026-06-08 — Phase 8 (Validated Example Corpus) complete: pattern-indexed corpus of 6 validated real-world code excerpts (Python + Node/TS) under `get-shit-done/references/validated-examples/`, wired into the planner on-demand and structured (via `counters:` → `common-bug-patterns.md` headers) as the Phase 9 eval substrate; all automated checks + 942 unit tests pass*
