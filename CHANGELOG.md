@@ -2,6 +2,10 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.5.1] - 2026-06-08
+
+Patch: fix stale-hooks false warning. Installs/updates now delete the v1.5-renamed legacy gsd-*.js hook files from disk (previously only their settings.json registrations were cleaned), and the update checker's stale-hook scan targets the current gsd2-* hooks instead of the orphaned legacy gsd-* set.
+
 ## [1.5.0] - 2026-06-08
 
 Milestone **v1.5** complete — all 9 phases executed. Theme: GSD becomes more autonomous, self-sufficient, observable, and self-improving. (Supersedes the 1.4.7 dev checkpoint; consolidates phases 1–9.)
