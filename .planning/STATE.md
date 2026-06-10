@@ -1,29 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: milestone
-status: milestone-executed (v1.5.0 shipped; human UAT pending for phases 02/06/09)
-stopped_at: v1.5.0 released and pushed to origin/main
-last_updated: "2026-06-08T16:44:09.983Z"
-last_activity: 2026-06-08
+milestone: v1.6
+milestone_name: Autonomous Supervision Harness
+status: defining-requirements
+stopped_at: Milestone v1.6 started — defining requirements
+last_updated: "2026-06-10T00:00:00.000Z"
+last_activity: 2026-06-10
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 27
-  completed_plans: 27
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 ## Current Position
 
-Milestone v1.5 — all 9 phases executed (27/27 plans). v1.5.0 released and pushed to origin/main.
-Pending: human UAT for phases 02/06/09; milestone archival via /gsd2:complete-milestone.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-10 — Milestone v1.6 Autonomous Supervision Harness started
+
+Carry-over from v1.5: archival via /gsd2:complete-milestone pending; human UAT open for phases 02/06/09.
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-03)
+See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 09 — skillopt-style-self-improving-skills
+**Current focus:** Milestone v1.6 — requirements definition
 
 ## Performance Metrics
 
