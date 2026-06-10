@@ -1,103 +1,72 @@
-# Requirements: GSD v1.5 Capability Port
+# Requirements: GSD v1.6 Autonomous Supervision Harness
 
-**Defined:** 2026-06-03
+**Defined:** 2026-06-10
 **Core Value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
 
-**Input analysis:** `.planning/reference/COMPARISON.md` (gsd2-vs-gsd-core), `.planning/reference/NEXT-MILESTONE-SEED.md`, `.planning/reference/IDEAS.md`.
+**Input analysis:** `.planning/research/SUMMARY.md` (+ STACK/FEATURES/ARCHITECTURE/PITFALLS), conversation 2026-06-10.
 
-**Guiding principle:** Adopt by *understanding*, not by *copying*. Each capability is ported through the normal discuss → plan → execute → verify loop — selectively, not wholesale.
+**Guiding principle:** The harness *proposes, never disposes*. Every autonomous decision auditable from the ledger alone. Trust ladder: single-phase interactive validation gates overnight multi-phase runs.
 
-## v1.5 Requirements
+_(v1.5 requirements: all SEC/RSCH/GUIDE/CONV/FIX/SKILL/PAR/CORPUS/TEACH shipped — see `.planning/v1.5/` and git history. CTX-01/02 remain reshaped → future doctor phase.)_
+
+## v1.6 Requirements
 
 Requirements for this milestone. Each maps to roadmap phases.
 
-### Security Hooks (SEC)
+### Decision Ledger (LEDGER)
 
-- [x] **SEC-01**: The 3 standalone advisory guard hooks (`prompt-guard`, `read-injection-scanner`, `read-guard`) are ported into `hooks/` under the `gsd2-*` filename convention (worktree-path-guard descoped to SEC-DEFER-01 — Phase 1 discussion 2026-06-03)
-- [x] **SEC-02**: Hooks build via `build-hooks.js` and register through `install.js` settings wiring
-- [x] **SEC-03**: Each hook is config-gated via `.planning/config.json` `hooks.*` keys — scanners (`prompt_guard`, `read_injection_scanner`) on-by-default, `read_guard` opt-in; all 3 advisory (no hard-block ships in Phase 1)
-- [x] **SEC-04**: Hooks run with no TypeScript/build/core-lib dependency (pure standalone JS)
+- [ ] **LEDGER-01**: Every autonomous decision in a harness run is appended to a per-run `DECISIONS.jsonl` — decision, alternatives considered, evidence, confidence, escalated flag — with schema enforced at write time
+- [ ] **LEDGER-02**: User can read and filter a run's ledger via gsd-tools CLI (by phase, verdict, escalated)
+- [ ] **LEDGER-03**: Ledger behavior is gated by harness run context (e.g. `harness.run_id`) — interactive sessions have zero behavior change
 
-### Autonomous Technical Resolution (RSCH)
+### Escalation Contract (ESC)
 
-_Reshaped 2026-06-04 (Phase 2 discussion) from "research roster" to "resolution loop" — per the minimize-human-round-trips north-star. Loops/skills over a new specialized agent; reuse existing capability (discuss-phase micro-research + the `deep-research` skill) rather than rebuild it._
+- [ ] **ESC-01**: A written escalation contract artifact defines discrete criteria (irreversibility, security boundary, scope change, spec ambiguity) mapped to a three-tier verdict schema: proceed / proceed-and-log / park-and-ask
+- [ ] **ESC-02**: `discuss-phase --auto` under a harness run evaluates each decision against the contract and records the verdict in the ledger
+- [ ] **ESC-03**: Escalation precision is calibrated against a golden set of ≥10 decisions before any overnight run is permitted (trust-ladder gate)
 
-- [x] **RSCH-01**: An autonomous technical-resolution loop exists (research → self-critique → confidence verdict), composed from existing capability — **not** a new specialized agent. The loop raises a technical answer from LOW→HIGH confidence without human input where evidence allows.
-- [x] **RSCH-02**: The loop is wired into the decision points where GSD currently defers technical questions to the human — discuss-phase `question_triage` (TECHNICAL/HYBRID, incl. the LOW-confidence fallback) and plan-phase (which has **no inline research path today**). A technical question reaches the human only when confidence stays LOW after the loop exhausts, or when it is genuine preference/taste.
-- [x] **RSCH-03**: The loop honors signal strength — it does not re-open questions CONTEXT.md marks `[STRONG]`/`[STRONG, user-override]`, and it records resolved technical decisions with provenance + confidence so they are not re-asked downstream.
+### Park-Don't-Block (PARK)
 
-### Execution Enrichment — References (GUIDE)
+- [ ] **PARK-01**: A park-and-ask verdict appends question + context snapshot to a per-run `MAILBOX.jsonl`; the parked branch stops while the run continues other work
+- [ ] **PARK-02**: User can review and answer all parked questions in one inbox command
+- [ ] **PARK-03**: Answering resumes the parked branch with a staleness check — current planning state (STATE.md, ROADMAP.md, cross-phase-notes.md) is re-read before replay
+- [ ] **PARK-04**: Stuck detection — an identical ledger hash across consecutive snapshots flags the run
 
-- [x] **GUIDE-01**: Anti-pattern / bug-pattern reference docs exist and are read by the planner/verifier ("what good and bad code looks like")
-- [x] **GUIDE-02**: Good-practices guidance includes Python-specific content (idea #3)
+### Overnight Runner (RUN)
 
-### Execution Enrichment — Context Budget (CTX) — RESHAPED 2026-06-04
+- [ ] **RUN-01**: `/gsd2:overnight` runs remaining phases unattended (wrapping `/gsd2:autonomous`) with ledger + escalation + mailbox active
+- [ ] **RUN-02**: Per-phase execution is worktree-isolated; merge conflicts route to the mailbox, never silently swallowed (`cmdWorktreeMerge` exits 0 on conflict — runner must check `clean:false`)
+- [ ] **RUN-03**: Startup health check + `run.log`; auth/permission failures fail loudly, no silent retry
+- [ ] **RUN-04**: Morning report summarizes decisions made, questions parked, phases completed
 
-> **Reshaped out of Phase 3 → "doctor" phase (TBD).** During Phase 3 discussion the user rejected the human-facing context-utilization classifier ("no need to inform me about it, only need to fix it") — the keep-context-tiny goal is met structurally via partitioning/distillation (already in flight), not via a token-% warning. CTX-01's read-depth tiers lose their consumer once the classifier is gone (`context_window` is a static config field, not a live usage signal). Both requirements migrate to a future agent-assisted **doctor** phase: a semantic extension of the existing `/gsd2:health` + `validate health --repair` that detects decisions documented-then-overwritten and heals docs by archiving superseded ones to prior versions. See `.planning/cross-phase-notes.md`.
+### Discussion Loop (LOOP)
 
-- [~] **CTX-01**: ~~Context-window degradation tiers + read-depth rules codified~~ — RESHAPED → doctor phase (consumer-less without a live classifier)
-- [~] **CTX-02**: ~~Context-utilization classifier wired into `gsd-health`~~ — RESHAPED → doctor phase (human-facing warning rejected; intent carries to semantic stale-decision healing)
+- [ ] **LOOP-01**: `/gsd2:discuss-loop` runs multi-lens judgment (skeptic / user-advocate / architect) anchored to a concrete artifact, not abstract positions
+- [ ] **LOOP-02**: A convergence brake tests content delta with a hard round cap; non-convergence escalates the top divergent positions to the mailbox — never a synthesized average
 
-### Execution Enrichment — Plan Convergence (CONV)
+### Triage Worker (TRIAGE)
 
-- [x] **CONV-01**: Stall-detection in the existing plan revision loop — escalate when BLOCKER+WARNING counts stop decreasing across cycles
-
-### Verify Fix (FIX)
-
-- [x] **FIX-01**: `parseMustHavesBlock` handles 2-space indentation so `verify artifacts` / `verify key-links` work on real plans (v1.4 carry-over blocker)
-
-### Agent Observability (OBS)
-
-- [x] **OBS-01**: A code-level hook (Claude Code `PostToolUse`, `matcher: Task|Agent`) logs every `gsd-*` subagent spawn — timestamp, agent type, spawning context — to a structured telemetry file, with zero changes to workflow/agent prompt files
-- [x] **OBS-02**: Telemetry captures agent-return confidence verdicts (scraped from return text) so a confidence-driven re-research (LOW → second spawn) is visible as correlated, timestamped entries; best-effort and non-blocking, with an optional reader to inspect the log
-
-### Self-Improving Skills (TEACH) — Phase 9
-
-_Online, feedback-driven skill evolution (reshaped 2026-06-08 from the dropped SkillOpt offline-batch optimizer). Materializes the intent of the reserved LEARN-01 ("extract-learnings + per-project intel store") under the TEACH- namespace; see reconciliation note below._
-
-- [ ] **TEACH-01**: A `/gsd2:teach` command exists — accepts a failure description, reads Phase 4 telemetry to propose an attribution target (agent_type → source file), and presents a bounded edit for ratification before any write. The attribution mapping is a unit-tested pure function (`gsd-tools lesson attribute`) that writes nothing.
-- [ ] **TEACH-02**: Ratified edits commit to `agents/` or `get-shit-done/` SOURCE only (never `.claude/` runtime); each ratified edit also writes an `applied` record (with commit hash) to `.planning/lessons/lessons.jsonl`.
-- [ ] **TEACH-03**: The lessons ledger supports the full lifecycle via `gsd-tools lesson` — append → list (filterable) → update disposition → bump-recurrence — with a recurrence counter the auto-miner reads.
-- [ ] **TEACH-04**: An auto-miner (`gsd-tools lesson scan`) nominates recurring failures (recurrence ≥ threshold, non-applied) but NEVER edits; scoped to ledger-recurrence only for v1 (BLOCKER/telemetry signals deferred). Every nomination routes through the `/teach` ratify gate.
-- [ ] **TEACH-05**: The loop is git-reversible — a bad ratified edit is undone with `git revert <commit>` + `npm run dev`, documented in the `/teach` confirmation output.
-
-> **LEARN-01 reconciliation:** REQUIREMENTS.md reserves `LEARN-01` (Learning Loop, idea #2/#3) for future milestones. Phase 9 (TEACH-01..05) materializes that intent. Open question for the human: mark LEARN-01 satisfied-by-TEACH, or keep it distinct (e.g. for a broader cross-project intel store). Left distinct here pending decision.
+- [ ] **TRIAGE-01**: `/gsd2:triage` analyzes pending todos/backlog against codebase + roadmap and emits six-verdict proposals (already-done / obsolete / fold-into-phase / new-phase / needs-input / defer) into the mailbox, each with evidence
+- [ ] **TRIAGE-02**: Triage writes only to the mailbox; routing (promote, fold, mark done, delete) executes only on human acceptance in the inbox
 
 ## Future Requirements
 
-Deferred to future milestones. Tracked but not in current roadmap.
+Deferred — tracked but not in this roadmap.
 
-### Security Hooks — descoped (Phase 1 discussion 2026-06-03)
+### Harness v2
 
-- **SEC-DEFER-01**: `worktree-path-guard` hard-block hook (PreToolUse `Write|Edit|MultiEdit`, exit 2 on absolute paths escaping a linked worktree, #260) — descoped from Phase 1; user doesn't rely on worktree isolation and no other functionality depends on it. Source: `gsd-core/hooks/gsd-worktree-path-guard.js`. Revisit if worktree-isolated execution becomes routine.
-- **SEC-DEFER-02**: `gsd-validate-commit.sh` (bash, Conventional Commits hard-block) — larger security-auditor surface, not actively needed.
-
-### Knowledge Graph (idea #1)
-
-- **GRAPH-01**: `analyze-dependencies` phase-dependency graph (cheap first step, no external binary)
-- **GRAPH-02**: Bug/feature knowledge graph at levels 1/2/3 (reuses core's graph *scaffold*; node/edge schema needs rework)
-
-### Cross-AI Convergence (idea #4)
-
-- **CONVX-01**: Cross-AI plan convergence with external reviewer CLIs (Codex/Gemini/Claude) — feasibility-gated by external dependencies
-
-### Learning Loop (idea #2, #3)
-
-- **LEARN-01**: `extract-learnings` + per-project intel store feeding decisions/lessons into future phases
+- **HARN-V2-01**: Escalation precision scoring command (needs accumulated ledger data first)
+- **HARN-V2-02**: Cross-session/run ledger aggregation
+- **HARN-V2-03**: Real-time external notifications (Slack/email) — `tail -f` MAILBOX + inbox command suffice for v1.6
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| Graphify code knowledge graph (full) | Schema needs rework for bug/feature links; depends on external AST binary — backlog |
-| Skills system / clusters / surface | Medium surface; revisit after curation need is concrete |
-| Workstreams / workspaces / manager | Parallel-execution surface; off the fork's discussion-first direction |
-| Cross-AI external-reviewer convergence | High value but feasibility-gated by external CLIs — deferred to future |
-| Extra phase modes (mvp/spec/ultraplan/eval/spike) | Each is a command to maintain; tension with prune goal — niche |
-| Observability telemetry port | GSD's own telemetry, not user-code logging guidance — low value for this milestone |
-| `secure-phase` + security-auditor | Bigger surface than the standalone hooks; hooks first, auditor later |
+| Supervisor as a spawned subagent | Subagents lack Skill/Agent tool grants — supervision logic runs at orchestrator/CLI level only (v1.5 Phase 2 lesson) |
+| Autonomous disposal of todos/backlog | Propose-never-dispose is load-bearing for trust; silent discards destroy the harness's value |
+| New npm runtime dependencies | All primitives exist (JSONL via fs, headless `claude -p`, system cron); GSD stays dependency-free |
+| Persistent daemon process (node-cron etc.) | System cron + fire-and-forget headless runs cover scheduling without a resident process |
 
 ## Traceability
 
@@ -105,32 +74,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 1 | Complete |
-| SEC-02 | Phase 1 | Complete |
-| SEC-03 | Phase 1 | Complete |
-| SEC-04 | Phase 1 | Complete |
-| RSCH-01 | Phase 2 | Complete |
-| RSCH-02 | Phase 2 | Complete |
-| RSCH-03 | Phase 2 | Complete |
-| GUIDE-01 | Phase 3 | Complete |
-| GUIDE-02 | Phase 3 | Complete |
-| CTX-01 | doctor (TBD) | Reshaped |
-| CTX-02 | doctor (TBD) | Reshaped |
-| OBS-01 | Phase 4 | Complete |
-| OBS-02 | Phase 4 | Complete |
-| CONV-01 | Phase 5 | Complete |
-| FIX-01 | Phase 5 | Complete |
-| TEACH-01 | Phase 9 | Planned |
-| TEACH-02 | Phase 9 | Planned |
-| TEACH-03 | Phase 9 | Planned |
-| TEACH-04 | Phase 9 | Planned |
-| TEACH-05 | Phase 9 | Planned |
+| (filled by roadmapper) | | |
 
 **Coverage:**
-- v1.5 requirements: 20 total
-- Mapped to phases: 20 ✓
-- Unmapped: 0 ✓
+- v1.6 requirements: 17 total
+- Mapped to phases: 0
+- Unmapped: 17 ⚠️ (roadmap pending)
 
 ---
-*Requirements defined: 2026-06-03*
-*Last updated: 2026-06-08 — added TEACH-01..05 (Self-Improving Skills, Phase 9); LEARN-01 reconciliation flagged*
+*Requirements defined: 2026-06-10*
+*Last updated: 2026-06-10 after initial definition*
