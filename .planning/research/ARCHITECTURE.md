@@ -1,336 +1,376 @@
-# Architecture Patterns: Domain-Aware Planning Integration
-**Domain:** GSD framework extension — v1.4 milestone
-**Analysis Date:** 2026-04-12
+# Architecture Patterns: Autonomous Supervision Harness Integration
+**Domain:** GSD framework extension — v1.6 milestone
+**Analysis Date:** 2026-06-10
+**Confidence:** HIGH (based on direct inspection of all existing source files)
 
 ---
 
 ## What This Document Covers
 
-Three new features need to integrate into the existing GSD architecture:
+Six new components need to integrate into the existing GSD architecture:
 
-1. **Domain router** — classify phase domain and auto-trigger appropriate spec workflows
-2. **AGENT-SPEC** — spec template and workflow for agentic system phases (mirrors UI-SPEC)
-3. **Documentation agent** — on-demand `/gsd2:document` command that reads all artifacts and produces a system map
+1. **Decision ledger** — `DECISIONS.jsonl` per run, wired into `discuss-phase --auto`
+2. **Escalation evaluator** — verdict schema (proceed / proceed-and-log / park-and-ask)
+3. **Park-don't-block mailbox** — `.planning/run/` layout, inbox review command
+4. **Overnight runner** — wraps `/gsd2:autonomous` with ledger + escalation + worktree isolation
+5. **Multi-lens discussion loop** — skeptic/user-advocate/architect judging of artifacts with convergence brake
+6. **Todo/backlog triage worker** — proposals emitted into the same mailbox
 
-This document maps each feature's integration points, lists new vs modified files, and calls out dependencies between them.
-
----
-
-## Feature 1: Domain Router
-
-### Problem Statement
-
-The current `discuss-phase.md` workflow ends with a static next-step suggestion:
-```
-- `/gsd2:ui-phase ${PHASE}` — generate UI design contract (if frontend work)
-```
-This is manual and hint-based — the user has to know it applies. It also fires for all phases, meaning non-UI phases see irrelevant guidance. The domain router replaces this with automatic classification: after discuss-phase completes, the orchestrator classifies the phase and routes to the right spec workflow without asking.
-
-### Where the Domain Router Lives
-
-The router belongs **inside `discuss-phase.md`**, specifically at the end of the `confirm_creation` step, replacing the static hint. It does not belong in a separate reference file because it needs access to the phase context already in orchestrator memory (the ROADMAP description, the CONTEXT.md just written, the codebase scout results). Extracting it to a reference file would require re-reading what's already parsed.
-
-It does not belong as a separate workflow step either, because it is not a standalone command — it is a routing decision that happens after every discuss-phase run. A separate file creates unnecessary indirection and makes the routing logic invisible to someone reading discuss-phase.
-
-**Implementation:** Add a `<step name="domain_classify">` step between `confirm_creation` and `git_commit` in `discuss-phase.md`. The step uses a classification heuristic against phase content already in context, then conditionally suggests the appropriate spec command (or nothing if domain is `generic`).
-
-### Classification Logic
-
-The router classifies against the phase goal (from ROADMAP.md) and any `<domain>` block in CONTEXT.md that was just written. It does not ask the user — it infers.
-
-```
-Domain signals (check in order — first match wins):
-  UI/FRONTEND:   phase goal contains UI keywords (component, page, layout, screen, form, view, modal, dashboard)
-                 OR CONTEXT.md <domain> references frontend framework (React, Vue, Next, Tailwind, shadcn)
-  AGENTIC:       phase goal contains agent keywords (agent, pipeline, workflow, orchestrator, tool-use, LLM, chain, graph)
-                 OR CONTEXT.md <domain> mentions agent frameworks or inter-agent communication
-  GENERIC:       neither of the above → no spec workflow triggered
-```
-
-Classification is done inline by the orchestrator (no subagent spawn needed — this is pattern matching against content already in context).
-
-### Interaction With Existing UI-SPEC Trigger
-
-Currently `discuss-phase.md` suggests `/gsd2:ui-phase` passively in its next-steps text. The domain router replaces that passive suggestion with an active conditional suggestion in `confirm_creation`:
-
-- If domain = `UI/FRONTEND` → suggest `/gsd2:ui-phase ${PHASE}` (same as today, but now shown only when appropriate)
-- If domain = `AGENTIC` → suggest `/gsd2:agent-phase ${PHASE}` (new)
-- If domain = `GENERIC` → show only `/gsd2:plan-phase ${PHASE}` (no spec step)
-
-The existing `/gsd2:ui-phase` command and `ui-phase.md` workflow are **not modified** by this feature. The router adds specificity to when the suggestion appears; the UI-SPEC machinery is unchanged.
-
-### Backward Compatibility
-
-If `discuss-phase.md` is called on a phase that was already discussed (update path), the router re-classifies from updated content and updates the suggestion accordingly. This is safe because the suggestion is informational — it does not auto-invoke.
-
-The router does **not** auto-invoke spec workflows. It only changes what appears in the next-steps section. This preserves user control and avoids breaking existing `.planning/` state for projects that discussed phases before this feature shipped.
-
-### Files Modified
-
-| File | Change |
-|------|--------|
-| `get-shit-done/workflows/discuss-phase.md` | Add `domain_classify` step; replace static UI-SPEC hint in `confirm_creation` with conditional domain-aware suggestion |
-
-### Files Created
-
-None. The router is inline logic in an existing workflow.
+The central constraint throughout: **subagents lack Skill and Agent tool grants**. Every component that needs to spawn a skill or another agent must execute at the orchestrator level (top-level session or headless `claude -p`).
 
 ---
 
-## Feature 2: AGENT-SPEC
+## Existing Architecture Anchor Points
 
-### Pattern Mapping (UI-SPEC → AGENT-SPEC)
-
-The UI-SPEC pattern has these components:
-- `templates/UI-SPEC.md` — output document template
-- `agents/gsd-ui-researcher.md` — writes the spec
-- `agents/gsd-ui-checker.md` — validates the spec
-- `workflows/ui-phase.md` — orchestrates researcher → checker → revision loop
-- `commands/gsd2/ui-phase.md` — user-facing entry point (`/gsd2:ui-phase`)
-- `references/ui-brand.md` — loaded as required reading by the orchestrator
-
-AGENT-SPEC needs the same components with agentic-system specifics.
-
-### New Files Required
-
-| File | Role | Mirror Of |
-|------|------|-----------|
-| `get-shit-done/templates/AGENT-SPEC.md` | Output document template | `templates/UI-SPEC.md` |
-| `agents/gsd-agent-researcher.md` | Writes the AGENT-SPEC | `agents/gsd-ui-researcher.md` |
-| `agents/gsd-agent-checker.md` | Validates AGENT-SPEC | `agents/gsd-ui-checker.md` |
-| `get-shit-done/workflows/agent-phase.md` | Orchestrates the flow | `workflows/ui-phase.md` |
-| `commands/gsd2/agent-phase.md` | Slash command entry point | `commands/gsd2/ui-phase.md` |
-| `get-shit-done/references/agent-patterns.md` | Required reading for researcher | `references/ui-brand.md` |
-
-No new `lib/*.cjs` module is needed — `init plan-phase` already provides all necessary context (phase dir, paths, model resolution). The `agent-phase.md` workflow calls `init plan-phase` exactly as `ui-phase.md` does.
-
-### AGENT-SPEC Template Content
-
-The AGENT-SPEC is a contract for agentic system phases. It locks decisions that the planner and executor otherwise make ad-hoc. Sections should cover:
+Before mapping integration points, the existing pieces that matter for v1.6:
 
 ```
-1. Topology — Which pattern? (chain, graph, orchestrator-workers, pipeline). One topology per phase.
-2. Agent Boundaries — Each agent's single responsibility, input/output contract (schema-level), failure mode.
-3. Communication Contracts — Message format (JSON schema or typed dict), transport (in-process vs queue), retries.
-4. Security Boundaries — What each agent can/cannot call, credential scope, prompt injection surface.
-5. Observability — Which spans to trace, what to log, structured vs unstructured, sampling.
-6. Test Contracts — For each agent: unit scenario (input → expected output), integration scenario, failure injection.
-7. Checker Sign-Off — (mirrors UI-SPEC dimensions, checked by gsd-agent-checker)
+get-shit-done/
+  workflows/
+    discuss-phase.md      -- has --auto mode and question_triage
+    autonomous.md         -- existing multi-phase runner (discuss→plan→execute per phase)
+    plan-phase.md         -- spawns gsd-planner subagent
+    execute-phase.md      -- spawns gsd-executor subagent
+  bin/
+    gsd-tools.cjs         -- CLI router (dependency-free Node CJS)
+    lib/
+      lesson.cjs          -- JSONL ledger pattern (append/list/filter/update)
+      trace.cjs           -- JSONL telemetry read/write pattern
+      worktree.cjs        -- worktree add/merge/remove/prune
+      parallel-gate.cjs   -- axis-A/B safety gate
+      state.cjs           -- STATE.md read/write
+  hooks/
+    gsd2-agent-trace.js   -- PostToolUse hook writes to .planning/telemetry/agent-trace.jsonl
+
+.planning/
+  telemetry/
+    agent-trace.jsonl     -- existing per-event JSONL telemetry
+  lessons/
+    lessons.jsonl         -- existing per-lesson JSONL ledger (v1.5 Phase 9)
+  STATE.md                -- frontmatter + sections (decisions, blockers)
+  ROADMAP.md              -- source of truth for phase status
 ```
-
-The test contracts section is what makes AGENT-SPEC different from UI-SPEC — it produces TDD scaffolding at spec time, before any code is written.
-
-### gsd-agent-researcher Agent
-
-The agent answers: "What communication, security, observability, and test contracts does this agentic phase need?"
-
-Key differences from `gsd-ui-researcher`:
-- Codebase scout looks for existing agent patterns, not design tokens
-- No "design system gate" equivalent — instead, a "topology gate" that asks what pattern if not inferrable
-- Produces test stubs as part of the spec, not just visual contracts
-
-Model profile entry needed in `get-shit-done/bin/lib/model-profiles.cjs` for both `gsd-agent-researcher` and `gsd-agent-checker`.
-
-### gsd-agent-checker Agent
-
-Validates the AGENT-SPEC against these dimensions (analogous to UI-SPEC's 6 dimensions):
-1. Topology declared and justified
-2. All agent boundaries defined with input/output schemas
-3. Communication contracts complete (no "TBD" fields)
-4. Security boundaries explicit (not "assume safe")
-5. Observability plan actionable (named spans, log levels specified)
-6. Test contracts executable (each scenario has a concrete action + observable)
-
-### agent-phase.md Workflow
-
-Exactly mirrors `ui-phase.md`:
-1. Initialize via `init plan-phase`
-2. Check existing AGENT-SPEC
-3. Spawn `gsd-agent-researcher` with phase context
-4. Spawn `gsd-agent-checker`
-5. Revision loop (max 2 iterations)
-6. Present final status with next steps (`/gsd2:plan-phase`)
-7. Commit + update state
-
-The `required_reading` block loads `references/agent-patterns.md` (same role as `ui-brand.md` for UI workflows).
-
-### agent-phase.md Command Stub
-
-```markdown
----
-name: gsd2:agent-phase
-description: Generate agent system contract (AGENT-SPEC.md) for agentic phases
-argument-hint: "[phase]"
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
-  - Grep
-  - Task
-  - AskUserQuestion
----
-<objective>
-Create an agent system contract (AGENT-SPEC.md) for an agentic phase.
-Orchestrates gsd-agent-researcher and gsd-agent-checker.
-Flow: Validate → Research Contracts → Verify AGENT-SPEC → Done
-</objective>
-
-<execution_context>
-@~/.claude/get-shit-done/workflows/agent-phase.md
-@~/.claude/get-shit-done/references/agent-patterns.md
-</execution_context>
-
-<context>
-Phase number: $ARGUMENTS — optional, auto-detects next unplanned phase if omitted.
-</context>
-
-<process>
-Execute @~/.claude/get-shit-done/workflows/agent-phase.md end-to-end.
-Preserve all workflow gates.
-</process>
-```
-
-### Modified Files for AGENT-SPEC
-
-| File | Change |
-|------|--------|
-| `get-shit-done/bin/lib/model-profiles.cjs` | Add `gsd-agent-researcher` and `gsd-agent-checker` entries to all three profiles (quality/balanced/budget) |
-| `bin/install.js` | Add new agents to `CODEX_AGENT_SANDBOX` map; add new agent files to install copy list |
-
-### How gsd-planner Consumes AGENT-SPEC
-
-The planner already reads all files in its `<files_to_read>` block that exist in the phase directory. `init plan-phase` does not currently surface `has_agent_spec` in its JSON — the planner would need to discover the AGENT-SPEC file via glob or the orchestrator would need to pass the path explicitly.
-
-Two options:
-1. Add `agent_spec_path` to `cmdInitPlanPhase` in `init.cjs` (preferred — mirrors how `context_path`, `research_path`, `uat_path` are resolved)
-2. Have the `plan-phase.md` workflow glob for `*-AGENT-SPEC.md` before building the planner prompt
-
-Option 1 is cleaner and consistent with the existing pattern. Add to `cmdInitPlanPhase`:
-```javascript
-const agentSpecFile = files.find(f => f.endsWith('-AGENT-SPEC.md') || f === 'AGENT-SPEC.md');
-if (agentSpecFile) {
-  result.agent_spec_path = toPosixPath(path.join(phaseInfo.directory, agentSpecFile));
-}
-```
-
-Then `plan-phase.md` includes `{agent_spec_path}` in the planner's `<files_to_read>` block when non-null.
 
 ---
 
-## Feature 3: Documentation Agent
+## Component 1: Decision Ledger
 
-### Design Decision: New Command, Not Extension of Existing Workflows
+### Where it lives
 
-The documentation agent is on-demand, not phase-lifecycle-bound. It does not fit into discuss → plan → execute → verify. It reads existing artifacts and synthesizes a system map. It should be a standalone command: `/gsd2:document`.
+`.planning/run/{run-id}/DECISIONS.jsonl` — one file per run (not one global file). Run IDs are timestamps or GSD-generated slugs so concurrent runs stay isolated. The ledger is **append-only during a run**; it becomes read-only when the run completes.
 
-This is the same pattern as `/gsd2:map-codebase` — a standalone command that reads artifacts and produces a snapshot. The documentation agent is the planning-level equivalent.
+### Schema (one JSON line per decision)
 
-### New Files Required
-
-| File | Role |
-|------|------|
-| `agents/gsd-documenter.md` | Agent persona — reads all planning artifacts, writes system map |
-| `get-shit-done/workflows/document.md` | Orchestration workflow |
-| `commands/gsd2/document.md` | Slash command entry point |
-| `get-shit-done/templates/SYSTEM-MAP.md` | Output document template |
-
-No new `lib/*.cjs` module needed. The workflow calls existing `init` commands for context.
-
-### What the Documentation Agent Reads
-
-The agent synthesizes from all existing artifacts. The orchestrator (`document.md` workflow) gathers paths and passes them in the agent prompt:
-
-**Planning artifacts (from `.planning/`):**
-- `PROJECT.md` — Vision, requirements, key decisions
-- `ROADMAP.md` — Phase structure and goals
-- `STATE.md` — Current progress, blockers, decisions
-- `REQUIREMENTS.md` — Full requirement set
-
-**Phase artifacts (per phase, from `.planning/phases/NN-slug/`):**
-- `*-CONTEXT.md` — User decisions per phase
-- `*-PLAN.md` — Implementation plans (tasks, waves)
-- `*-SUMMARY.md` — What was built per phase
-- `*-UI-SPEC.md` — UI contracts (if exist)
-- `*-AGENT-SPEC.md` — Agent contracts (if exist)
-- `*-VERIFICATION.md` — Verification results
-
-**Codebase context (from `.planning/codebase/`):**
-- `ARCHITECTURE.md`, `STRUCTURE.md`, etc. (if generated by `/gsd2:map-codebase`)
-
-**Git history:**
-- The workflow calls `history-digest` from gsd-tools to get a structured summary of all SUMMARY.md data
-
-### Output: SYSTEM-MAP.md
-
-Written to `.planning/SYSTEM-MAP.md` (not in a phase directory — it is a project-level artifact).
-
-Template sections:
-```
-1. System Overview — one paragraph, what this system does end-to-end
-2. Architecture Summary — components, boundaries, how they connect
-3. Phase Build History — what each shipped phase delivered (from SUMMARYs)
-4. Current State — active phase, progress, open decisions
-5. Domain Contracts — index of all specs (UI-SPECs, AGENT-SPECs) with links
-6. Key Decisions Log — decisions from STATE.md + PROJECT.md consolidated
-7. Open Questions — unresolved blockers, deferred ideas across all phases
-```
-
-The agent does NOT generate new decisions or recommendations — it reads and synthesizes only. This is explicit in the agent definition to prevent scope creep.
-
-### document.md Workflow
-
-```
-1. Initialize — call `init progress` for project-level context
-2. Gather artifact index — find all phase dirs and their artifact files
-3. Gather git history — call `history-digest` for SUMMARY data
-4. Spawn gsd-documenter with full file list
-5. Handle return
-6. Write .planning/SYSTEM-MAP.md
-7. Commit (if commit_docs)
-8. Update state
-```
-
-The orchestrator passes the full file list to the agent, but the agent reads them. This is the same division as ui-phase (orchestrator gathers paths, researcher reads and writes). The gsd-documenter does the reading and synthesis; the orchestrator handles state updates.
-
-### gsd-tools.cjs Changes
-
-The documentation workflow needs to discover all phase artifact files. The existing `history-digest` command already aggregates SUMMARY.md data. What's missing is a command to list all spec files (UI-SPEC, AGENT-SPEC) across phases.
-
-**Option A (no gsd-tools change):** The `document.md` workflow uses a bash glob directly:
-```bash
-find .planning/phases -name "*-UI-SPEC.md" -o -name "*-AGENT-SPEC.md" 2>/dev/null
-```
-This works but is fragile (bash glob in a workflow).
-
-**Option B (add to gsd-tools):** Add `init document` compound command to `init.cjs` that returns all relevant artifact paths in one JSON call. Follows the established pattern.
-
-Option B is preferred for consistency. The `init document` command would return:
 ```json
 {
-  "project_path": ".planning/PROJECT.md",
-  "roadmap_path": ".planning/ROADMAP.md",
-  "state_path": ".planning/STATE.md",
-  "requirements_path": ".planning/REQUIREMENTS.md",
-  "codebase_maps": [".planning/codebase/ARCHITECTURE.md", ...],
-  "phases": [
-    {
-      "phase_number": "1",
-      "phase_name": "...",
-      "phase_dir": ".planning/phases/01-slug",
-      "context_path": "...",
-      "plan_paths": [...],
-      "summary_paths": [...],
-      "ui_spec_path": "...",
-      "agent_spec_path": "...",
-      "verification_path": "..."
-    },
-    ...
-  ]
+  "id": "dec-001",
+  "ts": "2026-06-10T02:15:00.000Z",
+  "phase": 3,
+  "context": "discuss-phase --auto: question_triage TECHNICAL",
+  "question": "Should rate-limiting use sliding window or fixed bucket?",
+  "decision": "sliding window",
+  "alternatives": ["fixed bucket", "token bucket"],
+  "evidence": "Context7 redis-rate-limit docs; 2x blog posts prefer sliding for API fairness",
+  "confidence": "HIGH",
+  "escalated": false,
+  "escalation_verdict": null,
+  "escalation_reason": null
 }
 ```
 
-This is one new function `cmdInitDocument` in `init.cjs`, registered in the `switch` block in `gsd-tools.cjs`. Moderate scope — roughly 60 lines of new code following existing patterns.
+The `escalated` + `escalation_verdict` + `escalation_reason` fields are written by the evaluator after the initial decision is logged. A decision is logged first (with `escalated: null`), then the evaluator updates in place (or appends a patching record — see Pitfall below).
+
+### How it hooks into `discuss-phase --auto`
+
+The `--auto` path in `discuss-phase.md` already uses `question_triage` for TECHNICAL/HYBRID questions. The integration point is the write-back step where resolved technical decisions are appended to CONTEXT.md (`<!-- resolved inline by resolution loop -->`). The ledger write happens **at the same moment** — after the resolution loop settles a confidence verdict:
+
+```
+question_triage → resolution loop reaches HIGH/MEDIUM
+    → existing: write to CONTEXT.md with [STRONG/WEAK, specialist-backed]
+    → NEW: append to DECISIONS.jsonl: {id, ts, phase, context, question, decision, alternatives, evidence, confidence, escalated: null}
+    → NEW: evaluator step (inline, not a subagent) sets escalated: true/false + verdict
+    → if escalated: append question to .planning/run/{run-id}/MAILBOX.jsonl
+```
+
+The evaluator runs **inline in the discuss-phase orchestrator**, not as a spawned subagent. This is the critical constraint: the evaluator needs to call `Skill()` if it wants to park a phase and continue another — that's an orchestrator-only capability.
+
+### gsd-tools subcommand
+
+Add `ledger` to `gsd-tools.cjs`:
+
+```
+ledger append <run-id> --data '{json}'   Append one decision record
+ledger list <run-id> [--phase N]         List decisions for a run
+ledger get <run-id> --id dec-001         Get single decision
+ledger patch <run-id> --id dec-001 --data '{json}'  Update fields (for evaluator write-back)
+```
+
+Implementation mirrors `lesson.cjs` and `trace.cjs` exactly — a new `lib/ledger.cjs` with `readLedger`, `writeLedger`, `appendLedger`, `patchLedger`. The JSONL path: `.planning/run/{run-id}/DECISIONS.jsonl`.
+
+---
+
+## Component 2: Escalation Evaluator
+
+### Placement: inline prompt step, not a separate agent
+
+The evaluator is **not a spawned subagent**. Reasons:
+
+1. Spawning a subagent for a classification decision costs context budget and breaks the DECISIONS.jsonl audit trail (the subagent's reasoning would be invisible to the ledger).
+2. The evaluator needs to write to the mailbox and potentially re-route the runner — both are orchestrator-level operations.
+3. The evaluation criteria are a written contract (4 conditions) that can be applied inline by the orchestrator in 2-3 reasoning steps.
+
+### Verdict schema
+
+```
+proceed              -- decision is safe to execute; log only (escalated: false)
+proceed-and-log      -- borderline; execute but flag in ledger for post-run human review
+park-and-ask         -- do not execute this branch; write to mailbox; continue other phases
+```
+
+### Escalation criteria (written contract — not heuristic)
+
+A decision triggers `park-and-ask` if ANY of the following is true:
+
+| Criterion | Description |
+|-----------|-------------|
+| **Irreversibility** | Decision produces an artifact or state that cannot be undone by `git revert` or a single CLI command |
+| **Security surface** | Decision expands credential scope, adds network egress, or modifies hook execution paths |
+| **Scope change** | Decision would add tasks outside the current phase's `<domain>` boundary in CONTEXT.md |
+| **Spec ambiguity** | The question's answer directly contradicts a `[STRONG]` decision in CONTEXT.md, or the resolution loop returned LOW confidence after exhausting budget |
+
+`proceed-and-log` applies when: confidence is MEDIUM, decision is reversible, no other criterion fires.
+
+`proceed` applies when: confidence is HIGH, decision is reversible, no criterion fires.
+
+### Where the evaluator is embedded
+
+The evaluator step is added to `discuss-phase.md`'s `question_triage` section as a sub-step after the resolution loop. It is also added to the `smart_discuss` step in `autonomous.md` (same placement). In both cases it is a prose reasoning block within the orchestrator, not a Task() call.
+
+---
+
+## Component 3: Park-Don't-Block Mailbox
+
+### Directory layout under `.planning/run/`
+
+```
+.planning/run/
+  {run-id}/
+    DECISIONS.jsonl       -- append-only decision ledger for this run
+    MAILBOX.jsonl         -- parked questions waiting for human answer
+    RUN-META.json         -- run start time, phase list, status (running/paused/complete)
+    parked/
+      phase-{N}.json      -- per-parked-phase context snapshot (resume info)
+```
+
+The `run-id` format: `{date}-{slug}`, e.g., `20260610-v16-overnight`. Human-readable so the inbox command can display it without decoding.
+
+### MAILBOX.jsonl schema
+
+```json
+{
+  "id": "q-001",
+  "ts": "2026-06-10T02:15:00.000Z",
+  "run_id": "20260610-v16-overnight",
+  "phase": 3,
+  "decision_id": "dec-005",
+  "question": "Rate limiting: should we use Redis or in-process?",
+  "context": "CONTEXT.md decision 3 says [STRONG] no external deps — Redis contradicts this",
+  "options": ["Redis (faster, external dep)", "in-process (slower, self-contained)"],
+  "evidence": "CONTEXT.md [STRONG] no-external-deps; RSCH-02 confidence HIGH",
+  "status": "pending",
+  "answer": null,
+  "answered_ts": null
+}
+```
+
+### Inbox review command: `gsd-tools mailbox`
+
+```
+mailbox list [--run run-id] [--status pending|answered]   List questions
+mailbox answer <run-id> --id q-001 --answer "Redis"       Record human answer
+mailbox review <run-id>                                   Interactive: show each pending Q, prompt for answer
+mailbox status <run-id>                                   Show run-id, phase count, pending/answered counts
+```
+
+No new workflow file needed for inbox review — `mailbox review` is a CLI command the human runs. The command prints each question with its context and options, reads stdin for the answer, writes back to MAILBOX.jsonl. The overnight runner polls MAILBOX.jsonl before resuming a parked phase (checks `status: "answered"` for the question that blocked it).
+
+### Parked branch resume flow
+
+```
+Runner parks phase 3 (question written to MAILBOX.jsonl, parked/phase-3.json saved)
+    → runner continues phase 4 in a different worktree
+    → human runs: gsd-tools mailbox review 20260610-v16-overnight
+    → answers question for phase 3
+    → runner (on next iteration or next morning) reads MAILBOX.jsonl
+    → sees phase-3 question now answered
+    → restores parked/phase-3.json context
+    → resumes discuss-phase for phase 3 with the answer injected
+    → continues phase 3 → plan → execute
+```
+
+The resume mechanism: `parked/phase-{N}.json` stores enough context for the orchestrator to re-run the blocked step. It contains:
+
+```json
+{
+  "phase": 3,
+  "blocked_at": "discuss-phase --auto: question_triage",
+  "question_id": "q-001",
+  "phase_dir": ".planning/v1.6/phases/03-rate-limiting",
+  "has_context": false,
+  "resume_instruction": "Resume discuss-phase --auto for phase 3 with answer injected into question_triage"
+}
+```
+
+---
+
+## Component 4: Overnight Runner
+
+### Design decision: headless `claude -p` per run, not a long-lived session
+
+Three options were considered:
+
+| Option | Verdict |
+|--------|---------|
+| **headless `claude -p`** — invoke `claude -p "/gsd2:autonomous --from N"` as a subprocess | **Chosen** |
+| Long-lived session | Requires keeping a terminal open; context degrades over many phases |
+| Scheduled (cron/systemd) | Too much infrastructure; not portable across machines |
+
+`claude -p` fires a single-shot headless run. The runner wraps it with:
+- Worktree setup per phase (using existing `worktree.cjs`)
+- Ledger + mailbox initialization
+- RUN-META.json tracking
+- Post-run ledger archival
+
+### New workflow: `workflows/overnight.md`
+
+This is a new workflow file, invoked via a new `/gsd2:overnight` command. It is an orchestrator-level workflow — it uses `Skill()` to invoke `/gsd2:autonomous` — so it cannot be a subagent.
+
+```
+/gsd2:overnight [--from N] [--run-id name]
+  → workflows/overnight.md
+    1. Init: create .planning/run/{run-id}/, write RUN-META.json
+    2. Init ledger: create DECISIONS.jsonl (empty)
+    3. Init mailbox: create MAILBOX.jsonl (empty)
+    4. Set config: gsd-tools config-set harness.run_id {run-id}
+    5. Launch: Skill(skill="gsd2:autonomous", args="--from N")
+       (autonomous.md will read harness.run_id and write to the active ledger)
+    6. After autonomous completes: archive RUN-META.json status="complete"
+    7. Print summary: gsd-tools mailbox status {run-id}
+    8. Print: "Review parked questions: gsd-tools mailbox review {run-id}"
+```
+
+The key integration: `autonomous.md` needs to check `harness.run_id` (via `config-get`) at startup. When set, all `smart_discuss` question_triage decisions write to the active ledger and pass through the evaluator. When not set (interactive use), ledger/evaluator are skipped — no behavior change for normal use.
+
+### Trust ladder: single-phase validation before overnight
+
+The first use of the overnight runner is explicitly scoped to one phase:
+
+```bash
+/gsd2:overnight --from 1 --run-id validation-run-001
+```
+
+After that run, the human reads the ledger (`gsd-tools ledger list validation-run-001`) and evaluates:
+- Were all `escalated: false` decisions actually safe?
+- Did `escalated: true` decisions genuinely need human input?
+- Were any safe decisions incorrectly escalated (false positives)?
+
+Only after the human scores escalation precision on a single phase does the runner get used for multi-phase overnight runs. This is the trust ladder the PROJECT.md specifies — built into the workflow docs, not enforced by code.
+
+---
+
+## Component 5: Multi-Lens Discussion Loop
+
+### Design: inline roles in the workflow, not separate agents
+
+Three personas — Skeptic, User-Advocate, Architect — judge a concrete artifact (a CONTEXT.md, an AGENT-SPEC, a PLAN.md). The personas are **inline roles within the orchestrator**, not spawned subagents. Reasons:
+
+1. Subagents cannot spawn further agents/skills — any follow-up action (re-research, escalate) requires orchestrator level.
+2. Three spawns × N artifacts adds significant context budget cost; inline roles share context cheaply.
+3. The convergence brake (stop when all 3 agree or when N rounds pass) requires shared state — hard to coordinate across subagents.
+
+### Where it lives
+
+New workflow: `workflows/discuss-loop.md`. Invoked:
+- From `/gsd2:discuss-phase` when `--loop` flag is present (for project-level open questions, not standard phase discussion)
+- From `/gsd2:overnight` for unresolved CONTEXT.md sections flagged as `[WEAK]` across multiple phases
+
+### Convergence brake
+
+```
+Max rounds: 3 (configurable via config.json harness.loop_max_rounds)
+Convergence condition: all 3 personas agree OR round delta drops below threshold (< 1 new objection)
+Outcome if no convergence: the contested decision is escalated to mailbox (same park-and-ask path)
+```
+
+### Artifact-anchored: what this means
+
+Each lens evaluates **a specific artifact section**, not an abstract question. The Skeptic reads `<decisions>` in CONTEXT.md and writes specific objections against named decisions. The User-Advocate reads `<expected_outcome>` and challenges whether decisions serve the stated end state. The Architect reads `<code_context>` and challenges whether patterns are coherent. This prevents the loop from becoming a free-form debate with no resolution surface.
+
+---
+
+## Component 6: Todo/Backlog Triage Worker
+
+### Design: a workflow + one new gsd-tools subcommand, no new agent
+
+The triage worker reads `.planning/todos/pending/*.md` (existing todo format), evaluates each against the current ROADMAP.md and STATE.md, and emits verdict proposals into the mailbox. It **never modifies a todo or roadmap directly** — the harness proposes, never disposes.
+
+### New workflow: `workflows/triage.md`
+
+```
+/gsd2:triage [--run-id name]
+  → workflows/triage.md
+    1. Init: ensure .planning/run/{run-id}/ exists (or create)
+    2. Read all pending todos: gsd-tools list-todos
+    3. Read ROADMAP.md + STATE.md for current phase list and completed set
+    4. For each todo: evaluate verdict (inline orchestrator, no subagent spawn)
+    5. Write proposals to MAILBOX.jsonl with verdict + rationale
+    6. Print summary: N proposals written, review with: gsd-tools mailbox review {run-id}
+```
+
+### Verdict taxonomy (inline evaluation criteria)
+
+| Verdict | Condition |
+|---------|-----------|
+| `already-done` | Todo title/content matches a shipped requirement in REQUIREMENTS.md or a completed phase |
+| `obsolete` | Todo references a pattern/file that no longer exists in the codebase |
+| `fold-into-phase` | Todo is within scope of an incomplete phase — reference that phase |
+| `new-phase` | Todo is out of scope for all existing phases; would be a standalone new phase |
+| `needs-input` | Cannot determine verdict without human clarification |
+| `defer` | Valid idea, no active phase home, not urgent enough to add now |
+
+The verdict is written to MAILBOX.jsonl as a `triage` type entry (separate from `decision` type). The human can accept, modify, or reject each proposal via `gsd-tools mailbox review`.
+
+---
+
+## System Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Orchestrator Level                          │
+│  /gsd2:overnight   /gsd2:triage   /gsd2:discuss-loop        │
+├─────────────────────────────────────────────────────────────┤
+│                  Harness Workflows                           │
+│  overnight.md ──→ Skill(autonomous) ──→ autonomous.md       │
+│  triage.md ──────────────────────────→ mailbox writes       │
+│  discuss-loop.md ─────────────────────→ inline roles        │
+├─────────────────────────────────────────────────────────────┤
+│              Modified Existing Workflows                     │
+│  discuss-phase.md  (+evaluator step in question_triage)     │
+│  autonomous.md     (+ledger writes in smart_discuss)        │
+├─────────────────────────────────────────────────────────────┤
+│               State / Persistence Layer                     │
+│  .planning/run/{run-id}/                                    │
+│    DECISIONS.jsonl   MAILBOX.jsonl   RUN-META.json          │
+│    parked/phase-{N}.json                                    │
+│  .planning/telemetry/agent-trace.jsonl  (existing)          │
+│  .planning/lessons/lessons.jsonl        (existing)          │
+├─────────────────────────────────────────────────────────────┤
+│               CLI Layer (gsd-tools.cjs)                     │
+│  ledger {append,list,get,patch}                             │
+│  mailbox {list,answer,review,status}                        │
+│  (existing: worktree, parallel-gate, lesson, trace)         │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -338,140 +378,215 @@ This is one new function `cmdInitDocument` in `init.cjs`, registered in the `swi
 
 | Component | Responsibility | Communicates With |
 |-----------|---------------|-------------------|
-| `discuss-phase.md` (modified) | Discussion + domain classification | Writes CONTEXT.md, suggests spec command |
-| `agent-phase.md` (new workflow) | Orchestrates AGENT-SPEC creation | Spawns gsd-agent-researcher, gsd-agent-checker |
-| `gsd-agent-researcher` (new agent) | Writes AGENT-SPEC.md from phase context | Reads CONTEXT.md, RESEARCH.md, ROADMAP section |
-| `gsd-agent-checker` (new agent) | Validates AGENT-SPEC.md | Reads AGENT-SPEC.md, CONTEXT.md |
-| `document.md` (new workflow) | Gathers artifacts, spawns documenter | Calls `init document`, spawns gsd-documenter |
-| `gsd-documenter` (new agent) | Reads all artifacts, writes SYSTEM-MAP.md | Reads all phase dirs, PROJECT.md, ROADMAP.md |
-| `init.cjs` (modified) | Compound init commands | Add `cmdInitDocument`; add `agent_spec_path` to `cmdInitPlanPhase` |
-| `model-profiles.cjs` (modified) | Agent-to-model mapping | Add entries for gsd-agent-researcher, gsd-agent-checker, gsd-documenter |
-| `plan-phase.md` (modified) | Phase planning orchestration | Add `agent_spec_path` to planner's files_to_read |
-| `bin/install.js` (modified) | GSD installation | Add new agents to sandbox map and copy list |
+| `overnight.md` (new workflow) | Init run dir, launch autonomous, archive | Calls `Skill(autonomous)`, writes RUN-META.json, calls `mailbox status` |
+| `autonomous.md` (modified) | Drive phases; read harness.run_id; write to ledger in smart_discuss | Calls `Skill(discuss-phase/plan/execute)`; reads `config-get harness.run_id` |
+| `discuss-phase.md` (modified) | Add evaluator step to question_triage; park-and-ask if criteria fire | Writes DECISIONS.jsonl via `ledger append`; writes MAILBOX.jsonl via `mailbox append` |
+| `discuss-loop.md` (new workflow) | Multi-lens review of a concrete artifact section | Inline roles (Skeptic/Advocate/Architect); writes convergence failures to mailbox |
+| `triage.md` (new workflow) | Evaluate pending todos against ROADMAP; emit proposals | Reads todos, ROADMAP, STATE; writes to MAILBOX.jsonl |
+| `ledger.cjs` (new lib module) | DECISIONS.jsonl CRUD (mirrors lesson.cjs) | Called by discuss-phase.md, autonomous.md via gsd-tools CLI |
+| `mailbox.cjs` (new lib module) | MAILBOX.jsonl CRUD + interactive review | Called by overnight.md, discuss-phase.md, triage.md via gsd-tools CLI |
+| `gsd-tools.cjs` (modified) | Route `ledger` and `mailbox` subcommands | Requires ledger.cjs, mailbox.cjs; same router pattern as lesson/trace |
+| `model-profiles.cjs` (not modified) | No new agents — all components are inline or existing | N/A |
+| `install.js` (not modified) | No new hook files needed for v1.6 | N/A |
 
 ---
 
-## Data Flow: Domain-Aware Discuss → Plan
+## Data Flow: Autonomous Decision to Human Inbox
 
 ```
-/gsd2:discuss-phase N
-  → discuss-phase.md
-    → [conversation + codebase scout]
-    → [domain_classify step]
-      → domain = UI/FRONTEND → suggest /gsd2:ui-phase N
-      → domain = AGENTIC    → suggest /gsd2:agent-phase N
-      → domain = GENERIC    → suggest /gsd2:plan-phase N (no spec step)
-    → writes NN-CONTEXT.md
-
-/gsd2:agent-phase N       (if agentic domain)
-  → agent-phase.md
-    → init plan-phase N (gets all context paths)
-    → spawn gsd-agent-researcher
-      → reads CONTEXT.md, ROADMAP section, REQUIREMENTS.md
-      → writes NN-AGENT-SPEC.md
-    → spawn gsd-agent-checker
-      → validates 6 dimensions
-    → revision loop (max 2)
-    → suggests /gsd2:plan-phase N
-
-/gsd2:plan-phase N
-  → plan-phase.md
-    → init plan-phase N (now includes agent_spec_path)
-    → spawn gsd-planner
-      → reads CONTEXT.md, RESEARCH.md, AGENT-SPEC.md (if present), REQUIREMENTS.md
-      → writes N-PLAN.md files with test contracts from AGENT-SPEC
-```
-
-```
-/gsd2:document
-  → document.md
-    → init document (new) → returns all artifact paths
-    → history-digest → SUMMARY data
-    → spawn gsd-documenter
-      → reads all phase artifacts
-      → writes .planning/SYSTEM-MAP.md
+/gsd2:overnight --from 1
+    ↓
+overnight.md: create .planning/run/20260610-v16/
+    config-set harness.run_id = 20260610-v16
+    ↓
+Skill(autonomous)
+    ↓
+autonomous.md → smart_discuss phase 1
+    ↓
+discuss-phase --auto: question_triage TECHNICAL
+    resolution loop → HIGH confidence
+    ↓
+EXISTING write: CONTEXT.md [STRONG, specialist-backed]
+NEW write: gsd-tools ledger append 20260610-v16 --data '{...decision...}'
+    ↓
+Evaluator (inline in discuss-phase orchestrator):
+    check 4 escalation criteria
+    verdict = proceed → patch ledger: {escalated: false}
+    verdict = park-and-ask → patch ledger: {escalated: true}
+                           → gsd-tools mailbox append --data '{...question...}'
+                           → write parked/phase-1.json (resume context)
+                           → runner continues next phase
+    ↓
+(Morning) Human: gsd-tools mailbox review 20260610-v16
+    sees question, provides answer
+    ↓
+Runner resumes phase 1:
+    reads parked/phase-1.json
+    re-runs discuss-phase with answer injected
+    continues → plan → execute → verify
 ```
 
 ---
 
-## Build Order and Dependencies
-
-The three features have a dependency chain:
+## Data Flow: Triage Worker
 
 ```
-Feature 1 (Domain Router)
-  → No dependencies on 2 or 3
-  → Can be built first
-  → Only modifies discuss-phase.md
-
-Feature 2 (AGENT-SPEC)
-  → Depends on Feature 1 to be routed correctly (but can work independently — /gsd2:agent-phase is a direct command)
-  → Requires model-profiles.cjs changes before agents can be spawned
-  → Requires init.cjs change (agent_spec_path) before planner can consume AGENT-SPEC
-
-Feature 3 (Documentation Agent)
-  → Depends on Feature 2 to document AGENT-SPEC contracts (but degrades gracefully without them)
-  → Requires init.cjs change (cmdInitDocument) — independent from Feature 2's init change
-  → Can consume AGENT-SPEC.md files if they exist; skips if not
+/gsd2:triage --run-id 20260610-v16
+    ↓
+triage.md: gsd-tools list-todos
+    read ROADMAP.md, STATE.md, REQUIREMENTS.md
+    ↓
+For each pending todo:
+    inline verdict evaluation (already-done / obsolete / fold-into-phase / ...)
+    ↓
+gsd-tools mailbox append --run-id 20260610-v16 --type triage --data '{verdict, rationale, todo_path}'
+    ↓
+Human: gsd-tools mailbox review 20260610-v16
+    accept verdict → gsd-tools todo complete <file>   (for already-done/obsolete)
+    accept fold → edit ROADMAP.md manually or via /gsd2:add-todo
+    reject → mark declined in MAILBOX.jsonl
 ```
-
-**Recommended build order:**
-1. Feature 1 — domain router in discuss-phase.md (pure text edit, no code changes, lowest risk)
-2. Feature 2 — AGENT-SPEC (most new files, but each file is independent; test with a real agentic phase)
-3. Feature 3 — Documentation agent (consumes outputs of both; easiest to verify once 1+2 exist)
-
-Feature 2 and 3 share one init.cjs change (both add new compound commands). This is not a conflict — they are separate functions in the same file. They can be developed in parallel but should be merged carefully.
 
 ---
 
-## What Changes in Each Existing File
+## New Files Required
 
-### `get-shit-done/workflows/discuss-phase.md`
-- Add `<step name="domain_classify">` between `confirm_creation` and `git_commit`
-- Replace static UI-SPEC hint in `confirm_creation`'s next-steps block with conditional domain-aware routing text
+| File | Type | Role |
+|------|------|------|
+| `get-shit-done/workflows/overnight.md` | New workflow | Wraps `/gsd2:autonomous` with harness init/teardown |
+| `get-shit-done/workflows/triage.md` | New workflow | Todo/backlog triage with proposal emission |
+| `get-shit-done/workflows/discuss-loop.md` | New workflow | Multi-lens artifact review with convergence brake |
+| `commands/gsd2/overnight.md` | New command stub | Entry point for `/gsd2:overnight` |
+| `commands/gsd2/triage.md` | New command stub | Entry point for `/gsd2:triage` |
+| `commands/gsd2/discuss-loop.md` | New command stub | Entry point for `/gsd2:discuss-loop` |
+| `get-shit-done/bin/lib/ledger.cjs` | New lib module | DECISIONS.jsonl CRUD (mirrors lesson.cjs) |
+| `get-shit-done/bin/lib/mailbox.cjs` | New lib module | MAILBOX.jsonl CRUD + interactive review |
 
-### `get-shit-done/workflows/plan-phase.md`
-- In the planner's `<files_to_read>` block, add conditional line: `- {agent_spec_path} (Agent System Contract — if agentic phase)`
+---
 
-### `get-shit-done/bin/lib/init.cjs`
-- `cmdInitPlanPhase`: add `agent_spec_path` detection (5 lines, follows `uat_path` pattern)
-- Add `cmdInitDocument` function (new compound command, ~60 lines)
+## Modified Files
 
-### `get-shit-done/bin/gsd-tools.cjs`
-- Add `require` for any new lib module (none needed — init.cjs handles everything)
-- Register `init document` in the `switch` block for `init` commands
+| File | Change |
+|------|--------|
+| `get-shit-done/workflows/discuss-phase.md` | Add evaluator step in `question_triage`; write to ledger + mailbox when `harness.run_id` is set |
+| `get-shit-done/workflows/autonomous.md` | Read `harness.run_id` at startup; thread it into `smart_discuss` question_triage writes; implement parked-phase resume loop |
+| `get-shit-done/bin/gsd-tools.cjs` | Add `require` for ledger.cjs and mailbox.cjs; register `ledger` and `mailbox` cases in the switch router |
 
-### `get-shit-done/bin/lib/model-profiles.cjs`
-- Add entries for `gsd-agent-researcher`, `gsd-agent-checker`, `gsd-documenter` to quality/balanced/budget profile objects
+---
 
-### `bin/install.js`
-- Add `gsd-agent-researcher.md`, `gsd-agent-checker.md`, `gsd-documenter.md` to agent install list
-- Add entries in `CODEX_AGENT_SANDBOX` for sandbox level assignment
+## Build Order
+
+The features have dependencies that suggest this order:
+
+```
+Phase 1: ledger.cjs + mailbox.cjs + gsd-tools routing
+    → Foundation for all other components; no UI, no workflow changes yet
+    → Can be unit-tested against the existing JSONL patterns (lesson.cjs, trace.cjs as reference)
+
+Phase 2: Escalation evaluator + discuss-phase.md wiring
+    → Wire evaluator inline in question_triage (guarded by harness.run_id check — no behavior change without overnight runner)
+    → Validate: run /gsd2:discuss-phase --auto on one phase, confirm DECISIONS.jsonl is populated
+    → TRUST LADDER CHECKPOINT: read the ledger, manually score escalation precision before proceeding
+
+Phase 3: overnight.md + /gsd2:overnight command
+    → Wraps existing autonomous.md; adds run init/teardown
+    → Validate: single-phase overnight run → read ledger → score precision
+    → Only after scoring: attempt multi-phase run
+
+Phase 4: triage.md + /gsd2:triage command
+    → Standalone worker; no dependency on overnight runner (but can share the same run-id mailbox)
+    → Validate: run against current .planning/todos/pending/ and verify proposals are correct
+
+Phase 5: discuss-loop.md + /gsd2:discuss-loop command
+    → Standalone artifact reviewer; no dependency on other v1.6 components
+    → Validate: pass one existing CONTEXT.md through the loop, verify convergence behavior
+
+Phase 6: Resume logic in autonomous.md (parked branch resumption)
+    → Depends on Phase 1-3; needs working mailbox, parked/*.json, and overnight runner
+    → Most complex component; build last when the rest is verified
+```
+
+**Rationale for this order:**
+- CLI layer first (Phase 1) — every other component calls it; having it unit-testable before the workflows reduces debugging surface
+- Evaluator before runner (Phase 2 before 3) — the runner's value is nil without the evaluator; and the evaluator can be validated interactively without headless operation
+- Trust ladder (Phase 2 checkpoint) — the PROJECT.md constraint says: validate on a single phase before widening; the build order enforces this structurally
+- Triage and discuss-loop are independent (Phases 4-5) — they share the mailbox CLI but have no other coupling; they can be built/validated in parallel
+- Resume logic last (Phase 6) — it's the most complex and requires all other pieces to be solid first
 
 ---
 
 ## Anti-Patterns to Avoid
 
-**Do not add a per-domain yes/no gate in discuss-phase.md.** The PROJECT.md explicitly states "classify, don't ask." Adding `AskUserQuestion("Is this an agentic system?")` defeats the purpose and breaks the scalability of the pattern as more domains are added.
+### 1. Evaluator as a spawned subagent
 
-**Do not modify ui-phase.md or the UI-SPEC agents.** The domain router only changes what gets suggested after discuss-phase; the UI-SPEC machinery is unchanged.
+**What people do:** Spawn `Task(subagent_type="gsd-escalation-evaluator", ...)` for each decision.
 
-**Do not invoke agent-phase or ui-phase automatically from discuss-phase.** The domain router suggests; it does not auto-invoke. This preserves user control and avoids the nested AskUserQuestion bug documented in plan-phase.md (#1009).
+**Why it's wrong:** Subagents lack Skill/Agent grants. If the evaluator reaches `park-and-ask`, it cannot call `Skill(plan-phase, next-phase)` to continue. The orchestrator would need to re-evaluate the subagent's output anyway to decide whether to park or proceed. Double evaluation, no gain, and a broken tool-grant path.
 
-**Do not put AGENT-SPEC sections in CONTEXT.md.** CONTEXT.md captures user decisions. AGENT-SPEC captures system contracts. These are different documents for different audiences (user vs planner/executor). Mixing them creates ambiguity about signal strength.
+**Do this instead:** Inline evaluator — a prose reasoning block in the orchestrator that applies the 4 written criteria and emits a verdict string.
 
-**Do not have gsd-documenter make recommendations.** Its role is synthesis, not analysis. Adding recommendations creates output that can't be traced to a source artifact and pollutes the system map with untraceable suggestions.
+### 2. One global DECISIONS.jsonl
+
+**What people do:** Write all decisions to `.planning/DECISIONS.jsonl` (like the lessons ledger).
+
+**Why it's wrong:** Concurrent overnight runs on different branches corrupt each other's audit trails. The human cannot distinguish decisions from run A vs run B. Ledger-per-run under `.planning/run/{run-id}/` is the isolation unit.
+
+**Do this instead:** Run-scoped DECISIONS.jsonl under `.planning/run/{run-id}/`. The CLI's `ledger list --run all` can aggregate across runs when the human wants a full view.
+
+### 3. Blocking autonomous.md on mailbox questions
+
+**What people do:** When the evaluator says `park-and-ask`, the runner pauses and waits for the human to answer before continuing.
+
+**Why it's wrong:** This defeats park-don't-block. The overnight runner's value is precisely that it continues other phases while a question waits. Blocking on the mailbox reinstates the human-in-the-loop bottleneck.
+
+**Do this instead:** Write the question to MAILBOX.jsonl, save `parked/phase-{N}.json`, continue to the next incomplete phase. Resume the parked phase on the next iteration (or next run) after checking `status: "answered"`.
+
+### 4. Triage worker that modifies artifacts directly
+
+**What people do:** Have the triage worker move todos to `done/`, edit ROADMAP.md phase lists, or create new phases automatically.
+
+**Why it's wrong:** Violates the "harness proposes, never disposes" principle. Silent mutations to ROADMAP.md during an overnight run could invalidate the entire planning state without audit trail.
+
+**Do this instead:** Every triage verdict is a mailbox proposal. The human accepts/rejects each one via `gsd-tools mailbox review`. Only after human acceptance does any artifact change — and the human or an explicit `/gsd2:add-todo` call makes that change.
+
+### 5. Multi-lens loop with spawned agents per persona
+
+**What people do:** Spawn `gsd-skeptic-agent`, `gsd-advocate-agent`, `gsd-architect-agent` as three separate Task() calls.
+
+**Why it's wrong:** Three spawns share no context; the Skeptic cannot see the Architect's objection and build on it. Coordination requires writing intermediate state files and re-reading them, adding fragility. The convergence brake (does round N have < 1 new objection vs N-1?) requires shared state.
+
+**Do this instead:** Three inline role switches in the orchestrator, each reading the same artifact and the prior round's objections. Shared context window is the feature, not a limitation.
+
+---
+
+## Scalability Considerations
+
+The v1.6 harness is designed for 5–10 parallel GSD sessions, not thousands. The relevant scaling question is: what breaks when the overnight runner processes 8-10 phases across 2-3 milestones?
+
+| Scale | Concern | Design Response |
+|-------|---------|----------------|
+| 1 phase | Initial validation run | Single-phase overnight; human reads full ledger |
+| 5-10 phases (1 milestone) | Mailbox gets 15-30 questions | `mailbox review --status pending` filters; `--run run-id` scopes |
+| 2-3 concurrent milestones | Multiple overnight runners | Run IDs are isolated; no shared mutable state |
+| Ledger growth | JSONL files grow over time | Ledger is per-run, archived on run complete; no unbounded growth |
+
+Context window is the real scaling constraint for multi-phase overnight runs: `autonomous.md` re-reads ROADMAP.md after each phase, which keeps context fresh, but deeply nested `smart_discuss` over many phases accumulates. The `--from N` flag on overnight handles restarts after context-window degradation.
 
 ---
 
 ## Sources
 
-- `/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.planning/PROJECT.md` — v1.4 requirements and constraints
-- `/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.planning/codebase/ARCHITECTURE.md` — layer definitions and patterns
-- `/Users/itsoneword/Downloads/devProjects/GSD/get-shit-done/.planning/codebase/STRUCTURE.md` — file locations and naming conventions
-- `get-shit-done/workflows/discuss-phase.md` — existing discuss workflow (direct inspection)
-- `get-shit-done/workflows/ui-phase.md` — UI-SPEC orchestration pattern (direct inspection)
-- `agents/gsd-ui-researcher.md` — UI-SPEC researcher agent pattern (direct inspection)
-- `get-shit-done/templates/UI-SPEC.md` — UI-SPEC template structure (direct inspection)
-- `get-shit-done/bin/lib/init.cjs` — `cmdInitPlanPhase` artifact resolution pattern (direct inspection)
-- `get-shit-done/bin/gsd-tools.cjs` — command registry structure (direct inspection)
+- `.planning/PROJECT.md` — v1.6 requirements, constraints, trust ladder principle (direct inspection)
+- `get-shit-done/workflows/discuss-phase.md` — `question_triage` write-back pattern, `--auto` mode (direct inspection)
+- `get-shit-done/workflows/autonomous.md` — `smart_discuss` sub-step, harness integration points (direct inspection)
+- `get-shit-done/bin/lib/lesson.cjs` — JSONL ledger pattern (append/list/filter/update) used as implementation template (direct inspection)
+- `get-shit-done/bin/lib/trace.cjs` — second JSONL telemetry pattern confirming the convention (direct inspection)
+- `get-shit-done/bin/lib/worktree.cjs` — worktree isolation API (direct inspection)
+- `get-shit-done/bin/gsd-tools.cjs` — CLI router structure and subcommand registration pattern (direct inspection)
+- `.planning/telemetry/agent-trace.jsonl` — live example of JSONL event format (direct inspection)
+- `.planning/research/ARCHITECTURE.md` (v1.4) — prior integration architecture document for reference (direct inspection)
+
+---
+
+*Architecture research for: GSD v1.6 Autonomous Supervision Harness*
+*Researched: 2026-06-10*
