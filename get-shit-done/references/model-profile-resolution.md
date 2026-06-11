@@ -4,11 +4,13 @@ Resolve model profile once at the start of orchestration, then use it for all Ta
 
 ## Resolution Pattern
 
+Use `gsd-tools resolve-model` — it handles profile lookup, per-agent `model_overrides`, non-Claude runtime detection, and optional alias-to-ID mapping in one call:
+
 ```bash
-MODEL_PROFILE=$(cat .planning/config.json 2>/dev/null | grep -o '"model_profile"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "balanced")
+PLANNER_MODEL=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-planner --raw)
 ```
 
-Default: `balanced` if not set or config missing.
+Default: `balanced` profile if not set or config missing.
 
 ## Lookup Table
 
@@ -20,17 +22,16 @@ Look up the agent in the table for the resolved profile. Pass the model paramete
 Task(
   prompt="...",
   subagent_type="gsd-planner",
-  model="{resolved_model}"  # "inherit", "sonnet", or "haiku"
+  model="{resolved_model}"  # e.g. "fable", "opus", "sonnet", "haiku", or "inherit"
 )
 ```
 
-**Note:** Opus-tier agents resolve to `"inherit"` (not `"opus"`). This causes the agent to use the parent session's model, avoiding conflicts with organization policies that may block specific opus versions.
+**Note:** Per-agent `model_overrides` in `.planning/config.json` take precedence over the profile and pass through verbatim — any alias the runtime accepts is valid (e.g. `fable` on Claude Code).
 
-If `model_profile` is `"inherit"`, all agents resolve to `"inherit"` (useful for OpenCode `/model`).
+If `model_profile` is `"inherit"`, all agents resolve to `"inherit"` (useful for runtimes with live model switching, e.g. OpenCode `/model`). Non-Claude runtimes force `"inherit"` automatically.
 
 ## Usage
 
-1. Resolve once at orchestration start
-2. Store the profile value
-3. Look up each agent's model from the table when spawning
-4. Pass model parameter to each Task call (values: `"inherit"`, `"sonnet"`, `"haiku"`)
+1. Resolve once at orchestration start (one `resolve-model` call per agent type)
+2. Store the resolved values
+3. Pass the model parameter to each Task call (values: `"fable"`, `"opus"`, `"sonnet"`, `"haiku"`, `"inherit"`)
