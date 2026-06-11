@@ -2,6 +2,12 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.5.2] - 2026-06-11
+
+- Fix stale MODEL_ALIAS_MAP: retired claude-haiku-3-5 and deprecated claude-opus-4-0 replaced with current aliases; fable added
+- Document `fable` as a `model_overrides` value with cost guidance (verbatim pass-through to the Task call)
+- Fix model-profile-resolution doc drift: `gsd-tools resolve-model` is canonical; opus-tier never resolved to inherit
+
 ## [1.5.1] - 2026-06-08
 
 Patch: fix stale-hooks false warning. Installs/updates now delete the v1.5-renamed legacy gsd-*.js hook files from disk (previously only their settings.json registrations were cleaned), and the update checker's stale-hook scan targets the current gsd2-* hooks instead of the orphaned legacy gsd-* set.
