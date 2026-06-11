@@ -14,19 +14,23 @@ const TOOLS_PATH = path.join(__dirname, '..', 'get-shit-done', 'bin', 'gsd-tools
  * @param {string|string[]} args - Command string (shell-interpreted) or array
  *   of arguments (shell-bypassed via execFileSync, safe for JSON and dollar signs).
  * @param {string} cwd - Working directory.
+ * @param {object} [opts] - Optional options. opts.env overrides the child-process env.
  */
-function runGsdTools(args, cwd = process.cwd()) {
+function runGsdTools(args, cwd = process.cwd(), opts = {}) {
+  const childEnv = opts.env !== undefined ? opts.env : { ...process.env };
   try {
     let result;
     if (Array.isArray(args)) {
       result = execFileSync(process.execPath, [TOOLS_PATH, ...args], {
         cwd,
+        env: childEnv,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } else {
       result = execSync(`node "${TOOLS_PATH}" ${args}`, {
         cwd,
+        env: childEnv,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       });
