@@ -356,6 +356,41 @@ Include inline `confidence:` and `source:` and the marker `<!-- resolved inline 
 **Skip micro-research when:** question is clearly preference; codebase already answers it; prior phases decided it; question is scope/business logic.
 
 **Budget:** 0-5 micro-research calls per session. Reserve for genuinely ambiguous technical decisions where getting it wrong costs significant rework.
+
+**Escalation evaluator (harness runs only — fires only when `GSD_RUN_ID` is set):**
+
+After the resolution loop settles a decision (HIGH or MEDIUM auto-decide, or LOW exhaustion) and any write-back to CONTEXT.md is done, check for a harness run context:
+
+- If `GSD_RUN_ID` is NOT set (normal interactive session): skip this entire sub-step — no contract evaluation, no ledger append, zero behavior change.
+- If `GSD_RUN_ID` IS set, for EACH decision the loop resolved autonomously:
+
+1. Read `get-shit-done/references/escalation-contract.md` (once per session is enough).
+2. Apply the four criteria as membership checks against the contract's condition lists (inline reasoning — never a Task() spawn):
+   - irreversibility, security boundary, scope change, spec ambiguity
+3. Compute the verdict BEFORE any ledger write (the ledger is write-once; there is no patch). Compute `escalation_verdict` and `escalation_reason` first, BEFORE the single `ledger append` call:
+   - Any condition met → `escalation_verdict: "park-and-ask"`, `escalated: true`
+   - LOW after budget exhaustion → spec ambiguity condition 2 fires → `park-and-ask`, `escalated: true`
+   - No condition met, confidence HIGH → `"proceed"`, `escalated: false`
+   - No condition met, confidence MEDIUM → `"proceed-and-log"`, `escalated: false`
+   - Borderline (condition resembles but does not literally match): `proceed-and-log` — EXCEPT borderline irreversibility or security → `park-and-ask` (per the contract's tie-break rules)
+4. Append the complete record in ONE call:
+
+```bash
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" ledger append --data '{
+  "decision": "<the resolved recommendation>",
+  "alternatives": ["<alt considered>", "..."],
+  "evidence": "<loop source/reasoning summary>",
+  "confidence": "<HIGH|MEDIUM|LOW>",
+  "escalated": <true|false>,
+  "escalation_verdict": "<proceed|proceed-and-log|park-and-ask>",
+  "escalation_reason": "<criterion + condition number that fired, or: all criteria negative>",
+  "phase": <phase number>,
+  "context": "discuss-phase: question_triage",
+  "question": "<the original question text>"
+}'
+```
+
+5. If the verdict is `park-and-ask`: STILL ask the human directly in this session, exactly as discuss-phase normally would (Phase 11 interactive calibration mode). Branch parking + mailbox routing arrive in Phase 12 — do not write to the mailbox here.
 </question_triage>
 
 **Discussion guidelines:**
