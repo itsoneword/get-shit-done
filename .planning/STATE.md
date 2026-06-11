@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Phase 12 context gathered
-last_updated: "2026-06-11T21:23:49.759Z"
+stopped_at: Completed 11-escalation-contract-discuss-phase-wiring-01-PLAN.md
+last_updated: "2026-06-11T21:29:44.973Z"
 progress:
   total_phases: 15
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 ## Current Position
 
-Phase: 10 (decision-ledger-cli-foundation) — EXECUTING
+Phase: 11 (escalation-contract-discuss-phase-wiring) — EXECUTING
 Plan: 2 of 2
 
 ## Project Reference
@@ -22,7 +22,7 @@ Plan: 2 of 2
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 10 — decision-ledger-cli-foundation
+**Current focus:** Phase 11 — escalation-contract-discuss-phase-wiring
 
 ## Performance Metrics
 
@@ -48,6 +48,8 @@ Recent decisions affecting current work:
 - [Phase 10]: Required-field validation uses 'in' operator so escalated:null passes (field present, value nullable)
 - [Phase 10]: Run-context gate enforces GSD_RUN_ID or explicit arg; interactive sessions always hit exit 1 (never silent write)
 - [Phase 10]: Mailbox append-only: no writeMailbox/cmdUpdate export; question is sole required field; run_id always forced to effectiveRunId
+- [Phase 11-escalation-contract-discuss-phase-wiring]: Contract is self-contained (embeds tier definitions) rather than referencing REQUIREMENTS.md — matches resolution-loop.md pattern
+- [Phase 11-escalation-contract-discuss-phase-wiring]: Tie-break default is proceed-and-log; irreversibility/security exception is park-and-ask — asymmetric by design (wrong scope/ambiguity call is reviewable; wrong security/irreversible call is not)
 
 ### Pending Todos
 
@@ -67,6 +69,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-11T21:23:49.754Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/v1.6/phases/12-park-don-t-block-mailbox/12-CONTEXT.md
+Last session: 2026-06-11T21:29:44.968Z
+Stopped at: Completed 11-escalation-contract-discuss-phase-wiring-01-PLAN.md
+Resume file: None
