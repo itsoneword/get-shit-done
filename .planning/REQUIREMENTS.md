@@ -74,13 +74,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| LEDGER-01 | Phase 10 | Pending |
+| LEDGER-02 | Phase 10 | Pending |
+| LEDGER-03 | Phase 10 | Pending |
+| ESC-01 | Phase 11 | Pending |
+| ESC-02 | Phase 11 | Pending |
+| ESC-03 | Phase 11 | Pending |
+| PARK-01 | Phase 12 | Pending |
+| PARK-02 | Phase 12 | Pending |
+| PARK-03 | Phase 12 | Pending |
+| PARK-04 | Phase 12 | Pending |
+| RUN-01 | Phase 13 | Pending |
+| RUN-02 | Phase 13 | Pending |
+| RUN-03 | Phase 13 | Pending |
+| RUN-04 | Phase 13 | Pending |
+| LOOP-01 | Phase 14 | Pending |
+| LOOP-02 | Phase 14 | Pending |
+| TRIAGE-01 | Phase 15 | Pending |
+| TRIAGE-02 | Phase 15 | Pending |
 
 **Coverage:**
-- v1.6 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️ (roadmap pending)
+- v1.6 requirements: 18 total
+- Mapped to phases: 18
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-10*
-*Last updated: 2026-06-10 after initial definition*
+*Last updated: 2026-06-10 — traceability filled after roadmap creation (18 requirements, Phases 10-15)*

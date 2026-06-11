@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: defining-requirements
-stopped_at: Milestone v1.6 started — defining requirements
+status: ready-to-plan
+stopped_at: Roadmap created — Phase 10 ready to discuss/plan
 last_updated: "2026-06-10T00:00:00.000Z"
 last_activity: 2026-06-10
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,25 +15,24 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-10 — Milestone v1.6 Autonomous Supervision Harness started
+Phase: 10 of 15 (Decision Ledger + CLI Foundation)
+Plan: — (not started)
+Status: Ready to plan
+Last activity: 2026-06-10 — v1.6 roadmap created (6 phases, 18 requirements mapped)
 
-Carry-over from v1.5: archival via /gsd2:complete-milestone pending; human UAT open for phases 02/06/09.
+Progress: [░░░░░░░░░░] 0%
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Milestone v1.6 — requirements definition
+**Current focus:** Phase 10 — Decision Ledger + CLI Foundation
 
 ## Performance Metrics
 
 **Velocity:**
-
-- Total plans completed: 0
+- Total plans completed: 0 (v1.6)
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -44,97 +43,11 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Classify, don't ask: Router infers domain from phase description; no yes/no gates
-- Observability in spec, not implementation: Logging/tracing is a design decision
-- Framework-agnostic spec with pattern references: Show topologies without prescribing tools
-- On-demand docs, not inline: One agent reads all artifacts; avoids fragmented inline docs
-- [Phase 01-domain-router]: Domain classification router inserted into discuss-phase Step 5.5 as inline LLM logic -- no new agent or CLI command
-- [Phase 01-domain-router]: CONTEXT.md domain fields (Detected domain/Evidence/Confirmed by user) are the Phase 2 stub -- no additional config or state files needed
-- [Phase 01-domain-router]: Domain classification reads Detected domain from CONTEXT.md in plan-phase step 5.6 rather than re-running keyword grep
-- [Phase 01-domain-router]: Agentic stub in plan-phase is an active AGENT-SPEC.md check that skips silently when file missing — clean hook for Phase 2
-- [Phase 02-agent-spec]: [Phase 02-01]: Test contract format mirrors TEST-SPEC.md exactly (Action/Observables/Pass criteria) for SPEC-04 structural reuse
-- [Phase 02-agent-spec]: [Phase 02-01]: Observability section uses three required subsections (Tracing, Boundary Logging, Failure Diagnosis) so checker can validate concretely
-- [Phase 02-agent-spec]: [Phase 02-01]: AGENTIC-PATTERNS.md uses GSD's own workflows (discuss/plan/execute pipeline, domain router, wave executor) as concrete real-world examples
-- [Phase 02-agent-spec]: Used Node:test runner for new test (Jest not a project dependency)
-- [Phase 02-agent-spec]: AGENT-SPEC discovery added to both init plan-phase and execute-phase for symmetry
-- [Phase 02-agent-spec]: [Phase 02-03] Researcher and checker personas defined inline in agent-spec-phase.md prompts (no separate agent .md files), matching ui-phase.md convention
-- [Phase 02-agent-spec]: [Phase 02-03] Checker uses binary PASS/FLAG/FAIL criteria; Observability dimension treats TBD or standard logging as automatic FAIL
-- [Phase 02-agent-spec]: [Phase 02-03] discuss-phase change is additive one-line (agent-spec-phase shown alongside ui-phase, not replacing)
-- [Phase 03-documentation-agent]: [Phase 03-02] .claude/ runtime copy is gitignored; commit only commands/gsd2/*.md source — install.js propagates to runtime
-- [Phase 03-documentation-agent]: existing_subsystems filter excludes both _gaps.md and _proposed.md (updater scratch file)
-- [Phase 03-documentation-agent]: completed_phases_since returns all [x] phases (not date-filtered) — orchestrator diffs against prior map
-- [Phase 03-documentation-agent]: document-mapper/updater profile = sonnet/sonnet/haiku (higher balanced than codebase-mapper since narrative writing needs more reasoning)
-- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-02] File-level granularity (no line numbers) for the dependency graph — keeps it readable and stable across edits
-- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-02] Subcommand caller regex tolerates quoted absolute path (gsd-tools.cjs["]? <verb>) since workflows wrap paths in double quotes
-- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-02] Distinguish callers (any reference) from spawned_by (Task() invocations) so Risk Surface for 04-03 cleanly identifies what loop-mode adapter must preserve
-- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] Scoped phase slice anchors on currentPhase || nextPhase || phases[0] with [anchor-1, anchor+2] window
-- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] Slug cap order: slice(0, 45) THEN strip trailing hyphen — handles edge cases where slice lands on a separator
-- [Phase 04-verification-harness-and-context-efficiency]: [Phase 04-01] All edits mirrored in source (get-shit-done/, commands/) AND runtime (.claude/) — only source committed since runtime is gitignored
-- [Phase 04]: [Phase 04-03] gsd-debugger needed no source change — find_root_cause_only mode + symptoms_prefilled flag pre-existed; verified by grep, no commit
-- [Phase 04]: [Phase 04-03] verify expect: regex requires /pattern/ wrapping — bare strings treated as equality (matches plan template documentation)
-- [Phase 04]: [Phase 04-03] cmdVerifyCommands always emits JSON regardless of --raw — loop verifier and jq pipelines need parseable output unconditionally
-- [Phase 04]: [Phase 04-03] Loop verifier Step LOOP-1 calls 'verify commands <plan_path>' — plan file is source of truth; inline verify_commands in contract is redundancy/shape-validation only
-- [Phase 04]: [Phase 04-03] Wrote new parseVerifyCommands instead of extending parseMustHavesBlock — latter has latent 4-space-indent bug; reused by other verify subcommands; risk-isolated new helper
-- [Phase 04]: Deferred Task 4 (manual harness dogfood) — GSD self-verification needs its own workflow design
-- [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] phasesDir(cwd) is the single chokepoint; planningPaths().phases is a getter that delegates to it, cascading partition-awareness to ~13 indirect callers
-- [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] phasesDir back-compat fallback: when STATE.md milestone is set but partitioned dir doesn't exist AND legacy dir exists, return legacy (lets retrofit migration run without breakage)
-- [Phase 05-milestone-versioned-phase-ids]: [Phase 05-01] Init JSON contract: milestone_root/partition_root/legacy_layout_detected/prior_milestones[] are additive fields spread into result objects — existing fields unchanged
-- [Phase 05-02]: Manifest deletion happens BEFORE git add — manifest is a recovery scratch file, not a commit artifact
-- [Phase 05-02]: migration.cjs reuses buildMilestoneContext(cwd).milestone_root for STATE.md milestone lookup; also references extractCurrentMilestone — no third local parser (RESEARCH.md §3 anti-pattern)
-- [Phase 05-02]: Pre-flight clean-tree check scoped to .planning/ only (not full repo) — user may have unrelated WIP in src/
-- [Phase 05-02]: PATTERN_BARE swept only inside todos/ and quick/; root files (PROJECT/ROADMAP/STATE/cross-phase-notes) only get FULL_PATH rewrites — protects free prose like 'see phases 1-3'
-- [Phase 05]: W4: migration_hint is informational auto-detect at every init call; actual migration requires explicit --yes confirmation — auto-retrofit means detect+prompt not auto-mutate
-- [Phase 05]: Empty legacy phases/ dir left by git mv is auto-removed post-moves in migration.cjs via rmdirSync (best-effort)
-- [Phase 01]: gsd-workflow-guard.js registration gap left as-is (pre-existing; wiring it is out of scope for Plan 01)
-- [Phase 01]: Uninstall array uses union of old+new hook names for partial-upgrade safety
-- [Phase 01]: statusLine migration is a two-hop chain: statusline.js->gsd-statusline.js->gsd2-statusline.js (both blocks preserved in cleanupOrphanedHooks)
-- [Phase 01]: Default-ON gate placed after .planning/ path filter so config read only fires for files that would be scanned
-- [Phase 01]: PreToolUse Write|Edit entry holds both prompt-guard and read-guard in one hooks[] array (cleanest; mirrors core shape)
-- [Phase 01]: Separate PostToolUse entry for read-injection-scanner with matcher 'Read' so it scopes correctly and does not fire on all post-tool events
-- [Phase 02]: Loop contract landed in committed source (get-shit-done/references/); plain text load-bearing strings for literal grep acceptance
-- [Phase 02]: RSCH-02/03 test groups intentionally RED at Wave 0 — target wiring files not modified until Plans 02/03
-- [Phase 02]: plan-phase spawn assertion whole-file scoped to tolerate Plan 03 ## 9.3 sub-step placement
-- [Phase 02]: MEDIUM auto-decides in discuss-phase question_triage (does NOT fall through to ask-user); LOW runs bounded re-research loop before escalating to human
-- [Phase 02]: Signal-strength pre-check inserted before TECHNICAL/HYBRID spawn — STRONG decisions in CONTEXT.md skipped without spawning micro-research (RSCH-03)
-- [Phase 02]: Write-back uses [STRONG, specialist-backed] for HIGH, [WEAK, specialist-backed] for MEDIUM, with inline confidence/source and resolution loop marker
-- [Phase 02]: TECHNICAL UNKNOWN is a new return signal from gsd-planner (not PLANNING INCONCLUSIVE) — planner surfaces, orchestrator resolves, honoring tool-grant boundary
-- [Phase 02]: Signal-strength pre-check in plan-phase step 9.3 skips resolution loop for [STRONG] decisions already in CONTEXT.md (RSCH-03)
-- [Phase 03-execution-detail-enrichment]: PATH-TOKEN RULE: source agent uses ~/.claude/ token; runtime uses absolute path; diff -q not asserted for agent files
-- [Phase 03-execution-detail-enrichment]: planner-antipatterns.md content folded as ## Planner Anti-Patterns in universal-anti-patterns.md; no third standalone file
-- [Phase 03-execution-detail-enrichment]: cp after Write for byte-identity: write source once, cp to runtime — guarantees diff -q pass
-- [Phase 03-execution-detail-enrichment]: Python-Specific Bugs placed before </patterns> in common-bug-patterns.md, with integer division entry retained as historical context
-- [Phase 04]: trace.cjs cmdTrace writes to stdout directly, not via output() — avoids process.exit/polarity inversion
-- [Phase 05-plan-loop-convergence-and-verify-fix]: Stall = non-decreasing BLOCKER+WARNING for 2 consecutive cycles; confirmable precisely at iteration 3; inline-only trajectory; both escalation branches reuse same three options
-- [Phase 05-plan-loop-convergence-and-verify-fix]: Exact-count header anchor for parseMustHavesBlock; childIndent derived dynamically from first non-blank child of must_haves: so function is format-agnostic
-- [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: git-worktree.md ships technique ONLY; Phase 7 owns execute-phase add→wave→merge orchestration and parallel-safety gate
-- [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: CSO rule encoded in artifact-authoring.md: description = WHEN (triggering conditions only), never a workflow summary — prevents Claude from skipping artifact body
-- [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: GSD form-factor bias: loops/skills over new commands; prefer reference + workflow-edit over new agent; new commands only for genuinely distinct lifecycles
-- [Phase 06]: 06-02: Reference-load at consumption point only (review.md present_results, ship.md optional_review) — no --reviews handler added to plan-phase.md
-- [Phase 06-skill-self-sufficiency-audit-and-port-superpo]: Iron Law watch-it-fail enforcement inserted inline in RED step (compact); exempt from tdd written as plain text to satisfy grep acceptance criteria; gsd-local-patches third copy received only narrow Gap 1 exemption-clause edit
-- [Phase 07-parallel-multi-session-safety-planning-ergono]: cmdWorktreeMerge exits 0 on conflict ({clean:false}) — conflict is a detected state not a command error; 07-06 JSON-parses to decide auto-merge vs pause
-- [Phase 07-parallel-multi-session-safety-planning-ergono]: Executor-targeting caveat: on-disk isolation proven but subagent cwd resets between bash calls so executor writing absolute repo-root paths lands in MAIN tree; 07-06 must fall back to in-place + checkpoint
-- [Phase 07-parallel-multi-session-safety-planning-ergono]: extractFrontmatter reuse in cmdInitTodos for depends_on/related_to parsing — handles both inline and block YAML forms; already imported, no new dep
-- [Phase 07-parallel-multi-session-safety-planning-ergono]: todo schema: required=[created,title,area], optional=[depends_on,related_to,files] — existing todos without new fields remain valid
-- [Phase 07-parallel-multi-session-safety-planning-ergono]: SC3 substrate only in 07-02 — gate reads todo edges in 07-05; mark-complete deferred to 07-05
-- [Phase 07]: Expected hooks list derived from install.js; settings.json parity report-only (installer owns settings.json); checkSourceRuntimeSymmetry exported for 07-06 post-merge reuse
-- [Phase 07]: Backlog command source tracked in commands/gsd2/ (not runtime-only as plan claimed); edited source + copied to .claude/ runtime
-- [Phase 07]: next-backlog-id allocator unions dir scan + ROADMAP ## Backlog heading scan to handle sparse/deletion edge cases
-- [Phase 07]: Shell out for roadmap analyze + phase-plan-index (process.exit in output() makes in-process calls corrupt stdout)
-- [Phase 07]: parallel-gate: resolve todo file existence FIRST then fall back to phase-number form (date-prefixed slugs start with digit)
-- [Phase 07]: parallel-gate: related_to on todos is context-only — does NOT trigger axis-B refuse; only depends_on triggers refuse
-- [Phase 08]: counters: vocabulary uses exact ## header strings from common-bug-patterns.md (Phase 9 join key) — not slug form
-- [Phase 08]: INDEX is strictly 4-column (pattern_id / constraint / language / file) — guards fat-INDEX anti-pattern
-- [Phase 08]: requests v2.31.0 flat layout: requests/adapters.py (not src/), lines 500-519 chosen for except-wrap chain
-- [Phase 08]: pydantic BaseModel.__init__ (240-260) chosen over model_validate (678-724) — compact parse contract, within excerpt size budget
-- [Phase 08]: env-schema (fastify/env-schema v7.0.0) used for config-env-validation over fastify config-validator.js (auto-generated); shows env-read + schema-validate + fail-fast in one readable function
-- [Phase 07-parallel-multi-session-safety-planning-ergono]: Executor-targeting fallback: subagent cwd resets so absolute-path writes land in main tree; 07-06 falls back to in-place + checkpoint
-- [Phase 08-validated-example-corpus]: INDEX rows written in Wave 3 integration plan to avoid file-ownership collision between parallel Wave 2 plans
-- [Phase 08-validated-example-corpus]: gsd-planner.md pointer uses ~/.claude/ token; agent file not cp'd to runtime
-- [Phase 09-skillopt-style-self-improving-skills]: cmdScan is ledger-recurrence-ONLY in v1; BLOCKER/telemetry scanning deferred per scope guard
-- [Phase 09-skillopt-style-self-improving-skills]: attributeFile() is a pure function with .claude/ and gsd-local-patches/ path guards; AGENT_FILE_MAP static table for agent_type -> source file
-- [Phase 09-02-teach-command]: bounded-edit cap set at <=20 lines / one contiguous section — planner ASSUMPTION (no published SkillOpt number; GSD defines its own limit)
-- [Phase 09-02-teach-command]: /gsd2:teach workflow + command committed as SOURCE only; npm run dev propagates to .claude/ runtime; no manual copy step
-- [Phase 09-02-teach-command]: ratify gate is the only human round-trip; advisor-critic runs inline (no sub-agent); no auto-apply path exists
+- Harness proposes, never disposes — all autonomous decisions auditable from ledger alone, no transcript replay
+- Orchestrator-level only — subagents lack Skill/Agent grants; runner + evaluator run at top-level session
+- Zero new npm dependencies — JSONL via fs, headless claude -p, system cron; all primitives confirmed present
+- Trust ladder — interactive single-phase ledger review + escalation calibration gates overnight multi-phase runs (ESC-03 is a structural gate before Phase 13)
+- Wave-0 required for Phase 13 — headless session lifespan and bypassPermissions behavior are undocumented; must be empirically tested before scheduling logic is built
 
 ### Pending Todos
 
@@ -144,52 +57,16 @@ Recent decisions affecting current work:
 - Update command should sync project-local hooks (tooling)
 - generate-claude-md cleanup + hybrid shape + sidecar staleness mitigation (tooling)
 
+Carry-over from v1.5: archival via /gsd2:complete-milestone pending; human UAT open for phases 02/06/09.
+
 ### Blockers/Concerns
 
-- [Phase 04-03 discovery] parseMustHavesBlock in frontmatter.cjs uses 4-space-indent regex; real plans use 2-space; 'verify artifacts' and 'verify key-links' silently return 'no blocks found' for ALL current plans. Surfaced while implementing parseVerifyCommands. Scheduled for Phase 5 (FIX-01, renumbered from Phase 4 when Agent Observability was inserted as Phase 4).
+None for v1.6 (Phase 10 has no external dependencies).
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260507-u0a | Consolidate /gsd2:progress into single init-progress CLI call; wire dormant --scoped flag | 2026-05-07 | 8597abe | [260507-u0a-consolidate-gsd2-progress-into-single-in](./quick/260507-u0a-consolidate-gsd2-progress-into-single-in/) |
-| Phase 05-milestone-versioned-phase-ids P01 | 27 | 3 tasks | 11 files |
-| Phase 05-milestone-versioned-phase-ids P02 | 10min | 2 tasks | 4 files |
-| Phase 05 P03 | 0 | 3 tasks | 3 files |
-| Phase 01 P01 | 6 | 3 tasks | 10 files |
-| Phase 01-security-hooks P02 | 5min | 3 tasks | 9 files |
-| Phase 02-autonomous-technical-resolution P01 | 2 | 2 tasks | 2 files |
-| Phase 02 P02 | 1 | 2 tasks | 1 files |
-| Phase 02 P03 | 83 | 2 tasks | 2 files |
-| Phase 03-execution-detail-enrichment P02 | 17 | 2 tasks | 4 files |
-| Phase 03-execution-detail-enrichment P01 | 16 | 2 tasks | 4 files |
-| Phase 04-agent-observability-telemetry P03 | 25 | 2 tasks | 3 files |
-| Phase 05-plan-loop-convergence-and-verify-fix P02 | 12 | 2 tasks | 2 files |
-| Phase 05-plan-loop-convergence-and-verify-fix P01 | 15 | 2 tasks | 2 files |
-| Phase 06-skill-self-sufficiency-audit-and-port-superpo P03 | 30 | 3 tasks | 5 files |
-| Phase 06 P02 | 5 | 2 tasks | 6 files |
-| Phase 06-skill-self-sufficiency-audit-and-port-superpo P01 | 15 | 3 tasks | 9 files |
-| Phase 07-parallel-multi-session-safety-planning-ergono P01 | 17min | 3 tasks | 5 files |
-| Phase 07-parallel-multi-session-safety-planning-ergono P02 | 7 | 2 tasks | 4 files |
-| Phase 07 P03 | 25 | 2 tasks | 5 files |
-| Phase 07 P04 | 35 | 2 tasks | 6 files |
-| Phase 07 P05 | 51min | 1 tasks | 4 files |
-| Phase 08-validated-example-corpus P01 | 8 | 2 tasks | 3 files |
-| Phase 08 P02 | 10 | 2 tasks | 3 files |
-| Phase 08 P03 | 7 | 2 tasks | 3 files |
-| Phase 07-parallel-multi-session-safety-planning-ergono P06 | multi-session | 3 tasks | 4 files |
-| Phase 08-validated-example-corpus P04 | 8 | 2 tasks | 2 files |
-| Phase 09-skillopt-style-self-improving-skills P01 | 16 | 3 tasks | 3 files |
-
-### Roadmap Evolution
-
-- v1.5 roadmap created: 4 phases — Security Hooks, General Research Agent, Execution-Detail Enrichment, Plan-Loop Convergence and Verify Fix
-- Phase 6 added (2026-06-05): Skill Self-Sufficiency — audit all 14 superpowers skills vs GSD coverage and port the genuine gaps (execution-time TDD discipline, receiving-code-review, writing-skills, worktree-isolation default) so GSD is self-contained. superpowers plugin disabled by user this session; hard-removal is a follow-up. Sequenced after Phase 5, no hard dependency.
-- Phase 8 added (2026-06-08): Skill Self-Improvement & Validated Example Corpus — two enhancement threads, both partly seeded already: (1) SkillOpt-informed self-improvement loop for skills/commands/reference prose, optimizing against real execution traces/verifier outcomes; (2) curated corpus of validated handwritten code examples from real reference projects, replacing synthetic examples. Absorbs the SkillOpt todo + CODE-EXAMPLES.md / IDEAS.md #7. Sequenced after Phase 7, no hard dependency. (Note: `gsd-tools phase add` mis-numbered this 1000 because the 999.x backlog phases inflate the max-integer calc — manually corrected to 8; root cause is the same 999.x scheme Phase 7 scope item 5 fixes.)
+Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless session lifespan / bypassPermissions behavior must be confirmed before discuss-phase for that phase.
 
 ## Session Continuity
 
-Last session: 2026-06-08T15:57:08.558Z
-Last activity: 2026-06-08
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-06-10
+Stopped at: Roadmap written — Phase 10 ready to discuss/plan
 Resume file: None

@@ -1,202 +1,265 @@
-# Roadmap: GSD v1.5 Capability Port
+# Roadmap: GSD v1.6 Autonomous Supervision Harness
 
-## Overview
+## Milestones
 
-v1.5 closes the fork's execution-detail gap by selectively porting four capability clusters from gsd-core. Phase 1 delivers standalone security guard hooks — the highest-confidence, lowest-effort addition. Phase 2 builds an autonomous technical-resolution loop (research → self-critique → decide) wired into discuss/plan, so technical unknowns resolve without bouncing back to the human. Phase 3 enriches execution with anti-pattern references and context-budget tooling. Phase 4 adds a code-level observability hook that logs every gsd-* subagent spawn (and its confidence verdict) to a structured telemetry file, making loop behavior grep-checkable. Phase 5 adds stall-detection to the plan revision loop and fixes the parseMustHavesBlock regression. Every port goes through the normal discuss → plan → execute → verify loop — adopted by understanding, not copied wholesale.
+- ✅ **v1.5 Capability Port** - Phases 1-9 (shipped 2026-06-08)
+- 🚧 **v1.6 Autonomous Supervision Harness** - Phases 10-15 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (1.1, 2.1): Urgent insertions (marked with INSERTED)
+<details>
+<summary>✅ v1.5 Capability Port (Phases 1-9) - SHIPPED 2026-06-08</summary>
 
-- [x] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (worktree-path-guard descoped — see CONTEXT) (completed 2026-06-03)
-- [x] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan, so they stop bouncing to the human — loops over new agents (RESHAPED 2026-06-04) (completed 2026-06-04)
-- [x] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier — context-budget tiers + utilization classifier reshaped out → doctor phase (RESHAPED 2026-06-04) (completed 2026-06-04)
-- [x] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse(Task|Agent) hook logs every gsd-* subagent spawn + scraped confidence verdict to .planning/telemetry/agent-trace.jsonl, with a minimal `gsd-tools trace` reader — zero prompt-file changes (completed 2026-06-05)
+- [x] **Phase 1: Security Hooks** - Port 3 standalone advisory guard hooks into hooks/ under gsd2-* naming, config-gated, no build dependency (completed 2026-06-03)
+- [x] **Phase 2: Autonomous Technical Resolution** - Resolve technical/domain unknowns via a research→self-critique confidence loop wired into discuss/plan (completed 2026-06-04)
+- [x] **Phase 3: Execution-Detail Enrichment** - Anti-pattern/bug-pattern reference docs (incl. Python), hybrid-loaded into planner/verifier (completed 2026-06-04)
+- [x] **Phase 4: Agent Observability & Telemetry** - Code-level PostToolUse hook logs every gsd-* subagent spawn + scraped confidence verdict (completed 2026-06-05)
 - [x] **Phase 5: Plan-Loop Convergence and Verify Fix** - Stall-detection in the plan revision loop plus parseMustHavesBlock 2-space-indent fix (completed 2026-06-06)
-- [x] **Phase 6: Skill Self-Sufficiency** - Audit all 14 superpowers skills vs GSD coverage, then port only the genuine gaps (execution-time TDD discipline, receiving-code-review rigor, skill-authoring guidance, worktree-isolation default) into GSD as native commands/references so the external plugin dependency can be dropped — removal itself is a follow-up (completed 2026-06-06)
-- [x] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + merge so concurrent sessions and quick-fixes stop silently overwriting each other (axis A — file coupling); a parallel-safety gate combining `depends_on` (axis B — decision coupling) + file-scope disjointness (reuses Phase 4 dep-graph) to greenlight/refuse concurrent work and forbid parallel discussion of dependent phases; `depends_on`/`related_to` on todo frontmatter; absorbs the doctor source↔runtime symmetry-check (folded from backlog, verifies no drift post-merge); migrates the confusing backlog ID scheme to B-prefixed IDs (B1, B2…) outside the phase-number space (completed 2026-06-08)
-- [x] **Phase 8: Validated Example Corpus** - Build a curated corpus of *validated handwritten* code examples mined from strong real-world reference projects, indexed by pattern (not by repo), with per-example commentary on what it solves and what not to cargo-cult — so GSD guidance stops leaning on plausible-but-untested LLM-generated examples. Also serves as the validated reference/eval substrate that Phase 9 needs. Absorbs CODE-EXAMPLES.md / IDEAS.md #7. (Split from the original combined Phase 8 on 2026-06-08.) (completed 2026-06-08)
-- [x] **Phase 9: Self-Improving Skills (feedback-driven)** - Online skill evolution: GSD's skill/command/reference prose learns from *real failures observed during development*. A manual `/teach` (primary) + auto-miner (suggests only) captures a lesson; the loop reads Phase 4 telemetry to attribute the culprit artifact, proposes a *bounded* edit, the human *ratifies*, it commits to source; lessons persist in a `.planning/lessons/` ledger. In the *spirit* of SkillOpt (bounded edits, accept-gate, reversibility) but NOT its offline benchmark — the eval-substrate/scorer was dropped as unbuildable on GSD's small-N data. Consolidation delegated to the future doctor. Absorbs the SkillOpt todo. (RESHAPED 2026-06-08 from "full eval-harness + batch optimizer".) (completed 2026-06-08)
+- [x] **Phase 6: Skill Self-Sufficiency** - Audit 14 superpowers skills, port genuine gaps (TDD discipline, code-review rigor, artifact authoring, worktree technique) (completed 2026-06-06)
+- [x] **Phase 7: Parallel Multi-Session Safety & Planning Ergonomics** - Worktree-isolated execution + parallel-safety gate (axis A/B) + symmetry-check + B-prefixed backlog IDs (completed 2026-06-08)
+- [x] **Phase 8: Validated Example Corpus** - Pattern-indexed corpus of validated handwritten code examples from real reference projects (completed 2026-06-08)
+- [x] **Phase 9: Self-Improving Skills (feedback-driven)** - Online skill-evolution loop: /gsd2:teach + lessons ledger + advisor-critic bounded edit + ratify gate (completed 2026-06-08)
+
+</details>
+
+### 🚧 v1.6 Autonomous Supervision Harness (In Progress)
+
+**Milestone Goal:** Delegate the human's job of monitoring 5-10 parallel GSD sessions to an agentic supervision loop with a predictable, auditable escalation mechanism — the human reviews one inbox of logged decisions and parked questions instead of babysitting tabs.
+
+**Guiding principle:** The harness proposes, never disposes. Trust ladder: validate on a single phase (read the ledger, score escalation precision) before widening to overnight multi-phase runs.
+
+- [ ] **Phase 10: Decision Ledger + CLI Foundation** - lib/ledger.cjs + lib/mailbox.cjs + gsd-tools subcommands — the shared persistence layer every other component calls
+- [ ] **Phase 11: Escalation Contract + discuss-phase Wiring** - Written escalation contract artifact, inline evaluator in discuss-phase, and trust-ladder calibration gate before overnight runs are permitted
+- [ ] **Phase 12: Park-Don't-Block Mailbox** - park-and-ask branch parking, mailbox inbox review command, staleness-checked resume, and stuck detection
+- [ ] **Phase 13: Overnight Runner** - /gsd2:overnight wrapping /gsd2:autonomous with ledger + escalation + worktree isolation + morning report (Wave-0 required first)
+- [ ] **Phase 14: Multi-Lens Discussion Loop** - /gsd2:discuss-loop with three-lens artifact judgment and content-delta convergence brake
+- [ ] **Phase 15: Resume Logic + Backlog Triage Worker** - autonomous.md resume path after mailbox answers + /gsd2:triage propose-only worker
 
 ## Phase Details
+
+<details>
+<summary>✅ v1.5 Phases 1-9 (complete — see git history for details)</summary>
 
 ### Phase 1: Security Hooks
 **Goal**: Users running GSD on agentic pipelines have a defense-in-depth hook layer that guards against prompt injection and out-of-worktree edits — config-gated, namespace-clean, with no TypeScript or core-lib dependency
 **Depends on**: Nothing (first phase)
 **Requirements**: SEC-01, SEC-02, SEC-03, SEC-04 (worktree-path-guard descoped to SEC-DEFER-01 per Phase 1 discussion)
-**Discussion focus**: RESOLVED in 01-CONTEXT.md — 3 advisory hooks (prompt-guard + read-injection-scanner default-on, read-guard opt-in); blanket `gsd2-*` rename incl. existing 4 hooks; config gating via `.planning/config.json` `hooks.*` keys mirroring `hooks.workflow_guard`; worktree-path-guard + validate-commit deferred
 **Success Criteria** (what must be TRUE):
   1. Running `npm run build:hooks` produces the 3 new `gsd2-*` guard hooks in hooks/dist/ alongside the renamed existing hooks — no build errors
   2. Running `gsd2 --claude --local` (or equivalent install) registers the new hooks in .claude/settings.json under `gsd2-*` filenames and removes stale `gsd-*` registrations
   3. Each new hook is independently enable/disable-able via a config.json key; the default posture (on vs opt-in) is documented per hook
   4. The hooks run from pure standalone JS — no import of a TypeScript-compiled lib or any new runtime dependency
-**Plans**: 2 (01 rename to gsd2-*, 02 port 3 new advisory hooks + gating)
+**Plans**: 2/2 complete
 
 ### Phase 2: Autonomous Technical Resolution
-**Goal**: Technical and domain unknowns are resolved by the model autonomously — researched, self-critiqued to a confidence threshold, and decided — so they stop bouncing back to the human. The human is reserved for genuine preference/taste ("do you want it to work this way?"), never "which technical approach." Wired into the GSD decision points that currently defer to the human.
-**Depends on**: Nothing (sequenced after Phase 1 by confidence; no technical dependency)
+**Goal**: Technical and domain unknowns are resolved by the model autonomously so they stop bouncing back to the human
+**Depends on**: Nothing
 **Requirements**: RSCH-01, RSCH-02, RSCH-03
-**Discussion focus**: RESOLVED in 02-CONTEXT.md — reshaped 2026-06-04 from "port a general research agent" to "autonomous technical-resolution loop" per the minimize-human-round-trips north-star. Key decisions: loops/skills over a new specialized agent; reuse `deep-research` (already does fan-out + adversarial-verify) rather than rebuild; close plan-phase's missing inline research path; tighten discuss-phase `question_triage` so LOW-confidence technical questions resolve via the loop instead of defaulting to the human.
 **Success Criteria** (what must be TRUE):
-  1. A reusable technical-resolution loop (research → self-critique → confidence verdict) exists, composed from existing capability — no new specialized agent. It raises LOW→HIGH confidence without human input where evidence allows.
-  2. A technical/HYBRID question arising in plan-phase is resolved inline (a path that does not exist today); discuss-phase's LOW-confidence fallback no longer defaults to asking the human when evidence can resolve it. A technical question reaches the human only when confidence stays LOW after the loop exhausts, or it is genuine preference.
-  3. The loop honors signal strength — skips `[STRONG]`/`[STRONG, user-override]` decisions — and records resolved technical decisions with confidence + source so they aren't re-asked downstream.
-**Plans**: 3 (01 loop contract + Wave 0 test, 02 discuss-phase LOW-branch wiring, 03 plan-phase orchestrator loop + gsd-planner surfacing)
+  1. A reusable technical-resolution loop (research → self-critique → confidence verdict) exists, raising LOW→HIGH confidence without human input where evidence allows
+  2. A technical/HYBRID question arising in plan-phase is resolved inline; discuss-phase's LOW-confidence fallback no longer defaults to asking the human when evidence can resolve it
+  3. The loop honors signal strength — skips STRONG decisions — and records resolved technical decisions with confidence + source
+**Plans**: 3/3 complete
 
 ### Phase 3: Execution-Detail Enrichment
-**Goal**: Planners and verifiers have codified reference docs for what good and bad code looks like (incl. Python), so plans and verifications draw on a shared "good/bad code" standard rather than improvising
-**Depends on**: Nothing (sequenced after Phase 2; no technical dependency)
+**Goal**: Planners and verifiers have codified reference docs for what good and bad code looks like (incl. Python)
+**Depends on**: Nothing
 **Requirements**: GUIDE-01, GUIDE-02
-**Reshaped-out requirements**: CTX-01, CTX-02 → doctor phase (see Discussion focus + REQUIREMENTS.md)
-**Discussion focus**: RESOLVED in 03-CONTEXT.md — reshaped 2026-06-04. Docs land in `references/` (established convention). Loading is **hybrid**: verifier eager-loads (`@`) the bug-pattern doc (bad code matters most at verify time); planner references the anti-pattern doc on-demand ("Read when relevant", like `tdd.md`) to keep context lean. Python content covers idioms, anti-patterns, typing conventions. The entire context-budget cluster (CTX-01 tiers, CTX-02 classifier) was reshaped OUT: the user rejected a human-facing context warning ("only need to fix it"); the keep-context-tiny goal is met structurally (partitioning/distillation), and the forward-looking piece — an agent-assisted **doctor** that detects documented-then-overwritten decisions and archives superseded ones — becomes its own phase (see `.planning/cross-phase-notes.md`).
 **Success Criteria** (what must be TRUE):
-  1. Anti-pattern and bug-pattern reference docs exist in references/ and are loaded per the hybrid scheme — bug-pattern doc eager-loaded by the verifier, anti-pattern doc referenced on-demand by the planner
-  2. The reference docs include Python-specific content (at minimum: Python anti-patterns, common bug patterns, and typing/idiom conventions) alongside the language-agnostic material
-**Plans**: 2 (01 common-bug-patterns.md + verifier eager-load; 02 universal-anti-patterns.md [folds planner-antipatterns] + planner on-demand pointer) — both Wave 1, parallel (no shared files)
+  1. Anti-pattern and bug-pattern reference docs exist in references/ and are loaded per the hybrid scheme
+  2. The reference docs include Python-specific content alongside language-agnostic material
+**Plans**: 2/2 complete
 
 ### Phase 4: Agent Observability & Telemetry
-**Goal**: GSD emits a structured, code-level telemetry log of agent activity — every subagent spawn (who/when/spawning-context) and its returned confidence verdict — so loop and feature behavior is verifiable by inspecting a record rather than eyeballing a transcript. Addresses the structural problem that each new prose-based feature gets harder to dogfood-test.
-**Depends on**: Nothing technically; sequenced BEFORE Phase 5 so convergence/stall-detection can consume the telemetry signal.
+**Goal**: GSD emits a structured, code-level telemetry log of agent activity so loop behavior is verifiable by inspecting a record rather than eyeballing a transcript
+**Depends on**: Nothing technically
 **Requirements**: OBS-01, OBS-02
-**Discussion focus** (captured 2026-06-04, researched 2026-06-05): Mechanism = Claude Code **hooks**, reusing the Phase 1 hook infrastructure. A `PostToolUse` hook (`hooks/gsd2-agent-trace.js`, modeled on `gsd2-context-monitor.js`) with `matcher: "Task|Agent"` (amended from `"Task"` — the runtime surfaces the spawn tool as `Agent` per transcript evidence) fires on every gsd-* subagent return and appends one JSONL record (ts, agent_type, description, desc_hash, scraped confidence, seq). A `PostToolUseFailure(Task|Agent)` entry captures crashed spawns as `agent.error`. **Observability lives in code/config, NOT in prompts** (explicit user requirement): confidence is scraped from the agent's return text via a tolerant regex — zero workflow/agent prose changes. Log = append-only `.planning/telemetry/agent-trace.jsonl` (gitignored); reader = minimal `gsd-tools trace` (tail + filter), not a pretty-printer. Default-on via `config.hooks.agent_trace`. **Two empirical unknowns gate the scraper** (resolved in a Wave-0 step before implementation): the runtime `tool_name` string (Task vs Agent) and the hook `tool_response` shape (content-array vs result-string).
 **Success Criteria** (what must be TRUE):
-  1. A code-level hook records every `gsd-*` subagent spawn to a structured log (timestamp, agent type, spawning context) with zero changes to workflow/agent prompt files
-  2. The log captures the confidence verdict of resolution/verifier agent returns, so a confidence-driven re-research (LOW → second spawn) is visible as distinct, timestamped, correlated entries
-  3. Telemetry is best-effort and non-blocking — a hook failure never interrupts the agent run, and it degrades cleanly in runtimes without hook support
-**Plans**: 3 (01 Wave-0 empirical fixture capture + scraper/extract TDD; 02 hook body + build/install/config/gitignore wiring + live e2e verify; 03 `gsd-tools trace` reader + tests) — 01 is Wave 0 (gates the scraper); 02 and 03 are Wave 1, parallel (no shared files)
+  1. A code-level hook records every gsd-* subagent spawn to a structured log with zero changes to workflow/agent prompt files
+  2. The log captures the confidence verdict of resolution/verifier agent returns
+  3. Telemetry is best-effort and non-blocking — a hook failure never interrupts the agent run
+**Plans**: 3/3 complete
 
 ### Phase 5: Plan-Loop Convergence and Verify Fix
-**Goal**: The plan revision loop detects when it has stalled (BLOCKER+WARNING counts stop decreasing) and escalates rather than silently cycling; and verify artifacts / verify key-links work correctly on all current plans (2-space-indent fix)
-**Depends on**: Nothing (sequenced after Phase 3; FIX-01 is a self-contained bug fix; CONV-01 touches plan-phase revision loop only)
+**Goal**: The plan revision loop detects stalls and escalates rather than silently cycling; verify artifacts / verify key-links work correctly on all current plans
+**Depends on**: Nothing
 **Requirements**: CONV-01, FIX-01
-**Discussion focus**: Stall-detection threshold (how many cycles of non-decreasing issue counts before escalation); escalation UX (hard stop vs soft prompt vs checkpoint); whether stall state is written to a file (like ceiling-reached CHECKPOINT) or inline; parseMustHavesBlock fix scope (2-space indent only, or generalize to N-space)
 **Success Criteria** (what must be TRUE):
-  1. When the plan revision loop runs max_iterations without the BLOCKER+WARNING count decreasing, it emits a STALL DETECTED block and escalates to the user rather than silently completing
-  2. Running `gsd-tools verify artifacts <plan-path>` on a plan with 2-space-indented must_haves block returns the correct artifact list (not "no blocks found")
-  3. Running `gsd-tools verify key-links <plan-path>` on a plan with 2-space-indented must_haves block returns the correct key-links (not "no blocks found")
-**Plans**: 2 plans (Wave 1, parallel)
-  - 05-01 — FIX-01: generalize parseMustHavesBlock to N-space indent (frontmatter.cjs + regression tests)
-  - 05-02 — CONV-01: stall-detection in the plan-phase revision loop (plan-phase.md)
+  1. When the plan revision loop runs max_iterations without BLOCKER+WARNING count decreasing, it emits STALL DETECTED and escalates
+  2. Running `gsd-tools verify artifacts <plan-path>` on a 2-space-indented must_haves block returns the correct artifact list
+  3. Running `gsd-tools verify key-links <plan-path>` on a 2-space-indented must_haves block returns the correct key-links
+**Plans**: 2/2 complete
+
+### Phase 6: Skill Self-Sufficiency
+**Goal**: GSD natively covers the capability gaps currently filled by the (now-disabled) superpowers Claude Code plugin
+**Depends on**: Nothing
+**Requirements**: (derived at plan time from audit)
+**Success Criteria** (what must be TRUE):
+  1. A written coverage audit maps each of 14 superpowers skills to either an existing GSD artifact (covered) or a concrete port target (gap)
+  2. Each genuine gap is ported into GSD as a native artifact loaded through normal GSD flow
+  3. Running a representative GSD workflow exercises the ported TDD/review/worktree behavior without any superpowers skill being available
+**Plans**: 3/3 complete
+
+### Phase 7: Parallel Multi-Session Safety & Planning Ergonomics
+**Goal**: GSD makes it safe and ergonomic to run several sessions at once without the silent-overwrite mess that today's shared working tree produces
+**Depends on**: Relates to Phase 6
+**Requirements**: PAR-01..PAR-N (derived at plan time)
+**Success Criteria** (what must be TRUE):
+  1. A quick-fix run in a parallel session no longer silently overwrites a concurrently-executing phase — conflicts surface as a reviewable merge
+  2. A documented gate decides, from depends_on + file-scope, whether a proposed parallel set is safe, and refuses parallel discussion of dependent phases
+  3. Todos carry depends_on/related_to and the gate reads them
+  4. The doctor command reports source-runtime drift in one invocation
+  5. The backlog ID scheme no longer reuses the phase-number space
+**Plans**: 6/6 complete
+
+### Phase 8: Validated Example Corpus
+**Goal**: GSD guidance draws on a curated corpus of validated, human-maintained code examples mined from strong real-world reference projects
+**Depends on**: Nothing technically
+**Requirements**: CORPUS-01..N
+**Success Criteria** (what must be TRUE):
+  1. A validated-example corpus exists as a pattern-indexed catalog with explicit selection criteria, sourced from real reference projects, with per-example commentary
+  2. The corpus is loaded into at least one GSD flow through the normal references mechanism
+  3. The corpus is structured so Phase 9 can consume it as validated reference/eval material
+**Plans**: 4/4 complete
+
+### Phase 9: Self-Improving Skills (feedback-driven)
+**Goal**: GSD's skill/command/reference prose stops being static — it learns from real failures observed during development
+**Depends on**: Phase 4 telemetry (load-bearing); Phase 8 corpus (soft reference)
+**Requirements**: TEACH-01, TEACH-02, TEACH-03, TEACH-04, TEACH-05
+**Success Criteria** (what must be TRUE):
+  1. A /teach capture path exists; a lesson from a real failure is recorded to a .planning/lessons/ ledger, and an auto-miner can nominate recurring lessons without editing anything itself
+  2. The loop attributes a captured lesson to a GSD prose artifact and proposes a bounded edit; nothing touches get-shit-done/ source without human ratification
+  3. At least one real lesson lands as a committed, ratified, bounded edit to the correct GSD artifact with the before/after prose change recorded, and the loop is git-reversible
+**Plans**: 2/2 complete
+
+</details>
+
+### Phase 10: Decision Ledger + CLI Foundation
+
+**Goal**: Every harness component has a tested, shared persistence layer — append-only DECISIONS.jsonl and MAILBOX.jsonl — so autonomous decisions are auditable from the ledger alone without replaying transcripts
+
+**Depends on**: Nothing (first v1.6 phase; direct application of lesson.cjs patterns)
+
+**Requirements**: LEDGER-01, LEDGER-02, LEDGER-03
+
+**Discussion focus**: Schema design for DECISIONS.jsonl entries (field names, required vs optional fields for alternatives/evidence/confidence); run-id coordination mechanism (new config key vs RUN-META.json field — must decide here before any workflow wiring); .planning/run/{run-id}/ directory layout; which gsd-tools subcommands cover filter/read operations (ledger list, ledger filter, mailbox review)
+
+**Success Criteria** (what must be TRUE):
+  1. Running `gsd-tools ledger append <run-id>` with a valid decision record writes a JSONL entry to `.planning/run/{run-id}/DECISIONS.jsonl` with schema enforced at write time — missing required fields (decision, alternatives, evidence, confidence, escalated) are rejected with a clear error
+  2. Running `gsd-tools ledger list <run-id>` and `gsd-tools ledger filter <run-id> --phase N --escalated` returns filtered entries correctly from the ledger file
+  3. A harness run context (run-id) is detectable from the process environment or config so that interactive sessions produce zero behavior change — `gsd-tools ledger append` outside a harness run either no-ops or errors, never silently writes to an undefined run
+  4. `lib/ledger.cjs` and `lib/mailbox.cjs` are unit-tested modules following the lesson.cjs pattern; the `.planning/run/{run-id}/` directory layout is documented and enforced at run-init time
+
+**Plans**: TBD
+
+### Phase 11: Escalation Contract + discuss-phase Wiring
+
+**Goal**: The harness has a written, discrete escalation contract — four criteria mapped to a three-tier verdict schema — and discuss-phase evaluates every autonomous decision against it when a harness run_id is active; the human reads a populated ledger from one real interactive phase run and confirms escalation precision before overnight runs are permitted
+
+**Depends on**: Phase 10 (ledger.cjs and mailbox.cjs must exist before the evaluator can write verdicts)
+
+**Requirements**: ESC-01, ESC-02, ESC-03
+
+**Discussion focus**: Escalation criteria precision — prose criteria drift across LLM runs; must settle on a discrete verb list for each of the four criteria (irreversibility, security boundary, scope change, spec ambiguity); where the contract artifact lives (references/ vs .planning/); what counts as a "golden set" (10 decisions minimum, format for scoring); trust-ladder gate mechanics (who reads the ledger and what blocks Phase 13 if precision is low)
+
+**Success Criteria** (what must be TRUE):
+  1. A written escalation contract artifact exists with four discrete criteria (irreversibility, security boundary, scope change, spec ambiguity) each mapped to a specific tier (proceed / proceed-and-log / park-and-ask) — verifiable by reading the artifact, no inference required
+  2. Running discuss-phase with a harness run_id active causes the question_triage step to evaluate each decision against the contract and write a verdict to the ledger — interactive sessions without a run_id see no behavior change
+  3. After one complete interactive phase run, a human reads the populated DECISIONS.jsonl and confirms that escalation precision meets a stated threshold against the golden set — this confirmation is the structural gate blocking Phase 13 (overnight runner)
+  4. ESC-03 calibration is documented as a human activity with a concrete pass/fail criterion, not an automated score — the gate is social, not algorithmic
+
+**Plans**: TBD
+
+### Phase 12: Park-Don't-Block Mailbox
+
+**Goal**: A park-and-ask verdict parks the blocked branch and appends a structured question to the mailbox without stopping the run; the human resolves all parked questions in one inbox session; resuming a branch re-reads current planning state before replay; and the runner detects stuck phases before token burn
+
+**Depends on**: Phase 11 (escalation contract must produce park-and-ask verdicts before parking is exercised)
+
+**Requirements**: PARK-01, PARK-02, PARK-03, PARK-04
+
+**Discussion focus**: Branch-parking state machine (how a phase is marked as parked — MAILBOX entry only, or a separate `.planning/run/{run-id}/parked/phase-N.json` snapshot); context snapshot contents for staleness detection; what "resume" means at the prompt level (how the inbox review command hands off a phase restart); stuck detection threshold (how many consecutive identical ledger hashes before flagging)
+
+**Success Criteria** (what must be TRUE):
+  1. When discuss-phase emits a park-and-ask verdict, a question + context snapshot is appended to `MAILBOX.jsonl` and the current phase execution halts — the run continues other work rather than blocking
+  2. Running `gsd-tools mailbox review <run-id>` presents each parked question with context, accepts a human answer, and records the answer; all parked questions can be resolved in a single inbox session without switching tabs
+  3. After a human answers a parked question, the branch resumes by re-reading `STATE.md`, `ROADMAP.md`, and `cross-phase-notes.md` before replaying — the staleness diff between the context snapshot at park time and current planning state is visible before replay proceeds
+  4. An identical ledger hash across two consecutive phase snapshots is detected and flagged as a stuck run — the flag is visible in `gsd-tools ledger list` output and `run.log`
+
+**Plans**: TBD
+
+### Phase 13: Overnight Runner
+
+**Goal**: `/gsd2:overnight` runs remaining phases unattended — worktree-isolated, ledger-wired, mailbox-integrated, with a startup health check and a morning report — after Wave-0 empirical validation of headless session lifespan and bypassPermissions behavior
+
+**Depends on**: Phase 12 (all core harness primitives calibrated); Wave-0 research (headless session lifespan + `--permission-mode bypassPermissions` must be empirically confirmed before scheduling logic is built)
+
+**Requirements**: RUN-01, RUN-02, RUN-03, RUN-04
+
+**Discussion focus**: Wave-0 findings must precede discuss-phase for this phase — headless session lifespan (token expiry mid-run?), bypassPermissions runtime behavior, auth failure surface; per-phase worktree isolation pattern for the runner (reuses Phase 7 machinery); merge-conflict routing to mailbox vs checkpoint; morning report format and delivery (stdout, file, or mailbox); crontab entry convention; parallel worktree writes to agent-trace.jsonl (per-run trace files or mutex?)
+
+**Success Criteria** (what must be TRUE):
+  1. Running `/gsd2:overnight` starts a headless harness run, executes remaining phases with ledger + escalation + mailbox active, and produces a `run.log` — auth or permission failures are recorded loudly in run.log and the run stops, never silently retrying
+  2. Each phase executes in a worktree-isolated environment; a merge conflict routes a structured entry to `MAILBOX.jsonl` rather than being swallowed silently (the runner checks `clean:false` from `cmdWorktreeMerge`)
+  3. The morning report (`gsd-tools run report <run-id>`) summarizes decisions made, questions parked, and phases completed from the ledger alone — no transcript replay required
+  4. Wave-0 empirical results (headless session lifespan, bypassPermissions behavior) are documented as a concrete constraint record in the phase context before any scheduling logic is implemented
+
+**Plans**: TBD
+
+### Phase 14: Multi-Lens Discussion Loop
+
+**Goal**: `/gsd2:discuss-loop` judges a concrete artifact through three lenses (Skeptic, User-Advocate, Architect) and either reaches convergence with a verifiable content delta or escalates the top divergent positions to the mailbox — a synthesized average is never produced
+
+**Depends on**: Phase 11 (escalation contract must exist for convergence-failure escalation path); Phase 12 (mailbox must exist to receive unresolved positions)
+
+**Requirements**: LOOP-01, LOOP-02
+
+**Discussion focus**: Convergence test definition (content-delta on downstream constraints, not sentence similarity); what "anchored to a concrete artifact" means operationally (CONTEXT.md section, DECISIONS.jsonl entry, or any file passed as argument); round cap value (research suggests 3); how divergent positions are structured in the mailbox entry; whether the three lenses run sequentially inline or as parallel role switches
+
+**Success Criteria** (what must be TRUE):
+  1. Running `/gsd2:discuss-loop <artifact>` produces three-lens judgment of the artifact's content — each lens (Skeptic, User-Advocate, Architect) produces a distinct position grounded in the artifact text, not abstract opinions
+  2. When lenses converge (content-delta test passes), the loop exits early with a resolution record; when the hard round cap is reached without convergence, the top two divergent positions are written to the mailbox as structured entries — a synthesized average is never produced
+
+**Plans**: TBD
+
+### Phase 15: Resume Logic + Backlog Triage Worker
+
+**Goal**: A parked branch restarts correctly by replaying through the current planning state in `autonomous.md`; and `/gsd2:triage` analyzes pending todos against the codebase and roadmap, emitting six-verdict proposals to the mailbox that execute only on human acceptance
+
+**Depends on**: Phase 13 (overnight runner must be stable before resume logic is wired into autonomous.md — resume is the most complex component and is most sensitive to planning-state drift); Phase 12 (mailbox write path for triage proposals)
+
+**Requirements**: TRIAGE-01, TRIAGE-02
+
+**Discussion focus**: Resume path in autonomous.md — where exactly does the parked-phase restart splice in; what "replay" means (restart the full phase from ROADMAP position, or from the parked step); staleness diff format shown to the human before replay; triage worker scope (how it reads pending todos — todos/pending/ dir scan vs gsd-tools query); evidence format for six-verdict proposals; batch-to-mailbox write atomicity
+
+**Success Criteria** (what must be TRUE):
+  1. When a parked branch is resumed after a human answers a mailbox question, `autonomous.md` re-reads `STATE.md`, `ROADMAP.md`, and `cross-phase-notes.md` before replaying the blocked step — the staleness diff between park-time snapshot and current state is surfaced to the human before execution continues
+  2. Running `/gsd2:triage` reads pending todos against the codebase and roadmap and appends proposals to `MAILBOX.jsonl` — each proposal carries one of six verdicts (already-done / obsolete / fold-into-phase / new-phase / needs-input / defer) with evidence; nothing is promoted, folded, or deleted until the human accepts via `gsd-tools mailbox review`
+
+**Plans**: TBD
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+**Execution Order:** 10 → 11 → 12 → 13 → 14 → 15
+(13 requires Wave-0 research before discuss-phase; 14 and 15 can begin after 11 and 12 respectively, but are sequenced after 13 for stable foundations)
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Security Hooks | 2/2 | Complete   | 2026-06-03 |
-| 2. Autonomous Technical Resolution | 3/3 | Complete   | 2026-06-04 |
-| 3. Execution-Detail Enrichment | 2/2 | Complete   | 2026-06-04 |
-| 4. Agent Observability & Telemetry | 3/3 | Complete   | 2026-06-05 |
-| 5. Plan-Loop Convergence and Verify Fix | 2/2 | Complete   | 2026-06-06 |
-| 6. Skill Self-Sufficiency | 2/3 | In Progress|  |
-| 7. Parallel Multi-Session Safety & Planning Ergonomics | 6/6 | Complete   | 2026-06-08 |
-| 8. Validated Example Corpus | 4/4 | Complete   | 2026-06-08 |
-| 9. SkillOpt-Style Self-Improving Skills | 1/2 | In Progress|  |
-
-### Phase 6: Skill Self-Sufficiency: Audit and Port superpowers Gaps into GSD
-
-**Goal**: GSD natively covers the capability gaps currently filled by the (now-disabled) `superpowers` Claude Code plugin, so the external dependency can be dropped without losing capability. GSD becomes the single self-contained framework — no SessionStart skill-injection from a third-party plugin steering the agent.
-**Depends on**: Nothing (sequenced after Phase 5; pure additive audit + port, no technical dependency on prior v1.5 phases)
-**Requirements**: TBD (derived at plan time from the audit)
-**Discussion focus**: This is a *port-from-superpowers* phase, mirroring v1.5's port-from-gsd-core spirit. The user disabled the `superpowers@claude-plugins-official` plugin in `~/.claude/settings.json`; its cached skills remain on disk at `~/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/` for mining. Coverage audit already roughed in (this session): of 14 skills, ~10 are already covered by GSD (brainstorming→discuss-phase, writing/executing-plans→plan/execute-phase, subagent-driven & dispatching-parallel→wave executor, systematic-debugging→gsd2:debug, verification-before-completion→verify-work/gsd-verifier, requesting-code-review→gsd2:review, finishing-a-development-branch→ship/pr-branch). The genuine gaps to port: (1) **execution-time TDD discipline** — enforced red-green-refactor at execute-phase, beyond today's TEST-SPEC/add-tests which only produce specs; (2) **receiving-code-review** rigor — how to consume review feedback critically rather than blindly implement; (3) **writing-skills** — a skill/command-authoring guide for GSD itself; (4) **worktree-isolation as a first-class default** in execute-phase. Open scoping for discuss: which gaps land as references/ docs vs new commands vs workflow edits; whether the existing `gsd2:debug` already absorbs systematic-debugging fully or needs the red-green loop wired in.
-**Out of scope**: Hard-removal of the superpowers plugin cache + `installed_plugins.json` registry entry — explicit follow-up after this phase proves GSD covers the gaps.
-**Success Criteria** (what must be TRUE):
-  1. A written coverage audit maps each of the 14 superpowers skills to either an existing GSD command/reference (covered) or a concrete port target (gap), with rationale
-  2. Each genuine gap is ported into GSD as a native artifact (reference doc, command, or workflow edit) that an agent loads through normal GSD flow — no dependency on the superpowers plugin being installed
-  3. Running a representative GSD workflow (plan→execute) exercises the ported TDD/review/worktree behavior without any superpowers skill being available
-**Plans**: 3 (all Wave 1, parallel — file-disjoint)
-  - 06-01 — Gap 1: execution-time TDD discipline (tdd.md Iron Law + executor/execute-plan watch-it-fail + planner exemption)
-  - 06-02 — Gap 2: receiving-code-review reference + review.md/ship.md wiring
-  - 06-03 — 14-skill audit + Gap 3 artifact-authoring guide + Gap 4 git-worktree technique
-
-### Phase 7: Parallel Multi-Session Safety & Planning Ergonomics
-
-**Goal**: GSD makes it safe and ergonomic to run several sessions at once — start a quick-fix while a phase executes, or work two independent phases in parallel — and finish faster than serial, without the silent-overwrite mess that today's shared working tree produces. Folds in the doctor symmetry-check and tidies the planning ID model these multi-session workflows depend on.
-
-**Depends on**: Relates to Phase 6 (which ports *worktree-isolation as a default* — Phase 7 builds the multi-session orchestration + merge on top of that primitive). Not a hard block — user intends to start Phase 7 before Phase 6 closes; sequencing to be confirmed at discuss time.
-
-**Discussion focus** (captured 2026-06-06 from a design conversation — to be expanded at discuss-phase):
-
-The core insight is that parallel work has **two independent coupling axes**, and they need different mechanisms — conflating them is the trap:
-
-- **Axis A — file/write coupling.** Two tasks edit the same file. Solved by **worktree isolation**: each task runs in its own `git worktree add <dir>`, merged back at the end. This does not *prevent* conflicts — it makes them *explicit and reviewable at merge* instead of silent overwrites mid-run (today's "hard to tell if harm was done" problem). Must be a separate **worktree** (separate directory), not just a branch in the shared tree — a branch alone doesn't isolate files on disk.
-- **Axis B — decision/knowledge coupling.** Task B's *correctness* depends on a decision made in task A's discussion (e.g. phase 1's discussion picks an approach that invalidates phase 2's assumption). Worktrees do **nothing** for this — the trees merge clean while the logic is built on stale ground. The only safe handling is *sequencing*: refuse to run discussion/planning of dependent phases in parallel. GSD already models these edges as `depends_on`.
-
-Mapping cases to the dominant axis:
-- *Quick-fix while a phase runs* → axis A dominates, axis B ≈ 0 → **safest, highest value; worktree-isolate and merge.**
-- *Execute two already-planned phases* → axis A → safe **iff** `depends_on` shows no edge.
-- *Discuss/plan two phases at once* → axis B dominates → worktrees don't help → **keep serial** (planning artifacts live in separate phase folders so they rarely collide on A anyway; the real risk is decisions).
-
-Where isolation lives (NOT in agent prose — an LLM "remembering" to make a worktree is too fragile for a load-bearing guarantee): deterministically in **`execute-phase`** (workflow does the `git worktree add` → wave → merge) for agent-driven work, and as a **session-launch convention** (each session opened in its own worktree dir) for human-driven quick-fixes that no agent instruction would catch.
-
-**Scope (to refine at discuss/plan):**
-1. Worktree-isolated execution + merge in `execute-phase` (and the quick path) — axis A.
-2. Parallel-safety gate: combine `depends_on` (axis B) + file-scope disjointness (reuse the Phase 4 file-level dependency graph + caller analysis, axis A) → greenlight / refuse a proposed parallel set; explicitly forbid parallel discussion of dependent phases.
-3. `depends_on` / `related_to` on **todo** frontmatter (formalize — precedent exists: a todo already carries an informal `related:` line) so the same gate covers quick tasks, not just phases.
-4. Doctor source↔runtime symmetry-check (absorbed from the ex-backlog doctor item, folded into Phase 7): `diff -rq get-shit-done .claude/get-shit-done` + settings.json hook/statusLine registration parity — and post-merge drift verification for the worktree flow.
-5. Backlog ID scheme migration: B-prefixed IDs (B1, B2…) outside the phase-number space, allocated by `phase next-backlog-id` — items only receive a real phase number when promoted into a milestone.
-
-**Success Criteria** (what must be TRUE):
-  1. A quick-fix run in a parallel session no longer silently overwrites a concurrently-executing phase — conflicts surface as a reviewable merge.
-  2. A documented gate decides, from `depends_on` + file-scope, whether a proposed parallel set is safe, and refuses parallel discussion of dependent phases.
-  3. Todos carry `depends_on`/`related_to` and the gate reads them.
-  4. The doctor command reports source↔runtime drift in one invocation.
-  5. The backlog ID scheme no longer reuses the phase-number space — B-prefixed IDs (B1, B2…) are allocated outside it.
-
-**Plans**: 6 across 4 waves
-  - 07-01 (W1) — gsd-tools worktree CLI primitive (add/merge/remove/prune) + Wave-0 smoke + tests (SC1)
-  - 07-02 (W1) — todo depends_on/related_to frontmatter schema + init parse + add-todo template (SC3)
-  - 07-03 (W1) — source↔runtime symmetry-check folded into /gsd2:health (+--repair), exported for reuse (SC4)
-  - 07-04 (W2) — backlog ID migration to B-prefixed IDs (next-backlog-id allocator + commands + dir migration) (SC5)
-  - 07-05 (W3) — parallel-safe gate CLI (axis-B refuse / axis-A warn / greenlight), reads phase + todo edges (SC2,SC3)
-  - 07-06 (W4) — wire worktree+merge+symmetry into execute-phase; gate into execute/discuss/plan; auto-worktree into quick (SC1,SC2,SC4)
-
-### Phase 8: Validated Example Corpus
-
-**Goal**: GSD guidance draws on a curated corpus of *validated, human-maintained* code examples mined from strong real-world reference projects — indexed by pattern, with commentary — instead of leaning on plausible-but-untested LLM-generated examples. The corpus is structured to also serve as the validated reference/eval substrate Phase 9 will consume.
-
-**Depends on**: Nothing technically. Sequenced after Phase 7. Relates to Phase 3 (reference docs — same `references/` hybrid-load scheme) and Phase 6 (skill self-sufficiency). Feeds Phase 9.
-
-**Discussion focus** (captured 2026-06-08; split from the original combined Phase 8 per user decision — the SkillOpt loop moved to Phase 9):
-
-Build a small internal catalog *by pattern, not by repo* (e.g. CLI parsing, async retry, validation layer, config loading, telemetry hook, planner-prompt structure), with per-example commentary on what constraint it solves and what NOT to cargo-cult — connected to the failure modes the verifier/debug loops repeatedly catch. Source: `.planning/reference/CODE-EXAMPLES.md` (candidate sources + selection criteria already drafted), `IDEAS.md` #7. Open questions for discuss: corpus shape (excerpt vs link-only — licensing), how examples enter GSD's flow (which agents/refs consume it), what "validated" means operationally, and the initial bucket/language scope.
-
-**Success Criteria** (what must be TRUE — to refine at discuss/plan):
-  1. A validated-example corpus exists as a pattern-indexed catalog with explicit selection criteria, sourced from real reference projects (not synthetic), with per-example commentary on what it solves and what not to cargo-cult
-  2. The corpus is loaded into at least one GSD flow (e.g. planner/verifier reference) through the normal references mechanism
-  3. The corpus is structured so Phase 9 can consume it as validated reference/eval material
-
-**Plans**: 4 across 3 waves
-  - 08-01 (W1) — corpus structure: entry _TEMPLATE.md (front-matter schema + commentary sections, counters locked to common-bug-patterns.md headers) + SELECTION-CRITERIA.md + slim INDEX.md schema (SC1)
-  - 08-02 (W2) — curate 3 Python seed entries (error-propagation/requests, validation-layer/pydantic, resource-management/cpython) with real attributed excerpts (SC1, SC3)
-  - 08-03 (W2) — curate 3 Node/TS seed entries (async-retry/undici, validation-layer/zod, config-env/fastify-or-node) with real attributed excerpts (SC1, SC3)
-  - 08-04 (W3) — populate INDEX rows + wire on-demand pointer into gsd-planner.md code_quality_reference + propagate runtime copy (SC2)
-
-### Phase 9: Self-Improving Skills (feedback-driven)
-
-**RESHAPED 2026-06-08** at discuss-phase — from "SkillOpt offline batch-optimizer + eval substrate" to **online, feedback-driven skill evolution**. See `09-CONTEXT.md`.
-
-**Goal**: GSD's skill/command/reference prose stops being static — it learns from *real failures observed during development*. A lesson captured from a real bug is attributed to the responsible GSD artifact, turned into a *bounded* edit the human ratifies, and committed to source. Skills evolve from real project experience, not static prompts.
-
-**Depends on**: Phase 4 telemetry (`agent-trace.jsonl`) — **load-bearing** as the attribution substrate (which agent produced a failing artifact). Phase 8 corpus — **soft** reference only (good-code grounding when proposing edits); **NOT** a hard dependency post-reshape (the eval-substrate framing was dropped). Future semantic `/gsd2:doctor` inherits lesson/skill-edit consolidation.
-
-**Discussion focus** (RESOLVED in 09-CONTEXT.md):
-
-SkillOpt ([arXiv 2605.23904](https://arxiv.org/abs/2605.23904), [microsoft/SkillOpt](https://github.com/microsoft/SkillOpt)) is *offline batch* optimization gated on a held-out automated scorer. That eval substrate is **unbuildable on GSD's scale**: only ~7 real tasks exist (small-N), and the faithful score signals (verifier BLOCKER/WARNING, convergence iterations, telemetry confidence) require actually running execute+verify per rollout (slow, costly, non-deterministic), while the cheap LLM-judge alternative is gameable in a closed autonomous loop. The user reframed to **online continual** improvement, which dissolves both tensions: the task + signal come free from real bugs, no synthetic dataset is needed, and gameability evaporates (real failure signal + human ratifies each edit). We keep SkillOpt's *discipline* (bounded edits, explicit accept-gate, git-reversibility) and drop its benchmark.
-
-Locked decisions: **capture** = manual `/teach` (primary, trusted) + auto-miner (suggests recurring lessons only, never edits); **gate** = always propose, human ratifies every edit (the primary bloat guard); **attribution** = loop proposes the culprit artifact from Phase 4 telemetry + the produced artifact, user confirms; **accretion/consolidation** = delegated to the future `/gsd2:doctor`; **ledger** = lessons persist in `.planning/lessons/`. The reflection/edit-proposal engine is an advisor-style critic (exact agent/model = research).
-
-**Success Criteria** (what must be TRUE — to refine at plan):
-  1. A `/teach` capture path exists; a lesson from a real failure is recorded to a `.planning/lessons/` ledger, and an auto-miner can nominate recurring lessons without editing anything itself
-  2. The loop attributes a captured lesson to a GSD prose artifact (using Phase 4 telemetry + the produced artifact) and proposes a *bounded* edit; nothing touches `get-shit-done/` source without human ratification
-  3. At least one real lesson lands as a committed, ratified, bounded edit to the correct GSD artifact — the before/after prose change recorded — with the loop being git-reversible
-
-**Plans**: 2 plans, 2 waves (planned 2026-06-08)
-  - **09-01** (Wave 1, TDD): Lessons-ledger data layer — `tests/lesson.test.cjs` + `lib/lesson.cjs` + `gsd-tools lesson` subcommand (append/list/update/bump-recurrence/attribute/scan). Attribution = unit-tested pure function; auto-miner `scan` scoped to ledger-recurrence-only. Requirements TEACH-01 (data), TEACH-03, TEACH-04.
-  - **09-02** (Wave 2, execute, non-autonomous): `/gsd2:teach` command + `workflows/teach.md` loop (attribute → confirm → advisor-critic bounded edit → [y/N] ratify → source-only commit + ledger record + `npm run dev`); `/teach scan` nominations-only. Human-verify checkpoint demonstrates SC2 (no auto-apply) + SC3 (real ratified bounded edit) + git-reversibility. Requirements TEACH-01 (UX), TEACH-02, TEACH-05.
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Security Hooks | v1.5 | 2/2 | Complete | 2026-06-03 |
+| 2. Autonomous Technical Resolution | v1.5 | 3/3 | Complete | 2026-06-04 |
+| 3. Execution-Detail Enrichment | v1.5 | 2/2 | Complete | 2026-06-04 |
+| 4. Agent Observability & Telemetry | v1.5 | 3/3 | Complete | 2026-06-05 |
+| 5. Plan-Loop Convergence and Verify Fix | v1.5 | 2/2 | Complete | 2026-06-06 |
+| 6. Skill Self-Sufficiency | v1.5 | 3/3 | Complete | 2026-06-06 |
+| 7. Parallel Multi-Session Safety & Planning Ergonomics | v1.5 | 6/6 | Complete | 2026-06-08 |
+| 8. Validated Example Corpus | v1.5 | 4/4 | Complete | 2026-06-08 |
+| 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
+| 10. Decision Ledger + CLI Foundation | v1.6 | 0/TBD | Not started | - |
+| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 0/TBD | Not started | - |
+| 12. Park-Don't-Block Mailbox | v1.6 | 0/TBD | Not started | - |
+| 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
+| 14. Multi-Lens Discussion Loop | v1.6 | 0/TBD | Not started | - |
+| 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/TBD | Not started | - |
 
 ## Backlog
 
