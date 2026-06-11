@@ -188,7 +188,7 @@
   3. After a human answers a parked question, the branch resumes by re-reading `STATE.md`, `ROADMAP.md`, and `cross-phase-notes.md` before replaying — the staleness diff between the context snapshot at park time and current planning state is visible before replay proceeds
   4. An identical ledger hash across two consecutive phase snapshots is detected and flagged as a stuck run — the flag is visible in `gsd-tools ledger list` output and `run.log`
 
-**Plans**: TBD
+**Plans**: 3 plans — 12-01 (park.cjs primitives: snapshot + staleness + stuck detection + CLI, wave 1), 12-02 (mailbox review/answer + resume handoff, wave 2), 12-03 (discuss-phase park branch + /gsd2:inbox skill, wave 3)
 
 ### Phase 13: Overnight Runner
 
@@ -258,7 +258,7 @@
 | 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
 | 10. Decision Ledger + CLI Foundation | v1.6 | 2/2 | Complete    | 2026-06-11 |
 | 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete   | 2026-06-11 |
-| 12. Park-Don't-Block Mailbox | v1.6 | 0/TBD | Not started | - |
+| 12. Park-Don't-Block Mailbox | v1.6 | 0/3 | Planned | - |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
 | 14. Multi-Lens Discussion Loop | v1.6 | 0/TBD | Not started | - |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/TBD | Not started | - |
