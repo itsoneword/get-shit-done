@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: ready-to-plan
-stopped_at: Roadmap created — Phase 10 ready to discuss/plan
-last_updated: "2026-06-10T00:00:00.000Z"
-last_activity: 2026-06-10
+status: planning
+stopped_at: Phase 10 context gathered
+last_updated: "2026-06-11T17:31:46.200Z"
+last_activity: 2026-06-10 — v1.6 roadmap created (6 phases, 18 requirements mapped)
 progress:
-  total_phases: 6
+  total_phases: 15
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
+  percent: 0
 ---
 
 ## Current Position
@@ -32,6 +33,7 @@ See: .planning/PROJECT.md (updated 2026-06-10)
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v1.6)
 - Average duration: -
 - Total execution time: 0 hours
@@ -67,6 +69,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-10
-Stopped at: Roadmap written — Phase 10 ready to discuss/plan
-Resume file: None
+Last session: 2026-06-11T17:31:46.190Z
+Stopped at: Phase 10 context gathered
+Resume file: .planning/v1.6/phases/10-decision-ledger-cli-foundation/10-CONTEXT.md
