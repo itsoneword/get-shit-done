@@ -167,3 +167,17 @@
 **For Phase 13 — autonomous.md prompt alignment:**
 - `autonomous.md:255` ("3-4 grey areas with ~4 questions each") and `:276` (4-question cadence in "Discuss deeper") carry the fixed-question-count style removed from the discuss-phase command (commit 4b21af1, adaptive triage-first depth). Align these when Phase 13 modifies autonomous.md.
 - Signal: [STRONG] — user explicitly chose fixing prompts at source over workarounds.
+
+### From Phase 11 discussion (2026-06-11)
+
+**For Phases 12/13/15 — morning-inbox flow re-confirmed and sharpened:**
+- User restated the end-to-end loop: overnight parallel phase runs → autonomous research everywhere possible → questions saved (not blocking) → ONE ~1-hour morning discussion answering everything → run resumes to execute the answers. Phase 12's inbox session and Phase 15's resume path should be designed around that single-sitting review, and Phase 13's morning report feeds it.
+- Signal: [STRONG] — unprompted vision restatement, third consistent occurrence.
+
+**For Phase 13 — calibration gate is a file check:**
+- Phase 13 discuss-phase must check `​.planning/v1.6/phases/11-escalation-contract-discuss-phase-wiring/11-CALIBRATION.md` contains PASS before overnight runs proceed (ESC-03 structural gate). Gate is social (human writes PASS/FAIL + date + run-id); the file is the witness.
+- Signal: [STRONG, specialist-backed] — mechanism settled this session.
+
+**For post-calibration tuning — escalation thresholds are dials, not doctrine:**
+- User wants a neutral starting posture ("start with something neutral and see where it goes"): borderline → proceed-and-log except irreversibility/security borderlines park; specific digits (≤1 soft miss to proceed, ≤3/10 false parks) are [WEAK] and expected to move after real overnight runs.
+- Signal: [STRONG] on posture, [WEAK, specialist-backed] on digits.
