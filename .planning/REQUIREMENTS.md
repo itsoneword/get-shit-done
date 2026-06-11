@@ -23,7 +23,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **ESC-01**: A written escalation contract artifact defines discrete criteria (irreversibility, security boundary, scope change, spec ambiguity) mapped to a three-tier verdict schema: proceed / proceed-and-log / park-and-ask
 - [x] **ESC-02**: `discuss-phase --auto` under a harness run evaluates each decision against the contract and records the verdict in the ledger
-- [ ] **ESC-03**: Escalation precision is calibrated against a golden set of ≥10 decisions before any overnight run is permitted (trust-ladder gate)
+- [x] **ESC-03**: Escalation precision is calibrated against a golden set of ≥10 decisions before any overnight run is permitted (trust-ladder gate)
 
 ### Park-Don't-Block (PARK)
 
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEDGER-03 | Phase 10 | Complete |
 | ESC-01 | Phase 11 | Complete |
 | ESC-02 | Phase 11 | Complete |
-| ESC-03 | Phase 11 | Pending |
+| ESC-03 | Phase 11 | Complete |
 | PARK-01 | Phase 12 | Pending |
 | PARK-02 | Phase 12 | Pending |
 | PARK-03 | Phase 12 | Pending |

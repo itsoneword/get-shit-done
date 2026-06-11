@@ -257,7 +257,7 @@
 | 8. Validated Example Corpus | v1.5 | 4/4 | Complete | 2026-06-08 |
 | 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
 | 10. Decision Ledger + CLI Foundation | v1.6 | 2/2 | Complete    | 2026-06-11 |
-| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 1/2 | In Progress|  |
+| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete   | 2026-06-11 |
 | 12. Park-Don't-Block Mailbox | v1.6 | 0/TBD | Not started | - |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
 | 14. Multi-Lens Discussion Loop | v1.6 | 0/TBD | Not started | - |
@@ -269,7 +269,7 @@
 
 **Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
 **Requirements:** TBD
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)
