@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-06-11T18:32:58.631Z"
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-06-11T18:39:12.843Z"
 progress:
   total_phases: 15
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 ## Current Position
@@ -47,6 +47,7 @@ Recent decisions affecting current work:
 - [Phase 10]: Append-only ledger: no writeLedger/cmdUpdate/patch exports; audit guarantee requires immutable JSONL
 - [Phase 10]: Required-field validation uses 'in' operator so escalated:null passes (field present, value nullable)
 - [Phase 10]: Run-context gate enforces GSD_RUN_ID or explicit arg; interactive sessions always hit exit 1 (never silent write)
+- [Phase 10]: Mailbox append-only: no writeMailbox/cmdUpdate export; question is sole required field; run_id always forced to effectiveRunId
 
 ### Pending Todos
 
@@ -66,6 +67,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-11T18:32:58.627Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-06-11T18:39:12.835Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
