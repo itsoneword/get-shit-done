@@ -149,3 +149,21 @@
 **For the future semantic `/gsd2:doctor`: inherits lesson/skill-edit consolidation.**
 - Phase 9 deliberately does NOT build consolidation. Dedup, merging redundant lessons, and pruning stale skill edits are delegated to the doctor (already scoped as the stale-decision healer). The doctor's remit grows: stale *documented decisions* AND stale *self-taught skill edits* in the `.planning/lessons/` ledger.
 - Signal: [STRONG] — explicit delegation.
+
+### From Phase 10 discussion (2026-06-11)
+
+**For Phase 11 (Escalation Contract) and Phase 13 (Overnight Runner) — run-signal decision is LOCKED:**
+- Active harness run is detected via the `GSD_RUN_ID` environment variable, NOT `config-set harness.run_id`. ARCHITECTURE.md's config-key assumption is superseded — a tree-global config flag would leak into parallel interactive sessions sharing the working tree (LEDGER-03 violation). All evaluator/runner wiring must read the env var; trust-ladder calibration runs via `GSD_RUN_ID=<id> claude`.
+- Signal: [STRONG, specialist-backed] — parallel-session safety analysis, user confirmed.
+
+**For Phase 11 — evaluator writes verdicts at append time, no patch:**
+- Ledger records are write-once: the inline evaluator must produce its verdict BEFORE the record is appended (decision + verdict in one line). There is no `ledger patch`; revisions are superseding records referencing the original id.
+- Signal: [STRONG, specialist-backed] — append-only audit integrity.
+
+**For Phase 11/13 — north-star calibration target:**
+- User's stated end state: multi-hour milestone-scale runs, model resolves everything resolvable, only genuinely important questions surface. Escalation precision (Phase 11) is THE trust lever; ledger filtering must keep a hundreds-of-decisions run reviewable in minutes.
+- Signal: [STRONG] — unprompted vision statement, consistent with Phase 2 north star.
+
+**For Phase 13 — autonomous.md prompt alignment:**
+- `autonomous.md:255` ("3-4 grey areas with ~4 questions each") and `:276` (4-question cadence in "Discuss deeper") carry the fixed-question-count style removed from the discuss-phase command (commit 4b21af1, adaptive triage-first depth). Align these when Phase 13 modifies autonomous.md.
+- Signal: [STRONG] — user explicitly chose fixing prompts at source over workarounds.
