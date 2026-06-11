@@ -181,3 +181,17 @@
 **For post-calibration tuning — escalation thresholds are dials, not doctrine:**
 - User wants a neutral starting posture ("start with something neutral and see where it goes"): borderline → proceed-and-log except irreversibility/security borderlines park; specific digits (≤1 soft miss to proceed, ≤3/10 false parks) are [WEAK] and expected to move after real overnight runs.
 - Signal: [STRONG] on posture, [WEAK, specialist-backed] on digits.
+
+### From Phase 12 discussion (2026-06-11)
+
+**For Phase 13 (Overnight Runner) — consumption contract for Phase 12 primitives:**
+- Stuck detection ships in Phase 12 as a primitive (DECISIONS.jsonl hash recorded at phase-boundary snapshots, 2 consecutive identical = flagged); the runner OWNS calling it at every phase boundary and writing the flag to run.log.
+- `/gsd2:inbox` skill exists after Phase 12 — the morning report (RUN-04) should link to / compose with it as the single morning entry point rather than inventing a second review surface. Integrating report + inbox into one flow was explicitly deferred to Phase 13.
+- Parking only fires under GSD_RUN_ID + autonomous mode; the runner gets non-blocking parking for free, but "continue other work while a phase is parked" is runner orchestration, not built in Phase 12.
+- Signal: [STRONG] — boundary set explicitly this session.
+
+**For Phase 15 (Resume Logic) — handoff contract:**
+- Phase 12 ships: parked/phase-{N}.json snapshot (blocked-at step, question id, resume instruction, content hashes of STATE.md/ROADMAP.md/cross-phase-notes.md/phase CONTEXT.md, git HEAD at park time) + staleness-diff surface + inbox printing a per-phase resume handoff after answers. Phase 15 wires the actual replay into autonomous.md consuming exactly these artifacts — do not redesign the snapshot, extend it via superseding fields if more is needed.
+- Ledger write-once is preserved across the answer path: human answers live in MAILBOX.jsonl only; the SUPERSEDING ledger record is appended when the resumed branch acts on the answer — that append is Phase 15's responsibility.
+- The `/gsd2:inbox` skill deliberately does not hardcode decision-type-only assumptions, but triage-type entries (six-verdict proposals) are NOT handled in Phase 12 — Phase 15 extends the inbox for TRIAGE-01/02.
+- Signal: [STRONG, specialist-backed] — direct consequence of the 12/15 boundary decision.
