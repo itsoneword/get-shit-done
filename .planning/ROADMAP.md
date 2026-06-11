@@ -170,7 +170,7 @@
   3. After one complete interactive phase run, a human reads the populated DECISIONS.jsonl and confirms that escalation precision meets a stated threshold against the golden set — this confirmation is the structural gate blocking Phase 13 (overnight runner)
   4. ESC-03 calibration is documented as a human activity with a concrete pass/fail criterion, not an automated score — the gate is social, not algorithmic
 
-**Plans**: TBD
+**Plans**: 2 plans — 11-01 (escalation-contract.md + discuss-phase evaluator wiring, wave 1), 11-02 (golden set + calibration gate witness, wave 2)
 
 ### Phase 12: Park-Don't-Block Mailbox
 
@@ -257,7 +257,7 @@
 | 8. Validated Example Corpus | v1.5 | 4/4 | Complete | 2026-06-08 |
 | 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
 | 10. Decision Ledger + CLI Foundation | v1.6 | 2/2 | Complete    | 2026-06-11 |
-| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 0/TBD | Not started | - |
+| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 0/2 | Not started | - |
 | 12. Park-Don't-Block Mailbox | v1.6 | 0/TBD | Not started | - |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
 | 14. Multi-Lens Discussion Loop | v1.6 | 0/TBD | Not started | - |
