@@ -15,9 +15,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Decision Ledger (LEDGER)
 
-- [ ] **LEDGER-01**: Every autonomous decision in a harness run is appended to a per-run `DECISIONS.jsonl` — decision, alternatives considered, evidence, confidence, escalated flag — with schema enforced at write time
-- [ ] **LEDGER-02**: User can read and filter a run's ledger via gsd-tools CLI (by phase, verdict, escalated)
-- [ ] **LEDGER-03**: Ledger behavior is gated by harness run context (e.g. `harness.run_id`) — interactive sessions have zero behavior change
+- [x] **LEDGER-01**: Every autonomous decision in a harness run is appended to a per-run `DECISIONS.jsonl` — decision, alternatives considered, evidence, confidence, escalated flag — with schema enforced at write time
+- [x] **LEDGER-02**: User can read and filter a run's ledger via gsd-tools CLI (by phase, verdict, escalated)
+- [x] **LEDGER-03**: Ledger behavior is gated by harness run context (e.g. `harness.run_id`) — interactive sessions have zero behavior change
 
 ### Escalation Contract (ESC)
 
@@ -74,9 +74,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LEDGER-01 | Phase 10 | Pending |
-| LEDGER-02 | Phase 10 | Pending |
-| LEDGER-03 | Phase 10 | Pending |
+| LEDGER-01 | Phase 10 | Complete |
+| LEDGER-02 | Phase 10 | Complete |
+| LEDGER-03 | Phase 10 | Complete |
 | ESC-01 | Phase 11 | Pending |
 | ESC-02 | Phase 11 | Pending |
 | ESC-03 | Phase 11 | Pending |

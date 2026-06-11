@@ -256,7 +256,7 @@
 | 7. Parallel Multi-Session Safety & Planning Ergonomics | v1.5 | 6/6 | Complete | 2026-06-08 |
 | 8. Validated Example Corpus | v1.5 | 4/4 | Complete | 2026-06-08 |
 | 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
-| 10. Decision Ledger + CLI Foundation | v1.6 | 0/2 | Planned | - |
+| 10. Decision Ledger + CLI Foundation | v1.6 | 1/2 | In Progress|  |
 | 11. Escalation Contract + discuss-phase Wiring | v1.6 | 0/TBD | Not started | - |
 | 12. Park-Don't-Block Mailbox | v1.6 | 0/TBD | Not started | - |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |

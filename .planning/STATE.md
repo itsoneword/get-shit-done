@@ -2,33 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: planning
-stopped_at: Phase 10 context gathered
-last_updated: "2026-06-11T17:31:46.200Z"
-last_activity: 2026-06-10 — v1.6 roadmap created (6 phases, 18 requirements mapped)
+status: unknown
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-06-11T18:32:58.631Z"
 progress:
   total_phases: 15
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 ## Current Position
 
-Phase: 10 of 15 (Decision Ledger + CLI Foundation)
-Plan: — (not started)
-Status: Ready to plan
-Last activity: 2026-06-10 — v1.6 roadmap created (6 phases, 18 requirements mapped)
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 10 (decision-ledger-cli-foundation) — EXECUTING
+Plan: 2 of 2
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 10 — Decision Ledger + CLI Foundation
+**Current focus:** Phase 10 — decision-ledger-cli-foundation
 
 ## Performance Metrics
 
@@ -50,6 +44,9 @@ Recent decisions affecting current work:
 - Zero new npm dependencies — JSONL via fs, headless claude -p, system cron; all primitives confirmed present
 - Trust ladder — interactive single-phase ledger review + escalation calibration gates overnight multi-phase runs (ESC-03 is a structural gate before Phase 13)
 - Wave-0 required for Phase 13 — headless session lifespan and bypassPermissions behavior are undocumented; must be empirically tested before scheduling logic is built
+- [Phase 10]: Append-only ledger: no writeLedger/cmdUpdate/patch exports; audit guarantee requires immutable JSONL
+- [Phase 10]: Required-field validation uses 'in' operator so escalated:null passes (field present, value nullable)
+- [Phase 10]: Run-context gate enforces GSD_RUN_ID or explicit arg; interactive sessions always hit exit 1 (never silent write)
 
 ### Pending Todos
 
@@ -69,6 +66,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-11T17:31:46.190Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/v1.6/phases/10-decision-ledger-cli-foundation/10-CONTEXT.md
+Last session: 2026-06-11T18:32:58.627Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
