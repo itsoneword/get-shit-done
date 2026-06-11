@@ -46,7 +46,7 @@ Context files are resolved in-workflow using `init phase-op` and roadmap/state t
 4. **Scout codebase** — Find reusable assets, patterns, and integration points
 5. **Analyze phase** — Check prior decisions, skip already-decided areas, generate remaining gray areas
 6. **Present gray areas** — Multi-select: which to discuss? Annotate with prior decisions + code context
-7. **Deep-dive each area** — 4 questions per area, code-informed options, Context7 for library choices
+7. **Deep-dive each area** — adaptive depth; triage first: technical questions get resolved autonomously (stated as decisions with an override offer), only preference/intent questions go to the user
 8. **Write CONTEXT.md** — Sections match areas discussed + code_context section
 9. Offer next steps (research or plan)
 
@@ -66,11 +66,10 @@ Gray areas depend on what's being built. Analyze the phase goal:
 
 Generate 3-4 **phase-specific** gray areas, not generic categories.
 
-**Probing depth:**
-- Ask 4 questions per area before checking
-- "More questions about [area], or move to next? (Remaining: [list unvisited areas])"
-- Show remaining unvisited areas so user knows what's still ahead
-- If more → ask 4 more, check again
+**Probing depth (adaptive — no fixed question count):**
+- Content drives depth, not a quota. Before asking anything, triage it: if the answer depends on evidence (codebase, docs, conventions), resolve it autonomously and state the decision with an override offer; ask only when the answer depends on the user's taste, priorities, or intent
+- After each exchange, check: "Could a planner act on what I know?" If yes → offer to move on; if no → keep probing that area
+- "More on [area], or move to next? (Remaining: [list unvisited areas])"
 - After all areas → "Ready to create context?"
 
 **Do NOT ask about (Claude handles these):**
