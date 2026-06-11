@@ -142,6 +142,8 @@
 
 **Requirements**: LEDGER-01, LEDGER-02, LEDGER-03
 
+**Plans**: 2 (10-01 ledger.cjs + run init + dispatch; 10-02 mailbox.cjs + dispatch)
+
 **Discussion focus**: Schema design for DECISIONS.jsonl entries (field names, required vs optional fields for alternatives/evidence/confidence); run-id coordination mechanism (new config key vs RUN-META.json field — must decide here before any workflow wiring); .planning/run/{run-id}/ directory layout; which gsd-tools subcommands cover filter/read operations (ledger list, ledger filter, mailbox review)
 
 **Success Criteria** (what must be TRUE):
@@ -254,7 +256,7 @@
 | 7. Parallel Multi-Session Safety & Planning Ergonomics | v1.5 | 6/6 | Complete | 2026-06-08 |
 | 8. Validated Example Corpus | v1.5 | 4/4 | Complete | 2026-06-08 |
 | 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
-| 10. Decision Ledger + CLI Foundation | v1.6 | 0/TBD | Not started | - |
+| 10. Decision Ledger + CLI Foundation | v1.6 | 0/2 | Planned | - |
 | 11. Escalation Contract + discuss-phase Wiring | v1.6 | 0/TBD | Not started | - |
 | 12. Park-Don't-Block Mailbox | v1.6 | 0/TBD | Not started | - |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
