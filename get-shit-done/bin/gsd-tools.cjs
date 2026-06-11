@@ -182,6 +182,7 @@ const profilePipeline = require('./lib/profile-pipeline.cjs');
 const trace = require('./lib/trace.cjs');
 const lesson = require('./lib/lesson.cjs');
 const ledger = require('./lib/ledger.cjs');
+const mailbox = require('./lib/mailbox.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
 const parallelGate = require('./lib/parallel-gate.cjs');
@@ -934,6 +935,47 @@ async function main() {
         }
         default:
           process.stderr.write(`ledger: unknown subcommand: ${sub}\n`);
+          process.exit(1);
+      }
+      break;
+    }
+
+    case 'mailbox': {
+      const sub = args[1];
+      const runId = args[2];
+
+      switch (sub) {
+        case 'append': {
+          // mailbox append <run-id> --data <json>
+          // runId may be a run-id or '--data' if user omitted run-id (env fallback)
+          let effectiveRunId = runId;
+          let dataIdx;
+          if (runId === '--data') {
+            // no explicit run-id; env fallback path
+            effectiveRunId = undefined;
+            dataIdx = args.indexOf('--data');
+          } else {
+            dataIdx = args.indexOf('--data');
+          }
+          const jsonString = dataIdx !== -1 ? args[dataIdx + 1] : null;
+          if (!jsonString) {
+            process.stderr.write('mailbox append <run-id> --data <json>\n');
+            process.exit(1);
+          }
+          mailbox.cmdMailboxAppend(cwd, effectiveRunId, jsonString);
+          break;
+        }
+        case 'list': {
+          // mailbox list <run-id> [--status <status>] [--raw]
+          const statusIdx = args.indexOf('--status');
+          const opts = {
+            status: statusIdx !== -1 ? args[statusIdx + 1] : null,
+          };
+          mailbox.cmdMailboxList(cwd, runId, opts, raw);
+          break;
+        }
+        default:
+          process.stderr.write(`mailbox: unknown subcommand: ${sub}\n`);
           process.exit(1);
       }
       break;
