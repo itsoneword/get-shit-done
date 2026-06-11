@@ -8,5 +8,13 @@
     "read_injection_scanner": true,
     "read_guard": false,
     "agent_trace": true
+  },
+  "model_profile": "balanced",
+  "model_overrides": {
+    "gsd-planner": "fable",
+    "gsd-roadmapper": "fable",
+    "gsd-agent-researcher": "fable",
+    "gsd-debugger": "opus",
+    "gsd-fixer": "opus"
   }
 }
