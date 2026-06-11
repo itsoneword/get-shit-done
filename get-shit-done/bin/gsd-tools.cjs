@@ -181,6 +181,7 @@ const frontmatter = require('./lib/frontmatter.cjs');
 const profilePipeline = require('./lib/profile-pipeline.cjs');
 const trace = require('./lib/trace.cjs');
 const lesson = require('./lib/lesson.cjs');
+const ledger = require('./lib/ledger.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
 const parallelGate = require('./lib/parallel-gate.cjs');
@@ -890,6 +891,65 @@ async function main() {
         }
         default:
           process.stderr.write(`lesson: unknown subcommand: ${sub}\n`);
+          process.exit(1);
+      }
+      break;
+    }
+
+    case 'ledger': {
+      const sub = args[1];
+      const runId = args[2];
+
+      switch (sub) {
+        case 'append': {
+          // ledger append <run-id> --data <json>
+          // runId may be a run-id or '--data' if user omitted run-id (env fallback)
+          let effectiveRunId = runId;
+          let dataIdx;
+          if (runId === '--data') {
+            // no explicit run-id; env fallback path
+            effectiveRunId = undefined;
+            dataIdx = args.indexOf('--data');
+          } else {
+            dataIdx = args.indexOf('--data');
+          }
+          const jsonString = dataIdx !== -1 ? args[dataIdx + 1] : null;
+          if (!jsonString) {
+            process.stderr.write('ledger append <run-id> --data <json>\n');
+            process.exit(1);
+          }
+          ledger.cmdLedgerAppend(cwd, effectiveRunId, jsonString);
+          break;
+        }
+        case 'list':
+        case 'filter': {
+          // ledger list <run-id> [--phase N] [--escalated] [--raw]
+          const phaseIdx = args.indexOf('--phase');
+          const opts = {
+            phase: phaseIdx !== -1 ? parseInt(args[phaseIdx + 1], 10) : null,
+            escalated: args.includes('--escalated'),
+          };
+          ledger.cmdLedgerList(cwd, runId, opts, raw);
+          break;
+        }
+        default:
+          process.stderr.write(`ledger: unknown subcommand: ${sub}\n`);
+          process.exit(1);
+      }
+      break;
+    }
+
+    case 'run': {
+      const sub = args[1];
+
+      switch (sub) {
+        case 'init': {
+          const initRunId = args[2] || process.env.GSD_RUN_ID;
+          ledger.cmdRunInit(cwd, initRunId);
+          break;
+        }
+        default:
+          process.stderr.write(`run: unknown subcommand: ${sub}\n`);
           process.exit(1);
       }
       break;

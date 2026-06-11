@@ -21,6 +21,9 @@ animation/
 # Agent telemetry (append-only JSONL logs, never committed)
 .planning/telemetry/
 
+# Harness run data (append-only JSONL ledger + mailbox, never committed)
+.planning/run/
+
 # Internal planning documents
 reports/
 RAILROAD_ARCHITECTURE.md
