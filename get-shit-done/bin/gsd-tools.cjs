@@ -184,6 +184,7 @@ const lesson = require('./lib/lesson.cjs');
 const ledger = require('./lib/ledger.cjs');
 const mailbox = require('./lib/mailbox.cjs');
 const park = require('./lib/park.cjs');
+const discussLoop = require('./lib/discuss-loop.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
 const parallelGate = require('./lib/parallel-gate.cjs');
@@ -1054,6 +1055,59 @@ async function main() {
         }
         default:
           process.stderr.write(`run: unknown subcommand: ${sub}\n`);
+          process.exit(1);
+      }
+      break;
+    }
+
+    case 'discuss-loop': {
+      const sub = args[1];
+
+      switch (sub) {
+        case 'loop-id': {
+          // discuss-loop loop-id <artifact-ref>
+          discussLoop.cmdLoopId(cwd, args[2]);
+          break;
+        }
+        case 'validate': {
+          // discuss-loop validate --round N --data <json> [--prior <json>] [--artifact <path>]
+          const roundIdx = args.indexOf('--round');
+          const dataIdx = args.indexOf('--data');
+          const priorIdx = args.indexOf('--prior');
+          const artifactIdx = args.indexOf('--artifact');
+          discussLoop.cmdValidate(cwd, {
+            round: roundIdx !== -1 ? args[roundIdx + 1] : null,
+            jsonString: dataIdx !== -1 ? args[dataIdx + 1] : null,
+            priorJson: priorIdx !== -1 ? args[priorIdx + 1] : null,
+            artifactPath: artifactIdx !== -1 ? args[artifactIdx + 1] : null,
+          });
+          break;
+        }
+        case 'delta': {
+          // discuss-loop delta --round N --data <json array> [--degraded]
+          const roundIdx = args.indexOf('--round');
+          const dataIdx = args.indexOf('--data');
+          discussLoop.cmdDelta(cwd, {
+            round: roundIdx !== -1 ? args[roundIdx + 1] : null,
+            jsonString: dataIdx !== -1 ? args[dataIdx + 1] : null,
+            degraded: args.includes('--degraded'),
+          });
+          break;
+        }
+        case 'survivors': {
+          // discuss-loop survivors --data <json array of rounds>
+          const dataIdx = args.indexOf('--data');
+          discussLoop.cmdSurvivors(cwd, dataIdx !== -1 ? args[dataIdx + 1] : null);
+          break;
+        }
+        case 'transcript': {
+          // discuss-loop transcript <loop-id> --data <record json>
+          const dataIdx = args.indexOf('--data');
+          discussLoop.cmdTranscript(cwd, args[2], dataIdx !== -1 ? args[dataIdx + 1] : null);
+          break;
+        }
+        default:
+          process.stderr.write(`discuss-loop: unknown subcommand: ${sub}\n`);
           process.exit(1);
       }
       break;

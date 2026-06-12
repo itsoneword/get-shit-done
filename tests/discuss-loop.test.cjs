@@ -539,7 +539,7 @@ describe('discuss-loop loop-id - id generation', () => {
     );
     assert.ok(result.success, `loop-id should succeed: ${result.error}`);
     const id = result.output.trim();
-    assert.match(id, /^loop-\d{4}-\d{2}-\d{2}T[\dT-]+-[a-z0-9-]+$/, `id should match pattern, got: ${id}`);
+    assert.match(id, /^loop-\d{4}-\d{2}-\d{2}T[\dTZ-]+-[a-z0-9-]+$/, `id should match pattern, got: ${id}`);
     // slug should contain sanitized version of the ref
     assert.ok(id.includes('docs-plan-v2-md') || id.includes('docs-plan') || id.includes('plan'), `id should contain slug from ref, got: ${id}`);
     // No -- suffix when no GSD_RUN_ID
