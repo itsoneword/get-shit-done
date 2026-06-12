@@ -7,7 +7,7 @@
 get-shit-done/                        # Repository root
 ├── bin/
 │   └── install.js                    # npm binary entry point — installs GSD into AI runtimes
-├── agents/                           # Agent persona definitions (*.md, 25 agents)
+├── agents/                           # Agent persona definitions (*.md, 28 agents)
 │   ├── gsd-executor.md
 │   ├── gsd-planner.md
 │   ├── gsd-phase-researcher.md
@@ -26,9 +26,9 @@ get-shit-done/                        # Repository root
 │   ├── gsd-document-updater.md
 │   ├── gsd-test-designer.md
 │   ├── gsd-agent-checker.md
-│   ├── gsd-lens-skeptic.md             # Phase 14+: Multi-lens judgment
-│   ├── gsd-lens-user-advocate.md       # Phase 14+: Multi-lens judgment
-│   ├── gsd-lens-architect.md           # Phase 14+: Multi-lens judgment
+│   ├── gsd-lens-skeptic.md             # Phase 14+: Multi-lens judgment (fresh-context)
+│   ├── gsd-lens-user-advocate.md       # Phase 14+: Multi-lens judgment (user value)
+│   ├── gsd-lens-architect.md           # Phase 14+: Multi-lens judgment (system design)
 │   ├── gsd-ui-researcher.md
 │   ├── gsd-ui-checker.md
 │   ├── gsd-ui-auditor.md
@@ -38,16 +38,16 @@ get-shit-done/                        # Repository root
 │       ├── plan-phase.md
 │       ├── execute-phase.md
 │       ├── discuss-phase.md
-│       ├── discuss-loop.md             # Phase 14+
+│       ├── discuss-loop.md             # Phase 14+: Multi-lens judgment entry
 │       ├── new-project.md
 │       ├── verify-work.md
-│       ├── overnight.md                # Phase 13+: Autonomous runner
+│       ├── overnight.md                # Phase 13+: Unattended harness runner
 │       ├── inbox.md                    # Phase 10+: Morning review
 │       └── ...
 ├── get-shit-done/                    # Runtime assets — installed to ~/.claude/get-shit-done/
 │   ├── bin/
 │   │   ├── gsd-tools.cjs             # CLI router — the tool entrypoint called by all workflows
-│   │   └── lib/                      # Domain logic modules (25 modules)
+│   │   └── lib/                      # Domain logic modules (28 modules)
 │   │       ├── core.cjs              # Shared utilities, config, git, phase lookup, markdown normalization
 │   │       ├── state.cjs             # STATE.md read/write and progression
 │   │       ├── phase.cjs             # Phase CRUD and lifecycle
@@ -66,22 +66,22 @@ get-shit-done/                        # Repository root
 │   │       ├── ledger.cjs            # Phase 10+: Append-only decision ledger
 │   │       ├── mailbox.cjs           # Phase 10+: Escalated question mailbox
 │   │       ├── park.cjs              # Phase 12+: Phase snapshots and stuck detection
-│   │       ├── discuss-loop.cjs      # Phase 14+: Multi-lens loop primitives
-│   │       ├── worktree.cjs          # Phase 13+: Worktree lifecycle
-│   │       ├── parallel-gate.cjs     # Phase 13+: Concurrency safety
+│   │       ├── discuss-loop.cjs      # Phase 14+: Multi-lens loop primitives (validation, delta, survivors, transcript)
+│   │       ├── worktree.cjs          # Phase 13+: Git worktree lifecycle (add, merge, remove, prune)
+│   │       ├── parallel-gate.cjs     # Phase 13+: Concurrency safety checks
 │   │       ├── trace.cjs             # Tracing utilities
 │   │       ├── lesson.cjs            # Lesson recording (deprecated, for compatibility)
 │   │       ├── migration.cjs         # Migration utilities
 │   │       └── install-transform.cjs # Path token replacement helper
-│   ├── workflows/                    # Workflow orchestration instructions (55+ files)
+│   ├── workflows/                    # Workflow orchestration instructions (58+ files)
 │   │   ├── execute-phase.md
 │   │   ├── plan-phase.md
 │   │   ├── discuss-phase.md
-│   │   ├── discuss-loop.md             # Phase 14+: Multi-lens judgment loop
+│   │   ├── discuss-loop.md             # Phase 14+: Multi-lens judgment loop — round management, convergence detection, escalation routing
 │   │   ├── new-project.md
 │   │   ├── verify-work.md
-│   │   ├── overnight.md                # Phase 13+: Unattended runner with harness
-│   │   ├── autonomous.md               # Phase 13+: Per-phase autonomous loop
+│   │   ├── overnight.md                # Phase 13+: Unattended runner — health check, phase loop, conflict routing, stuck detection, morning report
+│   │   ├── autonomous.md               # Phase 13+: Per-phase autonomous loop (discuss → plan → execute with harness context)
 │   │   ├── inbox.md                    # Phase 10+: Morning review and question answer
 │   │   └── ...
 │   ├── references/                   # Behavioral reference documents loaded by agents
@@ -116,7 +116,7 @@ get-shit-done/                        # Repository root
 │   ├── codex-config.test.cjs
 │   ├── copilot-install.test.cjs
 │   ├── cursor-conversion.test.cjs
-│   ├── discuss-loop.test.cjs          # Phase 14+: Discuss-loop contract tests
+│   ├── discuss-loop.test.cjs          # Phase 14+: Discuss-loop contract tests (validation, delta, survivors)
 │   ├── quick-branching.test.cjs
 │   └── quick-research.test.cjs
 ├── scripts/
@@ -129,16 +129,17 @@ get-shit-done/                        # Repository root
     ├── codebase/                     # Codebase analysis documents
     ├── config.json
     ├── STATE.md
-    ├── discuss-loop/                 # Phase 14+: Discussion loop runtime artifacts
+    ├── discuss-loop/                 # Phase 14+: Discussion loop runtime artifacts (per run)
     │   └── loop-<id>/                # One directory per loop execution
-    │       └── TRANSCRIPT.jsonl       # Position blocks and deltas per round
+    │       ├── artifact.txt           # Artifact snapshot (grounds anchor validation in discuss-loop commands)
+    │       └── transcript.jsonl       # Append-only JSONL: position blocks, round_delta, lens_failure, loop_end records
     ├── run/                          # Phase 10+: Harness run directories (gitignored)
     │   └── run-<id>/
-    │       ├── DECISIONS.jsonl       # Append-only ledger of decisions
-    │       ├── MAILBOX.jsonl         # Parked questions and answers
+    │       ├── DECISIONS.jsonl       # Append-only ledger of decisions (decisions, alternatives, evidence, escalation_verdict, escalation_reason)
+    │       ├── MAILBOX.jsonl         # Parked questions and answers (question, options, evidence, status, answer)
     │       ├── RUN-META.json         # Run metadata and phase tracking
-    │       ├── run.log               # Timestamped event stream
-    │       └── parked/               # Phase 12+: Phase snapshot hashes
+    │       ├── run.log               # Timestamped event stream (Phase 13+): machine-parseable TYPE tokens
+    │       └── parked/               # Phase 12+: Phase snapshot hashes (file-hash deltas for stuck detection)
     │           ├── phase-1.json
     │           ├── phase-2.json
     │           └── ...
@@ -160,9 +161,12 @@ get-shit-done/                        # Repository root
 - `get-shit-done/bin/lib/core.cjs` — the shared foundation; all other lib modules import from here
 - `get-shit-done/bin/lib/init.cjs` — compound init commands that bundle all workflow context into a single JSON response (primary way orchestrators load state)
 - `get-shit-done/bin/lib/state.cjs` — STATE.md is read first in every workflow; this module owns all STATE.md operations
-- `get-shit-done/bin/lib/ledger.cjs` — Run context ledger operations; `run init`, `ledger append`, `ledger list`, `run record-phase`, `run status`, `run report` (Phase 10+)
+- `get-shit-done/bin/lib/ledger.cjs` — Run context ledger operations; `run init`, `ledger append`, `ledger list`, `run record-phase`, `run status`, `run report`, `run snapshot` (Phase 10+)
 - `get-shit-done/bin/lib/mailbox.cjs` — Run context question mailbox; `mailbox append`, `mailbox list`, `mailbox answer` (Phase 10+)
 - `get-shit-done/bin/lib/discuss-loop.cjs` — Loop primitives; `discuss-loop loop-id`, `discuss-loop validate`, `discuss-loop delta`, `discuss-loop survivors`, `discuss-loop transcript` (Phase 14+)
+- `get-shit-done/bin/lib/worktree.cjs` — Worktree lifecycle; `worktree add`, `worktree merge`, `worktree remove`, `worktree prune` (Phase 13+)
+- `get-shit-done/workflows/overnight.md` — Unattended overnight runner orchestration; health check, phase loop, conflict routing, stuck detection (Phase 13+)
+- `get-shit-done/workflows/discuss-loop.md` — Multi-lens discussion loop orchestration; round management, convergence, escalation (Phase 14+)
 
 **Configuration:**
 
@@ -182,11 +186,16 @@ get-shit-done/                        # Repository root
 - `DECISIONS.jsonl` — Ledger of autonomously resolved decisions; each line is a JSON record with `{id: "dec-NNN", decision, alternatives, evidence, confidence, escalated, escalation_verdict, escalation_reason, phase, context}` (append-only, write-once per decision)
 - `MAILBOX.jsonl` — Escalated questions and answers; each line is a JSON record with `{id: "q-NNN", question, phase, evidence, status, answer}` (append-only for questions, in-place answer updates)
 - `RUN-META.json` — Run metadata including phase boundary snapshots, git HEAD hashes, completion status
-- `run.log` — Timestamped event stream for parsing; lines match format: `YYYY-MM-DDTHH:MM:SSZ <EVENT> key1=val1 key2=val2`
+- `run.log` — Timestamped event stream for parsing (Phase 13+); lines match format: `YYYY-MM-DDTHH:MM:SSZ <TYPE> key1=val1 key2=val2`; TYPE tokens are locked vocabulary: `RUN_START`, `HEALTH_PASS`, `HEALTH_FAIL`, `PHASE_START`, `PHASE_COMPLETE`, `PHASE_PARKED`, `PHASE_FAILURE`, `AUTH_FAILURE`, `PERMISSION_DENIAL`, `CONFLICT_ROUTED`, `CONFLICT_ROUTED_FAIL`, `MERGE_PARSE_FAIL`, `WORKTREE_FALLBACK`, `STUCK_FLAG`, `RUN_STOP`, `RUN_COMPLETE`
+
+**Phase 13+ worktree artifacts (per phase, `.worktrees/overnight-phase-{N}/):**
+
+- Git linked worktree isolated from main tree; `worktree merge` returns JSON with `{clean: boolean, conflict_files: [...]}` (clean flag is canonical truth, not exit code)
 
 **Phase 14+ discuss-loop artifacts (per user project, `.planning/discuss-loop/<loop-id>/`):**
 
-- `TRANSCRIPT.jsonl` — One JSON record per round (up to 3 rounds × 3 lenses); each record contains all position blocks for that round plus `delta` array of new/modified constraints
+- `artifact.txt` — Full artifact content snapshot; used by `validatePositionBlock(..., {artifactContent})` to ground anchor substring checks
+- `transcript.jsonl` — One JSON record per transcript write (loop_start, position, lens_failure, round_delta, loop_end); append-only JSONL format
 
 ---
 
@@ -194,7 +203,7 @@ get-shit-done/                        # Repository root
 
 **Files:**
 
-- Library modules: `kebab-case.cjs` — e.g., `model-profiles.cjs`, `profile-pipeline.cjs`, `discuss-loop.cjs`
+- Library modules: `kebab-case.cjs` — e.g., `model-profiles.cjs`, `profile-pipeline.cjs`, `discuss-loop.cjs`, `worktree.cjs`
 - Agent definitions: `gsd-<role>.md` — e.g., `gsd-executor.md`, `gsd-plan-checker.md`, `gsd-lens-skeptic.md`
 - Command stubs: `kebab-case.md` matching the workflow name — e.g., `execute-phase.md`, `discuss-loop.md`
 - Workflow files: `kebab-case.md` matching the command — e.g., `execute-phase.md`, `overnight.md`
@@ -218,7 +227,7 @@ get-shit-done/                        # Repository root
 - Verification files: `N-VERIFICATION.md`
 - Archived milestones: `.planning/milestones/vX.Y-phases/`
 - Run directories (Phase 10+): `.planning/run/<run-id>/` where `<run-id>` follows pattern `<workflow>-YYYYMMDD-HHMMSS` or user override
-- Discuss-loop directories (Phase 14+): `.planning/discuss-loop/<loop-id>/` where `<loop-id>` is generated by `discuss-loop loop-id` command
+- Discuss-loop directories (Phase 14+): `.planning/discuss-loop/<loop-id>/` where `<loop-id>` is generated by `discuss-loop loop-id` command (format: `loop-<ISO8601-UTC>-<artifact-slug>[--<run-id>]`)
 
 ---
 
@@ -228,13 +237,13 @@ get-shit-done/                        # Repository root
 Add the command function to the appropriate lib module in `get-shit-done/bin/lib/`. Register the command in the `switch` block in `get-shit-done/bin/gsd-tools.cjs`. Export the function from the lib module's `module.exports`. Follow the `output(result, raw, rawValue)` pattern for responses and `error(message)` for errors.
 
 **New agent:**
-Create `agents/gsd-<role>.md` with YAML frontmatter (`name`, `description`, `tools`, `color`) and behavioral instructions. Add the agent to the `CODEX_AGENT_SANDBOX` map in `bin/install.js` with an appropriate sandbox level. Add the agent to `model-profiles.cjs` with quality/balanced/budget model assignments. Update install logic in `bin/install.js` to copy the new agent.
+Create `agents/gsd-<role>.md` with YAML frontmatter (`name`, `description`, `tools`, `color`) and behavioral instructions. Add the agent to the `CODEX_AGENT_SANDBOX` map in `bin/install.js` with an appropriate sandbox level. Add the agent to `model-profiles.cjs` with quality/balanced/budget model assignments. Update install logic in `bin/install.js` to copy the new agent. For multi-lens agents (Phase 14+), include `<grounding_rules>` and `<output_contract>` sections with detailed position-block schema and anchor validation requirements.
 
 **New command:**
 Create `commands/gsd2/<name>.md` with frontmatter declaring `name`, `description`, `argument-hint`, `allowed-tools`. Body should load the workflow via `@~/.claude/get-shit-done/workflows/<name>.md`. Create the corresponding `get-shit-done/workflows/<name>.md` with the orchestration steps.
 
 **New workflow:**
-Create `get-shit-done/workflows/<name>.md`. Follow the pattern: `<purpose>` block → `<required_reading>` block → `<available_agent_types>` block → `<process>` block with numbered steps. Use `node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init <workflow>` as the first step to load all context.
+Create `get-shit-done/workflows/<name>.md`. Follow the pattern: `<purpose>` block → `<required_reading>` block → `<available_agent_types>` block → `<process>` block with numbered steps. Use `node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init <workflow>` as the first step to load all context. For Phase 13+ workflows, include health check, worktree fallback handling, and run.log event type contracts.
 
 **New hook:**
 Add to `hooks/` as `gsd-<purpose>.js`. Read from stdin (JSON), process, output to stdout as `additionalContext` (advisory) or exit 0 to pass through. Add to `HOOKS_TO_COPY` array in `scripts/build-hooks.js`. Install logic in `bin/install.js` must register the hook in the appropriate runtime hook config.
@@ -249,4 +258,7 @@ Add `tests/<feature>.test.cjs`. Follow the pattern in `tests/claude-md.test.cjs`
 If adding ledger/mailbox/park operations: add commands to appropriate lib module (`ledger.cjs`, `mailbox.cjs`, `park.cjs`), register in gsd-tools router, gate writes behind `GSD_RUN_ID` check. Never directly write `.planning/run/<run-id>/` directories outside the gsd-tools CLI — enforce single access path. All JSONL writes must be append-only (appendFileSync, no rewrites except for terminal-state mutations like answer updates).
 
 **New discuss-loop operation (Phase 14+):**
-Add to `lib/discuss-loop.cjs` as pure functions (no I/O), cmd* handlers for process I/O. All validation is deterministic membership checking (CONSTRAINT_ID_RE, VALID_LENSES, etc.) — no heuristics. Every constraint must include a verbatim `anchor` field (string from artifact). Position blocks validated with `validatePositionBlock(block, {round, priorIds, artifactContent})` before acceptance.
+Add to `lib/discuss-loop.cjs` as pure functions (no I/O), cmd* handlers for process I/O. All validation is deterministic membership checking (CONSTRAINT_ID_RE, VALID_LENSES, etc.) — no heuristics. Every constraint must include a verbatim `anchor` field (string from artifact content). Position blocks validated with `validatePositionBlock(block, {round, priorIds, artifactContent})` before acceptance. Survivor selection via `selectSurvivors(rounds)` orders lenses by divergence weight (unshared blocking constraint count). Transcript writes via `appendTranscript(cwd, loopId, record)` are append-only, never rewrite.
+
+**New worktree or overnight-runner feature (Phase 13+):**
+Add worktree operations to `lib/worktree.cjs` (add, merge, remove, prune) or run operations to `lib/ledger.cjs` (record-phase, run status, run snapshot, run report). Conflict detection must read `clean: boolean` from `worktree merge --raw` JSON, never trust exit code (TC-2 invariant). Run.log writes must use locked TYPE vocabulary and ISO8601 timestamps. Stuck detection via `run snapshot` compares file hashes; stuck completed phases must be downgraded to failed (TC-6).

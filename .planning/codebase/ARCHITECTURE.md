@@ -13,7 +13,7 @@ Key characteristics:
 - **Commands as thin stubs:** `commands/gsd2/*.md` files are Claude slash-command definitions that load workflows by reference (`@~/.claude/get-shit-done/workflows/*.md`)
 - **Agents as specialized roles:** `agents/*.md` files define sub-agent personas with specific tools, responsibilities, and role boundaries
 - **State persisted in markdown:** The `.planning/` directory in each user project is the runtime state store — `STATE.md`, `ROADMAP.md`, `phases/`, `config.json`
-- **V1.6 supervision harness (Phases 10-14):** Append-only ledger + mailbox + parking + multi-lens discussion loop enable autonomous runs with human review checkpoints
+- **V1.6 supervision harness (Phases 10-15):** Append-only ledger + mailbox + parking + multi-lens discussion loop enable autonomous runs with human review checkpoints and conflict detection
 
 ---
 
@@ -59,23 +59,25 @@ Key characteristics:
   - `ledger.cjs` — Append-only decision ledger (Phase 10+): DECISIONS.jsonl with autonomously resolved decisions, confidence metadata, escalation verdicts
   - `mailbox.cjs` — Decision mailbox for escalated decisions (Phase 10+): MAILBOX.jsonl stores parked questions pending human review, tracks answer status
   - `park.cjs` — Phase snapshot persistence and stuck detection (Phase 12+): tracks file hashes at phase boundaries, detects staleness/convergence failure
-  - `discuss-loop.cjs` — Multi-lens judgment loop primitives (Phase 14+): loop-id generation, position validation, constraint delta, survivor tracking
-  - `worktree.cjs` — Linked worktree lifecycle for parallel executor isolation (Phase 13+)
+  - `discuss-loop.cjs` — Multi-lens judgment loop primitives (Phase 14+): loop-id generation, position validation, constraint delta, survivor selection, transcript recording
+  - `worktree.cjs` — Linked worktree lifecycle for parallel executor isolation (Phase 13+): create, merge, remove worktrees; conflict detection via clean flag
   - `parallel-gate.cjs` — Concurrent safety decision for phase dependencies (Phase 13+)
   - `trace.cjs`, `lesson.cjs`, `migration.cjs`, `install-transform.cjs` — Supporting utilities
 
-**Persistence Layer (Phase 10+ ledger/mailbox, Phase 12+ park, Phase 14+ discuss-loop):**
+**Persistence Layer (Phase 10+ ledger/mailbox, Phase 12+ park, Phase 13+ worktree, Phase 14+ discuss-loop):**
 
-- Purpose: Record autonomous decision outcomes, escalated decisions, phase snapshots, and multi-lens judgment loops for auditable runs
-- Location: `get-shit-done/bin/lib/ledger.cjs`, `get-shit-done/bin/lib/mailbox.cjs`, `get-shit-done/bin/lib/park.cjs`, `get-shit-done/bin/lib/discuss-loop.cjs`
+- Purpose: Record autonomous decision outcomes, escalated decisions, phase snapshots, worktree merges, and multi-lens judgment loops for auditable runs
+- Location: `get-shit-done/bin/lib/ledger.cjs`, `get-shit-done/bin/lib/mailbox.cjs`, `get-shit-done/bin/lib/park.cjs`, `get-shit-done/bin/lib/discuss-loop.cjs`, `get-shit-done/bin/lib/worktree.cjs`
 - Run context: Gated by `GSD_RUN_ID` environment variable. When set, `gsd-tools run init <run-id>` creates `.planning/run/<run-id>/` with:
   - `DECISIONS.jsonl` — Append-only ledger of autonomously resolved decisions
   - `MAILBOX.jsonl` — Parked questions and answers
   - `RUN-META.json` — Run metadata, phase tracking, git snapshots
   - `parked/phase-{N}.json` — File hashes and context snapshots at phase boundaries
-  - `discuss-loop/<loop-id>/TRANSCRIPT.jsonl` — Multi-lens round records and constraint deltas
-  - `run.log` — Timestamped event stream (parsed by morning report generator)
-- Data schema: Decisions include `{decision, alternatives, evidence, confidence, escalated, escalation_verdict, escalation_reason, phase, context}`. Questions include `{question, phase, evidence, status, answer}`. Discuss-loop records include position blocks with `{lens, round, position, blocking, constraints[], modifications}`.
+  - `run.log` — Timestamped event stream (Phase 13+): parsed by runner for health, phase outcomes, stuck detection, conflict routing
+- Worktree data: Git branch-based isolation; `.worktrees/` directory in project root (gitignored). Merges return `{clean: boolean, conflict_files: [...]}` for human conflict routing.
+- Discuss-loop data: `.planning/discuss-loop/<loop-id>/` with:
+  - `artifact.txt` — Artifact content snapshot (grounds anchor validation)
+  - `transcript.jsonl` — Position blocks, deltas, and lens_failure records; append-only, JSONL format
 
 **Escalation Contract Layer (Phase 11+):**
 
@@ -164,10 +166,10 @@ allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite, AskUserQue
 discuss-phase question_triage: resolution loop resolves decision (HIGH/MEDIUM/LOW) → only when GSD_RUN_ID is set (harness run): inline escalation evaluator applies four contract criteria as membership checks → computes `escalation_verdict` (proceed|proceed-and-log|park-and-ask) + `escalation_reason` → appends to `.planning/run/<run-id>/DECISIONS.jsonl` (write-once) → if `park-and-ask`: question appended to MAILBOX.jsonl for morning review; if `proceed`/`proceed-and-log`: decision executes autonomously and is flagged in ledger for morning review
 
 **Multi-Lens Discussion Loop (Phase 14+):**
-`/gsd2:discuss-loop <artifact-path | --decision dec-NNN>` → parse artifact (file or ledger decision) → up to 3 rounds of parallel judgment (fresh-context Skeptic, User-Advocate, Architect lenses) → each round: validate position blocks with verbatim anchor substring checks, compute constraint delta → converge on `blocking: false` + no new constraints, or escalate divergent positions → if `GSD_RUN_ID` set: append transcript to `.planning/run/<run-id>/discuss-loop/<loop-id>/TRANSCRIPT.jsonl`, write positions to mailbox (if `--auto` flag present); if interactive: present positions in-session, apply modifications to artifact
+`/gsd2:discuss-loop <artifact-path | --decision dec-NNN>` → parse artifact (file or ledger decision) → up to 3 rounds of parallel judgment (fresh-context Skeptic, User-Advocate, Architect lenses) → each round: three lens agents spawned in parallel via Task() → each returns position block with `{lens, round, position, blocking, constraints[]}` → orchestrator validates each block (anchor substring check against artifact.txt, referential integrity for carried constraints) → computes round delta (blocking lenses, new vs. carried constraint counts, convergence flag) → converge on `blocking: false` + no new constraints, or escalate divergent positions → on convergence: apply modifications to artifact (after escalation-contract check if committed file), append decision to ledger (if run context) → on escalation (round 3 divergence): compute survivor lenses via divergence-weight ranking, append mailbox entry (if `--auto` + run context, never synthesis of lens positions), or present in-session (interactive) → transcript appended at every step (loop-start, position record per lens, round-delta, loop-end)
 
 **Overnight Autonomous Run (Phase 13+, v1.6 harness):**
-`/gsd2:overnight [--from N] [--run-id <id>]` → health check (ESC-03 calibration + absolute GSD_RUN_LOG) → `gsd-tools run init <run-id>` → for each remaining phase: spawn autonomous loop via `Skill(skill="gsd2:autonomous", args="--phase N")` with GSD_RUN_ID, GSD_RUN_LOG in environment → each Skill invocation inherits run context, appends to ledger/mailbox, captures `PHASE RESULT:` line → runner monitors for conflicts (clean: false) → routes to mailbox, never retries → morning report printed at end with decision summary and pending questions
+`/gsd2:overnight [--from N] [--run-id <id>]` → health check (ESC-03 calibration gate + absolute GSD_RUN_LOG path) → `gsd-tools run init <run-id>` → discover phases and dependency graph → for each remaining phase: spawn autonomous loop via `Skill(skill="gsd2:autonomous", args="--phase N")` with GSD_RUN_ID, GSD_RUN_LOG in environment → worktree creation attempt (fallback to in-place if isolation unavailable) → each Skill invocation inherits run context, appends to ledger/mailbox, reads/writes parked snapshots → runner monitors for conflicts (clean: false from `worktree merge --raw`) and auth failures (hard stop) → conflicts route to mailbox with file list and run-id for morning resolution → phase stuck detection via `run snapshot` comparing hash deltas → morning report printed at end with decision summary, pending questions, and mailbox pointer
 
 **Morning Inbox (Phase 10+):**
 `/gsd2:inbox [run-id]` → resolve run → print morning report (from `gsd-tools run report <run-id>`) → load unanswered questions from MAILBOX.jsonl → present each with context, evidence, staleness state → record answers via `gsd-tools mailbox answer` → print per-phase resume handoffs (never execute resume)
@@ -191,7 +193,8 @@ All workflows read STATE.md first via `gsd-tools state load`. Writes happen at: 
 - Large payloads (>50KB JSON) are written to `/tmp/gsd-*.json` and the path returned with `@file:` prefix. Callers must check: `if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi`
 - Hook scripts use stdin timeouts (3s / 10s) to prevent hanging on slow pipes — exit 0 silently rather than reporting hook errors that confuse the agent.
 - Workflows have fallback logic: missing `.planning/` → error and instruct to run new-project; missing STATE.md → offer reconstruct; missing phase directory → offer to create; absent Task API (non-Claude runtimes) → sequential inline execution fallback.
-- Run context failures are fail-closed: health check gates fail-closed (no retry); transcript write failures abort the loop (unauditable); conflict detection never silently retries — conflicts route to mailbox.
+- Run context failures are fail-closed: health check gates fail-closed (no phase starts on HEALTH_FAIL); transcript write failures abort the loop immediately (unauditable); conflict detection never silently retries — conflicts route to mailbox with evidence preserved. Worktree merge conflicts leave branches UNMERGED for human morning review (TC-2 invariant: the branch is the conflict evidence).
+- Auth failures in overnight runs halt immediately (AUTH_FAILURE + RUN_STOP logged, no silent retry, no skip-to-independent for auth — every other failure parks/fails phase and continues to independent phases — auth is the asymmetric exception per RUN-03 invariant).
 
 ---
 
@@ -222,7 +225,13 @@ When `GSD_RUN_ID` environment variable is set, all append-only writes to `DECISI
 When `GSD_RUN_ID` is set (harness/overnight run), the discuss-phase question_triage evaluator applies the escalation contract inline (no Task spawn, no human roundtrip) to each autonomously resolved decision. The contract is a deterministic four-criterion membership check — conditions are literal, not heuristic. Verdicts are computed before ledger append (write-once). Borderline cases (condition resembles but doesn't literally match) default to `proceed-and-log` per tie-break rules, except borderline irreversibility or security → `park-and-ask`. This makes autonomous runs auditable and tunable — decisions flow through the ledger with their verdict and reason, visible in morning review.
 
 **Multi-Lens Grounding (Phase 14+):**
-Every constraint emitted by a lens agent must carry a verbatim anchor — a character-exact quote from the artifact being judged. The orchestrator mechanically substring-checks anchors against artifact content; a paraphrased or invented anchor fails validation and costs a re-spawn. No anchor → no constraint. This prevents lens synthesis of invented positions and grounds judgment in artifact text alone.
+Every constraint emitted by a lens agent must carry a verbatim anchor — a character-exact quote from the artifact being judged. The orchestrator mechanically substring-checks anchors against `artifact.txt` via `validatePositionBlock()` — a paraphrased or invented anchor fails validation and costs a re-spawn. No anchor → no constraint. This prevents lens synthesis of invented positions and grounds judgment in artifact text alone. Constraint IDs follow `<lens>-r<round>-c<n>` format and must be referenced by name when carried to later rounds (referential integrity check).
 
 **Discuss-Loop Convergence (Phase 14+):**
-The loop converges deterministically: no blocking position + no new constraints = verdict `accept`. Otherwise, escalate divergent positions to mailbox (autonomous runs) or present in-session (interactive). Divergent constraint sets are never averaged or synthesized — each surviving position is presented as-is with its evidence and anchor quotes.
+The loop converges deterministically: no blocking position + no new constraints = verdict `accept`. Otherwise, escalate divergent positions to mailbox (autonomous runs) or present in-session (interactive). Divergent constraint sets are never averaged or synthesized — each surviving position is presented as-is via `selectSurvivors()`, ordered by divergence weight (unshared blocking constraint count). Survivors are labeled per lens; non-surviving positions are discarded per LOOP-02 contract (no synthesis, no re-ranking of decisions that already converged).
+
+**Worktree Isolation (Phase 13+):**
+Parallel phase execution via overnight runner uses git linked worktrees (`.worktrees/overnight-phase-{N}/`) to isolate concurrent work. The `worktree add` command detects pre-existing isolation and detects submodules (not worktrees). Merges are conflict-aware: exit code is always 0, but the `clean: boolean` field (from `worktree merge --raw` JSON) indicates conflict state (TC-2: exit codes are meaningless, JSON clean flag is canonical truth). On conflict, the branch is left UNMERGED for human review; no silent retry. On clean merge, the worktree is removed. In-place fallback (WORKTREE_FALLBACK logged) occurs when isolation unavailable — runner logs the fallback, not a failure.
+
+**Stuck Phase Detection (Phase 13+):**
+At every phase boundary, `gsd-tools run snapshot` compares file hashes against parked snapshots from prior phases. If hashes haven't changed, the phase is marked stuck. A stuck completed phase is downgraded to failed (TC-6: stuck never completes). This catches convergence failures and loops where the model cannot progress.
