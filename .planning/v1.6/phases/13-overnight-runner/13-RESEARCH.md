@@ -430,8 +430,10 @@ overnight_health_check() {
     ERRORS=$((ERRORS + 1))
   fi
 
-  # 3. ESC-03 calibration gate
-  if ! grep -q "CALIBRATION_PASSED" ".planning/v1.6/phases/11-escalation-contract-discuss-phase-wiring/"*CALIBRATION*.md 2>/dev/null; then
+  # 3. ESC-03 calibration gate — case-sensitive match on the uppercase token;
+  # the shipped template is guaranteed to contain zero occurrences until a human
+  # fills the Result section (verified: grep -c returns 0 on the PENDING template)
+  if ! grep -q "PASS" ".planning/v1.6/phases/11-escalation-contract-discuss-phase-wiring/"*CALIBRATION*.md 2>/dev/null; then
     echo "$(date -u +%T) HEALTH_FAIL: ESC-03 calibration gate not passed — run calibration before overnight" >> "$LOG_FILE"
     ERRORS=$((ERRORS + 1))
   fi
@@ -534,10 +536,9 @@ function cmdRunReport(cwd, runId) {
 
 ## Open Questions
 
-1. **ESC-03 calibration gate check**
-   - What we know: ESC-03 is documented as a "structural gate blocking Phase 13" (ROADMAP.md). Phase 11 ships CALIBRATION.md. The calibration is a human activity with a pass/fail criterion.
-   - What's unclear: How does the overnight health check programmatically verify ESC-03 passed? The CALIBRATION.md avoids writing "PASS" directly (noted in STATE.md decision: "avoids uppercase PASS entirely by describing the token by letter spelling"). The health check must grep for the letter-spelled token.
-   - Recommendation: Plan must read the actual Phase 11 CALIBRATION.md and determine the exact grep pattern for the pass token. The health check should be `grep -qi "<spelled-token>" ...CALIBRATION*.md` — the planner should inspect this before writing the health check task.
+1. **ESC-03 calibration gate check** — RESOLVED (orchestrator verified against the shipped 11-CALIBRATION.md)
+   - The gate token IS the literal uppercase word `PASS`, written by the human into the Result section. The STATE.md note ("avoids uppercase PASS entirely by describing the token by letter spelling") refers only to the TEMPLATE: 11-CALIBRATION.md describes the token as "four letters: p-a-s-s, in capitals" so the file pre-contains zero occurrences and the gate cannot be accidentally satisfied.
+   - Health check: case-SENSITIVE `grep -q "PASS" ...CALIBRATION*.md` (not `-i` — the template legitimately contains lowercase "pass" in instructions). Verified: `grep -c "PASS"` returns 0 on the shipped PENDING template.
 
 2. **How overnight.md invokes autonomous.md — direct skill call or Skill()**
    - What we know: `autonomous.md` is already a workflow. The typical pattern is `Skill(skill="gsd2:autonomous")` from within another skill.
