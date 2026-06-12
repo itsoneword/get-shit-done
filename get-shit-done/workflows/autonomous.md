@@ -176,37 +176,56 @@ VERIFY_STATUS=$(grep "^status:" "${PHASE_DIR}"/*-VERIFICATION.md 2>/dev/null | h
 
 Route on VERIFY_STATUS:
 
-**Empty** (no file/field): handle_blocker "Execute phase ${PHASE_NUM} did not produce verification results."
+**Empty** (no file/field):
+- HARNESS_MODE: phase outcome is `failed` with reason `no-verification` — do not AskUserQuestion. In single-phase mode: emit `PHASE RESULT: failed phase=${PHASE_NUM} reason=no-verification` and stop. In multi-phase mode: treat as blocker (log it, skip to independent phases).
+- Interactive: handle_blocker "Execute phase ${PHASE_NUM} did not produce verification results."
 
-**`passed`**: Display `Phase ${PHASE_NUM} > ${PHASE_NAME} -- Verification passed`. Proceed to iterate.
+**`passed`**: Display `Phase ${PHASE_NUM} > ${PHASE_NAME} -- Verification passed`. Proceed to iterate. In single-phase mode: emit `PHASE RESULT: completed phase=${PHASE_NUM}` and stop.
 
-**`human_needed`**: Read human_verification items from VERIFICATION.md. Ask user:
-- "Phase ${PHASE_NUM} has items needing manual verification. Validate now or continue?"
-- Options: "Validate now" / "Continue without validation"
+**`human_needed`**:
+- HARNESS_MODE: do not ask. Read human_verification items from VERIFICATION.md. Append the deferred verification to the mailbox so it surfaces in the morning inbox:
 
-On "Validate now": Present items, then ask "Validation result?" with "All good -- continue" / "Found issues". Issues route to handle_blocker.
-On "Continue without validation": Display `Phase ${PHASE_NUM} > Human validation deferred`. Proceed to iterate.
+  ```bash
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox append --data '{"question":"Phase ${PHASE_NUM} completed but needs human verification: <one-line summary of the human_verification items from VERIFICATION.md>","phase":${PHASE_NUM},"context":"autonomous harness mode: verification status human_needed — items listed in ${PHASE_DIR}/<file>-VERIFICATION.md","status":"pending"}'
+  ```
 
-**`gaps_found`**: Read gap summary. Display score. Ask user:
-- "Gaps found in phase ${PHASE_NUM}. How to proceed?"
-- Options: "Run gap closure" / "Continue without fixing" / "Stop autonomous mode"
+  Capture the printed q-NNN. Phase outcome is `completed` with `deferred_verification=q-NNN` on the PHASE RESULT line. Display `Phase ${PHASE_NUM} > Human validation deferred to inbox (q-NNN)`. In single-phase mode: emit `PHASE RESULT: completed phase=${PHASE_NUM} deferred_verification=q-NNN` and stop. In multi-phase mode: proceed to iterate.
+- Interactive: Read human_verification items from VERIFICATION.md. Ask user:
+  - "Phase ${PHASE_NUM} has items needing manual verification. Validate now or continue?"
+  - Options: "Validate now" / "Continue without validation"
 
-On "Run gap closure" (limit: 1 attempt -- WHY: prevents infinite loops):
+  On "Validate now": Present items, then ask "Validation result?" with "All good -- continue" / "Found issues". Issues route to handle_blocker.
+  On "Continue without validation": Display `Phase ${PHASE_NUM} > Human validation deferred`. Proceed to iterate.
 
-```
-Skill(skill="gsd2:plan-phase", args="${PHASE_NUM} --gaps")
-```
+**`gaps_found`**:
+- HARNESS_MODE: do not ask. Run gap closure exactly once automatically (the existing 1-attempt limit applies):
 
-Verify gap plans via `init phase-op`. If none: handle_blocker.
+  ```
+  Skill(skill="gsd2:plan-phase", args="${PHASE_NUM} --gaps")
+  Skill(skill="gsd2:execute-phase", args="${PHASE_NUM} --no-transition")
+  ```
 
-```
-Skill(skill="gsd2:execute-phase", args="${PHASE_NUM} --no-transition")
-```
+  Re-read VERIFY_STATUS. `passed` → phase outcome `completed`; in single-phase mode emit `PHASE RESULT: completed phase=${PHASE_NUM}` and stop; otherwise proceed to iterate. `human_needed` → route per the harness human_needed branch above. Still `gaps_found` (or empty) → phase outcome `failed` with reason `gaps_found` (fail-safe direction: a wrongly-failed phase is reviewable in the morning; a wrongly-completed phase poisons downstream merges). In single-phase mode: emit `PHASE RESULT: failed phase=${PHASE_NUM} reason=gaps_found` and stop. In multi-phase mode: log and skip to independent phases.
+- Interactive: Read gap summary. Display score. Ask user:
+  - "Gaps found in phase ${PHASE_NUM}. How to proceed?"
+  - Options: "Run gap closure" / "Continue without fixing" / "Stop autonomous mode"
 
-Re-read VERIFY_STATUS. If `passed`/`human_needed`: route normally. If still `gaps_found`: ask "Gap closure did not fully resolve issues" with "Continue anyway" / "Stop autonomous mode".
+  On "Run gap closure" (limit: 1 attempt -- WHY: prevents infinite loops):
 
-On "Continue without fixing": Display `Phase ${PHASE_NUM} > Gaps deferred`. Proceed to iterate.
-On "Stop autonomous mode": handle_blocker "User stopped -- gaps remain in phase ${PHASE_NUM}".
+  ```
+  Skill(skill="gsd2:plan-phase", args="${PHASE_NUM} --gaps")
+  ```
+
+  Verify gap plans via `init phase-op`. If none: handle_blocker.
+
+  ```
+  Skill(skill="gsd2:execute-phase", args="${PHASE_NUM} --no-transition")
+  ```
+
+  Re-read VERIFY_STATUS. If `passed`/`human_needed`: route normally. If still `gaps_found`: ask "Gap closure did not fully resolve issues" with "Continue anyway" / "Stop autonomous mode".
+
+  On "Continue without fixing": Display `Phase ${PHASE_NUM} > Gaps deferred`. Proceed to iterate.
+  On "Stop autonomous mode": handle_blocker "User stopped -- gaps remain in phase ${PHASE_NUM}".
 
 **Single-phase mode:** after the phase resolves (via 3d routing, a parked discuss, or a failure), do not iterate. End the response with the outcome line as the FINAL line of output, exactly one of:
 
@@ -499,6 +518,10 @@ Cleanup shows its own dry-run and asks user for approval internally -- acceptabl
 
 ## 6. Handle Blocker
 
+**HARNESS_MODE: never AskUserQuestion.** Log the blocker description in the response output. In single-phase mode: the phase outcome is `failed` with a short kebab-case reason derived from the blocker description (e.g. `reason=no-plans-produced`) — emit the PHASE RESULT line and stop. In multi-phase harness mode: treat as the existing 'Skip this phase' branch (log `Phase {N} > {Name} — Skipped (harness): {description}`) and proceed to iterate.
+
+Interactive sessions: the existing 3-option AskUserQuestion, unchanged.
+
 Present 3 options via AskUserQuestion:
 - Prompt: "Phase {N} ({Name}) encountered an issue: {description}"
 - Options: "Fix and retry" / "Skip this phase" / "Stop autonomous mode"
@@ -526,6 +549,7 @@ Present 3 options via AskUserQuestion:
 <success_criteria>
 - Single-phase mode (--phase N) runs exactly one phase, never enters lifecycle, and ends with exactly one PHASE RESULT line
 - Harness mode (GSD_RUN_ID set) delegates discuss to discuss-phase --auto and never calls smart_discuss
+- Harness mode never invokes AskUserQuestion anywhere in the workflow — every former pause routes to mailbox + continue or to a failed outcome
 - All incomplete phases executed in order (smart discuss -> plan -> execute each)
 - Smart discuss proposes grey area answers in tables; user accepts or overrides per area
 - Progress banners displayed between phases
