@@ -257,7 +257,7 @@
 | 8. Validated Example Corpus | v1.5 | 4/4 | Complete | 2026-06-08 |
 | 9. Self-Improving Skills | v1.5 | 2/2 | Complete | 2026-06-08 |
 | 10. Decision Ledger + CLI Foundation | v1.6 | 2/2 | Complete    | 2026-06-11 |
-| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete   | 2026-06-11 |
+| 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete    | 2026-06-12 |
 | 12. Park-Don't-Block Mailbox | v1.6 | 0/3 | Planned | - |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
 | 14. Multi-Lens Discussion Loop | v1.6 | 0/TBD | Not started | - |
