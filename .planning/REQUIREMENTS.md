@@ -28,7 +28,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Park-Don't-Block (PARK)
 
 - [x] **PARK-01**: A park-and-ask verdict appends question + context snapshot to a per-run `MAILBOX.jsonl`; the parked branch stops while the run continues other work
-- [ ] **PARK-02**: User can review and answer all parked questions in one inbox command
+- [x] **PARK-02**: User can review and answer all parked questions in one inbox command
 - [x] **PARK-03**: Answering resumes the parked branch with a staleness check — current planning state (STATE.md, ROADMAP.md, cross-phase-notes.md) is re-read before replay
 - [x] **PARK-04**: Stuck detection — an identical ledger hash across consecutive snapshots flags the run
 
@@ -81,7 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ESC-02 | Phase 11 | Complete |
 | ESC-03 | Phase 11 | Complete |
 | PARK-01 | Phase 12 | Complete |
-| PARK-02 | Phase 12 | Pending |
+| PARK-02 | Phase 12 | Complete |
 | PARK-03 | Phase 12 | Complete |
 | PARK-04 | Phase 12 | Complete |
 | RUN-01 | Phase 13 | Pending |
