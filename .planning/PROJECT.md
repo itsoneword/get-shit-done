@@ -26,6 +26,8 @@ Every line of code written by an AI agent should trace back to a requirement tha
 
 ## Current State
 
+**v1.6 Phase 11 (Escalation Contract + discuss-phase Wiring) complete — 2026-06-12.** The ESC requirement set shipped: `get-shit-done/references/escalation-contract.md` (4 criteria — irreversibility, security boundary, scope change, spec ambiguity — as 24 numbered discrete conditions mapped to the proceed / proceed-and-log / park-and-ask verdict schema, with tie-break rules), an inline evaluator sub-step inside discuss-phase's `question_triage` that fires only when `GSD_RUN_ID` is set and writes verdict+reason in the single write-once `ledger append` call (interactive sessions byte-identical), a 14-scenario golden set (`11-GOLDEN-SET.md`), and the `11-CALIBRATION.md` gate witness (ships PENDING, zero uppercase "PASS" tokens — Phase 13's overnight runner stays blocked until a human fills it after a live calibration run; see `11-HUMAN-UAT.md`). Next: Phase 12 (park-don't-block mailbox).
+
 **v1.6 Phase 10 (Decision Ledger + CLI Foundation) complete — 2026-06-11.** The shared persistence layer for the supervision harness shipped: `lib/ledger.cjs` (append-only `DECISIONS.jsonl`, write-time validation of decision/alternatives/evidence/confidence/escalated, GSD_RUN_ID run-context gate so interactive sessions never write), `lib/mailbox.cjs` (`MAILBOX.jsonl` append/list with q-NNN ids, same gate), and `gsd-tools run init` enforcing the `.planning/run/<run-id>/` layout (gitignored). CLI: `ledger append/list/filter --phase/--escalated`, `mailbox append/list --status`. 24 new unit tests; 983 total pass. Verification: 10/10 must-haves. Next: Phase 11 (escalation contract + discuss-phase wiring).
 
 **v1.4 Domain-Aware Planning — shipped 2026-05-13**
@@ -63,13 +65,13 @@ Domain router, AGENT-SPEC, documentation agent, verification harness, and milest
 - Autonomous technical-resolution loop in discuss/plan — shipped v1.5 Phase 2 (RSCH)
 - Anti-pattern/bug-pattern reference docs incl. Python — shipped v1.5 Phase 3 (GUIDE)
 - Skill self-sufficiency, parallel multi-session safety (worktrees + axis-A/B gate), validated example corpus, self-improving skills (`/gsd2:teach`) — shipped v1.5 Phases 6–9
+- Decision ledger + mailbox persistence layer (`lib/ledger.cjs`, `lib/mailbox.cjs`, `run init`, ledger/mailbox CLI) — shipped v1.6 Phase 10 (LEDGER)
+- Escalation contract + discuss-phase evaluator wiring + calibration gate material — shipped v1.6 Phase 11 (ESC-01, ESC-02, ESC-03; live calibration sign-off pending in 11-HUMAN-UAT.md)
 
 ### Active
 
 _(milestone v1.6 Autonomous Supervision Harness — see `.planning/REQUIREMENTS.md` for full REQ-IDs)_
 
-- Decision ledger: every autonomous choice logged with alternatives, evidence, escalated flag (LEDGER)
-- Escalation contract: evaluator verdict schema with written park-and-ask criteria (ESC)
 - Park-don't-block question mailbox + single inbox review command (PARK)
 - Overnight runner wrapping /gsd2:autonomous with worktree isolation (RUN)
 - Artifact-anchored multi-lens discussion loop with convergence brake (LOOP)
@@ -128,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-11 — v1.6 Phase 10 complete: decision ledger + mailbox persistence layer (`lib/ledger.cjs`, `lib/mailbox.cjs`, `run init`, ledger/mailbox CLI subcommands; 983 tests pass). Milestone v1.6 Autonomous Supervision Harness started 2026-06-10 (decision ledger, escalation contract, park-don't-block mailbox, overnight runner, discussion loop, triage worker). Previous note (v1.5 Phase 9): `.planning/lessons/` JSONL ledger + `gsd-tools lesson` CLI + `/gsd2:teach` online skill-evolution loop (attribute → advisor-critic bounded edit → [y/N] ratify → source-only commit + separate ledger commit → npm run dev); dogfooded on the gsd repo (found+fixed a two-commit-ordering bug that broke git-revert undo); 959 unit tests pass. v1.5 Capability Port complete — all 9 phases shipped.*
+*Last updated: 2026-06-12 — v1.6 Phase 11 complete: escalation contract (4 criteria / 24 conditions / 3-tier verdicts), discuss-phase inline evaluator gated on GSD_RUN_ID, 14-scenario golden set, and PENDING calibration gate witness blocking Phase 13 until human sign-off. Previous note (Phase 10): decision ledger + mailbox persistence layer (`lib/ledger.cjs`, `lib/mailbox.cjs`, `run init`, ledger/mailbox CLI subcommands; 983 tests pass). Milestone v1.6 Autonomous Supervision Harness started 2026-06-10 (decision ledger, escalation contract, park-don't-block mailbox, overnight runner, discussion loop, triage worker). Previous note (v1.5 Phase 9): `.planning/lessons/` JSONL ledger + `gsd-tools lesson` CLI + `/gsd2:teach` online skill-evolution loop (attribute → advisor-critic bounded edit → [y/N] ratify → source-only commit + separate ledger commit → npm run dev); dogfooded on the gsd repo (found+fixed a two-commit-ordering bug that broke git-revert undo); 959 unit tests pass. v1.5 Capability Port complete — all 9 phases shipped.*
