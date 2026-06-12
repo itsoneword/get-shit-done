@@ -3,7 +3,7 @@ phase: 14
 slug: multi-lens-discussion-loop
 status: planned
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-06-12
 ---
 
@@ -38,12 +38,12 @@ created: 2026-06-12
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 14-01-01 | 01 | 1 | LOOP-01, LOOP-02 | unit (RED — TC-LENS-*, TC-ORCH-1/2 contracts) | `node --test tests/discuss-loop.test.cjs` (expected red) | ❌ W0 (this task creates it) | ⬜ pending |
-| 14-01-02 | 01 | 1 | LOOP-01, LOOP-02 | unit (GREEN) | `node --test tests/discuss-loop.test.cjs` + `node scripts/run-tests.cjs` | ✅ after 14-01-01 | ⬜ pending |
-| 14-02-01 | 02 | 1 | LOOP-01 | structural grep | `grep -l "tools: Read, Grep, Glob" agents/gsd-lens-*.md \| wc -l` → 3 | ✅ (grep, no test file) | ⬜ pending |
-| 14-02-02 | 02 | 1 | LOOP-01 | structural grep | `grep -q "name: gsd2:discuss-loop" commands/gsd2/discuss-loop.md` | ✅ | ⬜ pending |
-| 14-03-01 | 03 | 2 | LOOP-01, LOOP-02 | structural grep (record types, no-synthesis guardrail, pending status, bifurcation) | grep criteria in 14-03-PLAN Task 1 | ✅ | ⬜ pending |
-| 14-03-02 | 03 | 2 | LOOP-01, LOOP-02 | install + full suite | `npm run dev && node scripts/run-tests.cjs` | ✅ | ⬜ pending |
+| 14-01-01 | 01 | 1 | LOOP-01, LOOP-02 | unit (RED — TC-LENS-*, TC-ORCH-1/2 contracts) | `node --test tests/discuss-loop.test.cjs` (expected red) | ❌ W0 (this task creates it) | ✅ green |
+| 14-01-02 | 01 | 1 | LOOP-01, LOOP-02 | unit (GREEN) | `node --test tests/discuss-loop.test.cjs` + `node scripts/run-tests.cjs` | ✅ after 14-01-01 | ✅ green |
+| 14-02-01 | 02 | 1 | LOOP-01 | structural grep | `grep -l "tools: Read, Grep, Glob" agents/gsd-lens-*.md \| wc -l` → 3 | ✅ (grep, no test file) | ✅ green |
+| 14-02-02 | 02 | 1 | LOOP-01 | structural grep | `grep -q "name: gsd2:discuss-loop" commands/gsd2/discuss-loop.md` | ✅ | ✅ green |
+| 14-03-01 | 03 | 2 | LOOP-01, LOOP-02 | structural grep (record types, no-synthesis guardrail, pending status, bifurcation) | grep criteria in 14-03-PLAN Task 1 | ✅ | ✅ green |
+| 14-03-02 | 03 | 2 | LOOP-01, LOOP-02 | install + full suite | `npm run dev && node scripts/run-tests.cjs` | ✅ | ✅ green |
 | 14-03-03 | 03 | 2 | LOOP-01, LOOP-02 | manual (live smoke, TC-ORCH-interactive) | n/a — human-verify checkpoint | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
