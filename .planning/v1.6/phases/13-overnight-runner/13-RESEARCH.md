@@ -170,6 +170,19 @@ Expected: exit 1, stderr contains "Not logged in" or "authentication_error". Mar
 - Recommended for overnight: set `--max-turns` per phase invocation, not globally, since each phase calls `claude -p` separately through `autonomous.md`
 - The runner does NOT need to set `--max-turns` at the outer `overnight` level if it invokes autonomous sub-calls per phase
 
+### W0-5: User constraint record (2026-06-12 — overrides prescriptions above where they conflict)
+
+The user reviewed W0-1..W0-3 and supplied empirical input from their own environment. These are binding constraints for discuss-phase/planning:
+
+1. **OAuth concern dropped as a blocker.** The user's own overnight Claude sessions sustain auth without issue. Do NOT mandate `ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN` in the design. Auth safety net = the RUN-01 startup health check + loud auth-failure logging in run.log (already required). If the first real overnight run hits token expiry, run.log will show it and the prescription can be revisited — trust-ladder empiricism over preemptive complexity. (Caveat preserved for the record: the W0-1 failure reports concern fresh `claude -p` spawns; the user's working pattern may be long-lived sessions. The health check covers both.)
+
+2. **Sandbox-first permissioning, NOT blanket `bypassPermissions`.** The user runs with sandbox + auto-allow today and wants the runner to match. Expected overnight workload is research/fetch/plan/write — destructive ops are NOT expected. Design posture:
+   - Sandboxed bash with auto-allow runs without prompting in headless mode (docs: sandboxing.md).
+   - Anything needing to escape the sandbox (e.g. deletes outside allowed paths) goes through the regular permission flow — in an unattended run this must NOT hang: route it as a park-and-ask mailbox entry ("needs to delete X — answer in the morning"). This is the park-don't-block design applied to permissions and is explicitly acceptable to the user.
+   - **Network is the known pain point:** sandbox prompts per new domain. The runner's settings profile must pre-allow network: `sandbox.network.allowedDomains` (bash-level curl/wget) + `permissions.allow` rules `WebFetch(domain:...)` / `WebSearch` for the research tools.
+
+3. **Remaining Wave-0 probe (small, do before relying on it):** official docs are ambiguous whether a would-prompt tool call in `-p` mode auto-denies with a model-visible error (routable to mailbox) or aborts the run (headless.md says "the run aborts" for non-allowed tools). One short local probe with an `ask` rule + `claude -p` settles it; the mailbox routing design depends on the answer.
+
 ---
 
 ## Standard Stack
