@@ -206,7 +206,7 @@
   3. The morning report (`gsd-tools run report <run-id>`) summarizes decisions made, questions parked, and phases completed from the ledger alone — no transcript replay required
   4. Wave-0 empirical results (headless session lifespan, bypassPermissions behavior) are documented as a concrete constraint record in the phase context before any scheduling logic is implemented
 
-**Plans**: TBD
+**Plans**: 3 plans — 13-01 (gsd-tools run report + record-phase/status run-meta helpers, TDD, wave 1), 13-02 (autonomous.md harness mode: --phase selector + discuss-phase --auto delegation + PHASE RESULT contract, wave 1), 13-03 (overnight.md workflow + /gsd2:overnight stub + inbox report header, wave 2)
 
 ### Phase 14: Multi-Lens Discussion Loop
 
@@ -259,7 +259,7 @@
 | 10. Decision Ledger + CLI Foundation | v1.6 | 2/2 | Complete    | 2026-06-11 |
 | 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete    | 2026-06-12 |
 | 12. Park-Don't-Block Mailbox | v1.6 | 3/3 | Complete    | 2026-06-12 |
-| 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
+| 13. Overnight Runner | v1.6 | 0/3 | Planned | - |
 | 14. Multi-Lens Discussion Loop | v1.6 | 0/3 | Planned | - |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/TBD | Not started | - |
 
