@@ -249,7 +249,10 @@ function cmdLedgerAppend(cwd, runId, jsonString) {
 /**
  * List or filter decision records.
  * raw=true  → one JSON.stringify(rec) per line
- * raw=false → formatted table
+ * raw=false → formatted table (with optional STUCK FLAG header)
+ *
+ * STUCK FLAG is printed before the table in non-raw mode only, so that raw
+ * output stays machine-parseable JSONL.
  */
 function cmdLedgerList(cwd, runId, opts, raw) {
   const effectiveRunId = runId || process.env.GSD_RUN_ID;
@@ -265,6 +268,21 @@ function cmdLedgerList(cwd, runId, opts, raw) {
       process.stdout.write(JSON.stringify(rec) + '\n');
     }
   } else {
+    // Check for stuck flag in RUN-META.json (non-raw branch only)
+    try {
+      const metaFile = path.join(cwd, '.planning', 'run', effectiveRunId, 'RUN-META.json');
+      if (fs.existsSync(metaFile)) {
+        const meta = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+        if (meta.stuck === true) {
+          process.stdout.write(
+            `STUCK FLAG: run ${effectiveRunId} — ledger unchanged across last 2 phase boundaries\n`
+          );
+        }
+      }
+    } catch (_) {
+      // Missing or corrupt RUN-META.json must never break ledger list
+    }
+
     const table = formatTable(recs);
     if (table) process.stdout.write(table + '\n');
   }
