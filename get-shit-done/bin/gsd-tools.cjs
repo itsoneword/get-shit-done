@@ -1077,6 +1077,12 @@ async function main() {
           ledger.cmdRunStatus(cwd, runId, setIdx !== -1 ? args[setIdx + 1] : null, reasonIdx !== -1 ? args[reasonIdx + 1] : null);
           break;
         }
+        case 'report': {
+          let runId = args[2];
+          if (runId && runId.startsWith('--')) runId = undefined;
+          ledger.cmdRunReport(cwd, runId);
+          break;
+        }
         default:
           process.stderr.write(`run: unknown subcommand: ${sub}\n`);
           process.exit(1);

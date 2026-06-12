@@ -288,6 +288,121 @@ function cmdLedgerList(cwd, runId, opts, raw) {
   }
 }
 
+// ─── JSONL reader with skip-and-count ────────────────────────────────────────
+
+/**
+ * Read a JSONL file returning both parsed records and the count of
+ * non-empty lines that failed to parse. The morning report must
+ * skip-and-count, never crash (AGENT-SPEC: report is the only window into the run).
+ */
+function readJsonlWithCount(filePath) {
+  if (!fs.existsSync(filePath)) return { records: [], skipped: 0 };
+  const lines = fs.readFileSync(filePath, 'utf8').split('\n').filter(l => l.trim() !== '');
+  const records = [];
+  let skipped = 0;
+  for (const line of lines) {
+    try {
+      records.push(JSON.parse(line));
+    } catch (_) {
+      skipped++;
+    }
+  }
+  return { records, skipped };
+}
+
+// ─── Morning report ───────────────────────────────────────────────────────────
+
+/**
+ * Render a plain-text morning report from the three run artifacts alone.
+ * Reads EXACTLY: RUN-META.json, DECISIONS.jsonl, MAILBOX.jsonl — nothing else.
+ *
+ * gsd-tools run report <run-id>
+ */
+function cmdRunReport(cwd, runId) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write(
+      'run report: no run context — pass run-id or set GSD_RUN_ID\n'
+    );
+    process.exit(1);
+  }
+
+  // 2. RUN-META.json must exist
+  const mp = metaFilePath(cwd, effectiveRunId);
+  if (!fs.existsSync(mp)) {
+    process.stderr.write(
+      `run report: run not initialized: ${effectiveRunId}\n`
+    );
+    process.exit(1);
+  }
+
+  let meta;
+  try {
+    meta = JSON.parse(fs.readFileSync(mp, 'utf8'));
+  } catch (_) {
+    process.stderr.write(
+      `run report: RUN-META.json unreadable for ${effectiveRunId}\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. Read decisions and mailbox with skip-and-count
+  const dec = readJsonlWithCount(ledgerPath(cwd, effectiveRunId));
+  const mail = readJsonlWithCount(path.join(runDir(cwd, effectiveRunId), 'MAILBOX.jsonl'));
+
+  // 4. Compute stats
+  const escalated = dec.records.filter(d => d.escalated === true);
+  const unanswered = mail.records.filter(q => q.status !== 'answered');
+  const answered = mail.records.filter(q => q.status === 'answered');
+  const phases = Array.isArray(meta.phases) ? meta.phases : [];
+
+  // 5. Render plain text (NO markdown '#' headings)
+  const lines = [];
+
+  lines.push(`=== Morning Report: ${effectiveRunId} ===`);
+  lines.push(`Started:    ${meta.started_ts || 'unknown'}`);
+  const statusLine = `Status:     ${meta.status || 'unknown'}` +
+    (meta.stopped_reason ? ` (${meta.stopped_reason})` : '');
+  lines.push(statusLine);
+  lines.push('');
+
+  lines.push(`Phases (${phases.length}):`);
+  if (phases.length === 0) {
+    lines.push('  none recorded');
+  } else {
+    for (const rec of phases) {
+      let phaseLine = `  phase ${rec.phase}  ${rec.status}`;
+      if (rec.merge_clean === false) phaseLine += '  merge=conflict';
+      if (rec.reason) phaseLine += `  reason=${rec.reason}`;
+      lines.push(phaseLine);
+    }
+  }
+  lines.push('');
+
+  lines.push(`Decisions:  ${dec.records.length} total, ${escalated.length} escalated`);
+  lines.push('');
+
+  lines.push(`Mailbox:    ${unanswered.length} unanswered, ${answered.length} answered`);
+  if (unanswered.length > 0) {
+    lines.push('Unanswered questions:');
+    for (const q of unanswered) {
+      lines.push(`  [${q.id}] phase=${q.phase != null ? q.phase : '?'} — ${String(q.question).slice(0, 80)}`);
+    }
+  }
+
+  const totalSkipped = dec.skipped + mail.skipped;
+  if (totalSkipped > 0) {
+    lines.push('');
+    lines.push(`${totalSkipped} unparseable entries skipped`);
+  }
+
+  lines.push('');
+  lines.push(`Review with: /gsd2:inbox ${effectiveRunId}`);
+
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
 // ─── Run-meta mutation helpers ────────────────────────────────────────────────
 
 const VALID_PHASE_STATUSES = ['completed', 'parked', 'failed'];
@@ -426,6 +541,7 @@ module.exports = {
   runDir,
   ledgerPath,
   readLedger,
+  readJsonlWithCount,
   filterLedger,
   nextDecId,
   formatTable,
@@ -434,4 +550,5 @@ module.exports = {
   cmdLedgerList,
   cmdRunRecordPhase,
   cmdRunStatus,
+  cmdRunReport,
 };
