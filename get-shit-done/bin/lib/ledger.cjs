@@ -288,17 +288,267 @@ function cmdLedgerList(cwd, runId, opts, raw) {
   }
 }
 
+// ─── JSONL reader with skip-and-count ────────────────────────────────────────
+
+/**
+ * Read a JSONL file returning both parsed records and the count of
+ * non-empty lines that failed to parse. The morning report must
+ * skip-and-count, never crash (AGENT-SPEC: report is the only window into the run).
+ */
+function readJsonlWithCount(filePath) {
+  if (!fs.existsSync(filePath)) return { records: [], skipped: 0 };
+  const lines = fs.readFileSync(filePath, 'utf8').split('\n').filter(l => l.trim() !== '');
+  const records = [];
+  let skipped = 0;
+  for (const line of lines) {
+    try {
+      records.push(JSON.parse(line));
+    } catch (_) {
+      skipped++;
+    }
+  }
+  return { records, skipped };
+}
+
+// ─── Morning report ───────────────────────────────────────────────────────────
+
+/**
+ * Render a plain-text morning report from the three run artifacts alone.
+ * Reads EXACTLY: RUN-META.json, DECISIONS.jsonl, MAILBOX.jsonl — nothing else.
+ *
+ * gsd-tools run report <run-id>
+ */
+function cmdRunReport(cwd, runId) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write(
+      'run report: no run context — pass run-id or set GSD_RUN_ID\n'
+    );
+    process.exit(1);
+  }
+
+  // 2. RUN-META.json must exist
+  const mp = metaFilePath(cwd, effectiveRunId);
+  if (!fs.existsSync(mp)) {
+    process.stderr.write(
+      `run report: run not initialized: ${effectiveRunId}\n`
+    );
+    process.exit(1);
+  }
+
+  let meta;
+  try {
+    meta = JSON.parse(fs.readFileSync(mp, 'utf8'));
+  } catch (_) {
+    process.stderr.write(
+      `run report: RUN-META.json unreadable for ${effectiveRunId}\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. Read decisions and mailbox with skip-and-count
+  const dec = readJsonlWithCount(ledgerPath(cwd, effectiveRunId));
+  const mail = readJsonlWithCount(path.join(runDir(cwd, effectiveRunId), 'MAILBOX.jsonl'));
+
+  // 4. Compute stats
+  const escalated = dec.records.filter(d => d.escalated === true);
+  const unanswered = mail.records.filter(q => q.status !== 'answered');
+  const answered = mail.records.filter(q => q.status === 'answered');
+  const phases = Array.isArray(meta.phases) ? meta.phases : [];
+
+  // 5. Render plain text (NO markdown '#' headings)
+  const lines = [];
+
+  lines.push(`=== Morning Report: ${effectiveRunId} ===`);
+  lines.push(`Started:    ${meta.started_ts || 'unknown'}`);
+  const statusLine = `Status:     ${meta.status || 'unknown'}` +
+    (meta.stopped_reason ? ` (${meta.stopped_reason})` : '');
+  lines.push(statusLine);
+  lines.push('');
+
+  lines.push(`Phases (${phases.length}):`);
+  if (phases.length === 0) {
+    lines.push('  none recorded');
+  } else {
+    for (const rec of phases) {
+      let phaseLine = `  phase ${rec.phase}  ${rec.status}`;
+      if (rec.merge_clean === false) phaseLine += '  merge=conflict';
+      if (rec.reason) phaseLine += `  reason=${rec.reason}`;
+      lines.push(phaseLine);
+    }
+  }
+  lines.push('');
+
+  lines.push(`Decisions:  ${dec.records.length} total, ${escalated.length} escalated`);
+  lines.push('');
+
+  lines.push(`Mailbox:    ${unanswered.length} unanswered, ${answered.length} answered`);
+  if (unanswered.length > 0) {
+    lines.push('Unanswered questions:');
+    for (const q of unanswered) {
+      lines.push(`  [${q.id}] phase=${q.phase != null ? q.phase : '?'} — ${String(q.question).slice(0, 80)}`);
+    }
+  }
+
+  const totalSkipped = dec.skipped + mail.skipped;
+  if (totalSkipped > 0) {
+    lines.push('');
+    lines.push(`${totalSkipped} unparseable entries skipped`);
+  }
+
+  lines.push('');
+  lines.push(`Review with: /gsd2:inbox ${effectiveRunId}`);
+
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
+// ─── Run-meta mutation helpers ────────────────────────────────────────────────
+
+const VALID_PHASE_STATUSES = ['completed', 'parked', 'failed'];
+const VALID_RUN_STATUSES = ['running', 'complete', 'stopped'];
+
+/**
+ * Local path helper — avoids importing park.cjs (keep ledger.cjs sibling-free).
+ */
+function metaFilePath(cwd, runId) {
+  return path.join(runDir(cwd, runId), 'RUN-META.json');
+}
+
+/**
+ * Append a validated phase outcome record to RUN-META.json phases[].
+ *
+ * gsd-tools run record-phase <run-id> --phase N --status S [--worktree X]
+ *   [--merge-clean true|false] [--started-ts ISO] [--ended-ts ISO] [--reason text]
+ */
+function cmdRunRecordPhase(cwd, runId, opts) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write(
+      'run record-phase: no run context — set GSD_RUN_ID or pass run-id arg\n'
+    );
+    process.exit(1);
+  }
+
+  // 2. Run dir must exist
+  if (!fs.existsSync(runDir(cwd, effectiveRunId))) {
+    process.stderr.write(
+      `run record-phase: run not initialized: ${effectiveRunId} (run: gsd-tools run init ${effectiveRunId})\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. --phase required
+  if (opts.phase == null || isNaN(opts.phase)) {
+    process.stderr.write(
+      'run record-phase: --phase <N> and --status <completed|parked|failed> are required\n'
+    );
+    process.exit(1);
+  }
+
+  // 4. Validate --status
+  if (!opts.status || !VALID_PHASE_STATUSES.includes(opts.status)) {
+    if (!opts.status) {
+      process.stderr.write(
+        'run record-phase: --phase <N> and --status <completed|parked|failed> are required\n'
+      );
+    } else {
+      process.stderr.write(
+        `run record-phase: invalid status: ${opts.status} (expected completed|parked|failed)\n`
+      );
+    }
+    process.exit(1);
+  }
+
+  // 5. Read RUN-META.json
+  const mp = metaFilePath(cwd, effectiveRunId);
+  const meta = JSON.parse(fs.readFileSync(mp, 'utf8'));
+  if (!Array.isArray(meta.phases)) meta.phases = [];
+
+  // 6. Push the new entry
+  meta.phases.push({
+    phase: opts.phase,
+    status: opts.status,
+    worktree: opts.worktree != null ? opts.worktree : null,
+    merge_clean: opts.mergeClean != null ? opts.mergeClean : null,
+    started_ts: opts.startedTs != null ? opts.startedTs : null,
+    ended_ts: opts.endedTs != null ? opts.endedTs : null,
+    reason: opts.reason != null ? opts.reason : null,
+  });
+
+  // 7. Write back
+  fs.writeFileSync(mp, JSON.stringify(meta, null, 2) + '\n', 'utf8');
+
+  process.stdout.write(`phase recorded: phase=${opts.phase} status=${opts.status}\n`);
+}
+
+/**
+ * Set the terminal status of a run in RUN-META.json.
+ *
+ * gsd-tools run status <run-id> --set <running|complete|stopped> [--reason text]
+ */
+function cmdRunStatus(cwd, runId, setValue, reason) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write(
+      'run status: no run context — set GSD_RUN_ID or pass run-id arg\n'
+    );
+    process.exit(1);
+  }
+
+  // 2. Run dir must exist
+  if (!fs.existsSync(runDir(cwd, effectiveRunId))) {
+    process.stderr.write(
+      `run status: run not initialized: ${effectiveRunId} (run: gsd-tools run init ${effectiveRunId})\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. --set required
+  if (!setValue) {
+    process.stderr.write(
+      'run status: usage: run status <run-id> --set <running|complete|stopped> [--reason <text>]\n'
+    );
+    process.exit(1);
+  }
+
+  // 4. Validate --set value
+  if (!VALID_RUN_STATUSES.includes(setValue)) {
+    process.stderr.write(
+      `run status: invalid status: ${setValue} (expected running|complete|stopped)\n`
+    );
+    process.exit(1);
+  }
+
+  // 5. Read, update, write RUN-META.json
+  const mp = metaFilePath(cwd, effectiveRunId);
+  const meta = JSON.parse(fs.readFileSync(mp, 'utf8'));
+  meta.status = setValue;
+  if (reason) meta.stopped_reason = reason;
+  fs.writeFileSync(mp, JSON.stringify(meta, null, 2) + '\n', 'utf8');
+
+  process.stdout.write(`run status: ${setValue}\n`);
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
   REQUIRED_FIELDS,
+  VALID_PHASE_STATUSES,
+  VALID_RUN_STATUSES,
   runDir,
   ledgerPath,
   readLedger,
+  readJsonlWithCount,
   filterLedger,
   nextDecId,
   formatTable,
   cmdRunInit,
   cmdLedgerAppend,
   cmdLedgerList,
+  cmdRunRecordPhase,
+  cmdRunStatus,
+  cmdRunReport,
 };

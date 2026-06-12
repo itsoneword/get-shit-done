@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 14-multi-lens-discussion-loop-01-PLAN.md
-last_updated: "2026-06-12T11:43:54.999Z"
+stopped_at: Completed 13-01-PLAN.md
+last_updated: "2026-06-12T11:49:27.834Z"
 progress:
   total_phases: 15
   completed_phases: 3
@@ -16,6 +16,7 @@ progress:
 
 Phase: 13 (overnight-runner) — EXECUTING
 Plan: 2 of 3
+(parallel session: Phase 14 multi-lens-discussion-loop also executing)
 
 ## Project Reference
 
@@ -60,6 +61,8 @@ Recent decisions affecting current work:
 - [Phase 14]: Three separate lens agent files (not one parameterized agent) — persona + schema versioned in source, per 14-RESEARCH recommendation
 - [Phase 14-multi-lens-discussion-loop]: loop-id format includes Z from ISO timestamp — replace only /[:.]/g, Z stays in id
 - [Phase 14-multi-lens-discussion-loop]: validate errors written to stdout not stderr — matches plan spec pattern
+- [Phase 13]: readJsonlWithCount is a distinct function from readLedger — report needs the skipped count
+- [Phase 13]: cmdRunReport reads exactly three files: RUN-META.json, DECISIONS.jsonl, MAILBOX.jsonl — RUN-04 locked constraint
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-12T11:43:54.993Z
-Stopped at: Completed 14-multi-lens-discussion-loop-01-PLAN.md
+Last session: 2026-06-12T11:49:27.829Z
+Stopped at: Completed 13-01-PLAN.md
 Resume file: None

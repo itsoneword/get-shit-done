@@ -1053,6 +1053,37 @@ async function main() {
           park.cmdRunSnapshot(cwd, runId, { phase });
           break;
         }
+        case 'record-phase': {
+          let runId = args[2];
+          if (runId && runId.startsWith('--')) runId = undefined;
+          const flag = (name) => { const i = args.indexOf(name); return i !== -1 ? args[i + 1] : undefined; };
+          const phaseRaw = flag('--phase');
+          const mergeRaw = flag('--merge-clean');
+          ledger.cmdRunRecordPhase(cwd, runId, {
+            phase: phaseRaw != null ? parseInt(phaseRaw, 10) : null,
+            status: flag('--status') || null,
+            worktree: flag('--worktree') || null,
+            mergeClean: mergeRaw === 'true' ? true : mergeRaw === 'false' ? false : null,
+            startedTs: flag('--started-ts') || null,
+            endedTs: flag('--ended-ts') || null,
+            reason: flag('--reason') || null,
+          });
+          break;
+        }
+        case 'status': {
+          let runId = args[2];
+          if (runId && runId.startsWith('--')) runId = undefined;
+          const setIdx = args.indexOf('--set');
+          const reasonIdx = args.indexOf('--reason');
+          ledger.cmdRunStatus(cwd, runId, setIdx !== -1 ? args[setIdx + 1] : null, reasonIdx !== -1 ? args[reasonIdx + 1] : null);
+          break;
+        }
+        case 'report': {
+          let runId = args[2];
+          if (runId && runId.startsWith('--')) runId = undefined;
+          ledger.cmdRunReport(cwd, runId);
+          break;
+        }
         default:
           process.stderr.write(`run: unknown subcommand: ${sub}\n`);
           process.exit(1);
