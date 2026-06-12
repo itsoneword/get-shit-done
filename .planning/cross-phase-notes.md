@@ -202,3 +202,15 @@
 - Discuss-loop autonomous invocation is NOT wired in Phase 14 — the command ships standalone; what calls it during overnight runs is runner/resume territory. If 13/15 want the harness to use it on project-level open questions, that wiring is theirs.
 - Signal: [STRONG] — boundary stated explicitly during scoping, user did not contest.
 - Context: came up while bounding Phase 14 scope; converged modifications route through the escalation contract, so runner-invoked loops inherit the same park/proceed semantics automatically.
+
+### From Phase 13 discussion (2026-06-12)
+
+**For Phase 15: Resume Logic — multiple parked branches per run is the normal case:**
+- Phase 13's failure posture is skip-to-independent: when a phase parks, the runner continues to the next phase without a `depends_on` on the blocked one. A single overnight run can therefore accumulate SEVERAL parked/phase-{N}.json snapshots, not one. Phase 15's resume path and the inbox handoff must handle answering and resuming multiple parked branches from one run — including ordering (a resumed phase may unblock dependents that were skipped).
+- Signal: [STRONG, specialist-backed] — direct consequence of the user-selected failure posture.
+- Context: failure-posture choice point in Phase 13 discussion; user chose skip-to-independent over stop-on-first.
+
+**For any phase touching headless permission handling — ask-rule probe result (empirical):**
+- A would-prompt tool call in `claude -p` mode AUTO-DENIES and the run continues (exit 0); the model sees the denial as a tool error, and the result JSON carries a structured `permission_denials[]` array. Headless sessions do NOT abort or hang on permission gates. Probed live 2026-06-12 (temp ask rule + claude -p).
+- Signal: [STRONG, specialist-backed] — HIGH confidence, settles the W0-5 item 3 ambiguity against headless.md's "the run aborts" wording.
+- Context: run during Phase 13 discussion to ground mailbox routing of permission needs.
