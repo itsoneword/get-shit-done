@@ -25,6 +25,17 @@ if echo "$ARGUMENTS" | grep -qE '\-\-from\s+[0-9]'; then
 fi
 ```
 
+Parse `$ARGUMENTS` for `--phase N` flag and detect harness mode:
+
+```bash
+SINGLE_PHASE=""
+if echo "$ARGUMENTS" | grep -qE '\-\-phase\s+[0-9]'; then
+  SINGLE_PHASE=$(echo "$ARGUMENTS" | grep -oE '\-\-phase\s+[0-9]+\.?[0-9]*' | awk '{print $2}')
+fi
+HARNESS_MODE=""
+if [ -n "$GSD_RUN_ID" ]; then HARNESS_MODE="true"; fi
+```
+
 ```bash
 INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
 ```
@@ -47,6 +58,10 @@ Display startup banner:
 
 If `FROM_PHASE` is set, display: `Starting from phase ${FROM_PHASE}`
 
+If `SINGLE_PHASE` is set, display: `Single-phase mode: phase ${SINGLE_PHASE}`
+
+If `HARNESS_MODE` is true, display: `Harness mode: run ${GSD_RUN_ID} — non-interactive routing active`
+
 </step>
 
 <step name="discover_phases">
@@ -58,6 +73,8 @@ ROADMAP=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Parse `phases` array. Filter to incomplete: `disk_status !== "complete"` OR `roadmap_complete === false`. If `FROM_PHASE` set, exclude phases where `number < FROM_PHASE` (numeric comparison for decimals like "5.1"). Sort by `number` ascending.
+
+**Single-phase mode (`SINGLE_PHASE` set):** restrict the phase list to exactly that phase number. If the phase is not in ROADMAP.md: end immediately with final line `PHASE RESULT: failed phase=${SINGLE_PHASE} reason=not-found`. If the phase is already complete (disk_status complete AND roadmap_complete): end immediately with final line `PHASE RESULT: completed phase=${SINGLE_PHASE} reason=already-complete`. In single-phase mode the lifecycle step (audit/complete/cleanup) is NEVER entered — after the one phase finishes, emit the PHASE RESULT line (see execute_phase step) and stop.
 
 If no incomplete phases remain:
 
@@ -117,7 +134,23 @@ PHASE_STATE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op
 Parse `has_context`, `phase_dir` from JSON.
 
 - If `has_context` true: Display `Phase ${PHASE_NUM}: Context exists -- skipping discuss.` Proceed to 3b.
-- If false: Execute the smart_discuss step. After completion, re-fetch `PHASE_STATE` and verify `has_context`. If still false: handle_blocker "Smart discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
+- If false AND `HARNESS_MODE` is not true: Execute the smart_discuss step (unchanged interactive path). After completion, re-fetch `PHASE_STATE` and verify `has_context`. If still false: handle_blocker "Smart discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
+- If false AND `HARNESS_MODE` is true: do NOT run smart_discuss. Invoke the real discuss skill so the escalation evaluator (Phase 11) and park branch (Phase 12) fire:
+
+  ```
+  Skill(skill="gsd2:discuss-phase", args="${PHASE_NUM} --auto")
+  ```
+
+  Route on the skill's return:
+  - Output contains `PHASE PARKED` → the phase is parked (mailbox question + snapshot were already written by discuss-phase). Skip 3b/3c/3d entirely; the phase outcome is `parked` — capture the q-NNN id from the PHASE PARKED block for the PHASE RESULT line. In single-phase mode: end response with `PHASE RESULT: parked phase=${PHASE_NUM} q=q-NNN` (use captured q-NNN or `q-unknown` if id not in output).
+  - Output contains `design contract is required` (UI/Agentic auto-chain pause) → append a mailbox question so it surfaces in the morning inbox:
+
+    ```bash
+    node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox append --data '{"question":"Phase ${PHASE_NUM} needs an interactive design contract (ui-phase/agent-spec-phase) before planning — run it, then rerun the phase","phase":${PHASE_NUM},"context":"autonomous harness mode: discuss-phase --auto paused its chain at the design-contract gate","status":"pending"}'
+    ```
+
+    The phase outcome is `failed` with reason `needs-design-contract`. Skip 3b/3c/3d. In single-phase mode: end response with `PHASE RESULT: failed phase=${PHASE_NUM} reason=needs-design-contract`.
+  - Otherwise → discuss succeeded. Note: discuss-phase --auto auto-advances (it may have already chained plan-phase and even execute-phase). Re-fetch `PHASE_STATE` via `init phase-op` before each subsequent sub-step and SKIP what the chain already did: run 3b only if `has_plans` is false; run 3c only if no `*-VERIFICATION.md` exists in `${PHASE_DIR}`; always run 3d.
 
 **3b. Plan**
 
@@ -174,6 +207,17 @@ Re-read VERIFY_STATUS. If `passed`/`human_needed`: route normally. If still `gap
 
 On "Continue without fixing": Display `Phase ${PHASE_NUM} > Gaps deferred`. Proceed to iterate.
 On "Stop autonomous mode": handle_blocker "User stopped -- gaps remain in phase ${PHASE_NUM}".
+
+**Single-phase mode:** after the phase resolves (via 3d routing, a parked discuss, or a failure), do not iterate. End the response with the outcome line as the FINAL line of output, exactly one of:
+
+```
+PHASE RESULT: completed phase=${PHASE_NUM}
+PHASE RESULT: completed phase=${PHASE_NUM} deferred_verification=q-NNN
+PHASE RESULT: parked phase=${PHASE_NUM} q=q-NNN
+PHASE RESULT: failed phase=${PHASE_NUM} reason=<short-kebab-reason>
+```
+
+This line is the runner's outcome contract (AGENT-SPEC: ambiguous outcomes are treated as failed by the caller) — it must be machine-greppable: `^PHASE RESULT: (completed|parked|failed) phase=`. Multi-phase mode (no `--phase`) does not emit it.
 
 </step>
 
@@ -360,6 +404,8 @@ Display: `Created: {path}` and `Decisions captured: {count} across {area_count} 
 
 ## 4. Iterate
 
+**Single-phase mode (`SINGLE_PHASE` set):** never enter this step. After execute_phase completes, the PHASE RESULT line has already been emitted and the response ends. Do not loop.
+
 Re-read ROADMAP.md after each phase (WHY: catches phases inserted mid-execution, e.g., decimal phases like 5.1):
 
 ```bash
@@ -478,6 +524,8 @@ Present 3 options via AskUserQuestion:
 </process>
 
 <success_criteria>
+- Single-phase mode (--phase N) runs exactly one phase, never enters lifecycle, and ends with exactly one PHASE RESULT line
+- Harness mode (GSD_RUN_ID set) delegates discuss to discuss-phase --auto and never calls smart_discuss
 - All incomplete phases executed in order (smart discuss -> plan -> execute each)
 - Smart discuss proposes grey area answers in tables; user accepts or overrides per area
 - Progress banners displayed between phases
