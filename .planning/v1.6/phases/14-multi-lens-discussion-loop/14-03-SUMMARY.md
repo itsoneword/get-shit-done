@@ -39,7 +39,7 @@ requirements-completed: [LOOP-01, LOOP-02]
 
 duration: ~30min
 completed: 2026-06-12
-status: at-checkpoint (Task 3 awaiting human-verify)
+status: complete (Task 3 checkpoint approved 2026-06-12 — live smoke deferred to full-scope UAT after all phases)
 ---
 
 # Phase 14 Plan 03: Discuss-Loop Orchestrator Workflow Summary
@@ -65,7 +65,7 @@ status: at-checkpoint (Task 3 awaiting human-verify)
 
 1. **Task 1: Write discuss-loop orchestrator workflow** — `ec7ddf3` (feat)
 2. **Task 2: Install to runtime + validation green + smoke fixture** — `89adbae` (chore)
-3. **Task 3: Live smoke run** — AWAITING HUMAN VERIFY
+3. **Task 3: Live smoke run** — checkpoint APPROVED by user 2026-06-12; live smoke deferred to full-scope UAT once all v1.6 phases are done (persisted in 14-HUMAN-UAT.md)
 
 ## Files Created/Modified
 
@@ -113,8 +113,8 @@ These are sandbox environment failures (missing `/home/cleversol/.gsd` directory
 
 ## Next Phase Readiness
 
-- Task 3 (live smoke run) is the remaining gate — human must run `/gsd2:discuss-loop .planning/tmp/discuss-loop-fixture.md` in a fresh Claude Code session and confirm the 4 observables
-- Once Task 3 passes, Phase 14 Plan 03 is complete and Phase 14 can close
+- Task 3 (live smoke run) checkpoint approved with deferral — user will test full scope once all v1.6 phases are done; the 4 observables persist as UAT items in `14-HUMAN-UAT.md` and surface in `/gsd2:progress` until `/gsd2:verify-work` runs
+- Phase 14 Plan 03 is complete; Phase 14 can close
 
 ---
 *Phase: 14-multi-lens-discussion-loop*
