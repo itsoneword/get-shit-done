@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: executing
-stopped_at: Completed 14-03-PLAN.md (all tasks done)
-last_updated: "2026-06-12T14:44:00Z"
+status: unknown
+stopped_at: Completed 14-03-PLAN.md (all 3 tasks; smoke run confirmed)
+last_updated: "2026-06-12T14:49:41.185Z"
 progress:
   total_phases: 15
-  completed_phases: 6
+  completed_phases: 5
   total_plans: 13
   completed_plans: 13
 ---
