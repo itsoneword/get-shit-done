@@ -1,5 +1,5 @@
 # Architecture
-**Analysis Date:** 2026-03-21
+**Analysis Date:** 2026-06-12
 
 ## Pattern Overview
 
@@ -55,6 +55,26 @@ Key characteristics:
   - `profile-pipeline.cjs` — Claude Code session scanning for user behavioral profiling
   - `profile-output.cjs` — Structured output for user profile generation
   - `uat.cjs` — Cross-phase UAT/VERIFICATION.md scanner
+  - `ledger.cjs` — Autonomous decision ledger (Phase 10+): append-only log of autonomously resolved decisions with confidence metadata
+  - `mailbox.cjs` — Decision mailbox for escalated decisions (Phase 10+): stores escalation verdicts pending human review
+
+**Persistence Layer (Phase 10+ ledger/mailbox):**
+
+- Purpose: Record autonomous decision outcomes and escalated decisions for review cycles
+- Location: `get-shit-done/bin/lib/ledger.cjs`, `get-shit-done/bin/lib/mailbox.cjs`
+- Ledger: Append-only record at `.planning/run/<run-id>/DECISIONS.jsonl` — one JSON entry per line, immutable after write (no full-file rewrite; appendFileSync only)
+- Mailbox: Escalated questions at `.planning/run/<run-id>/MAILBOX.jsonl` — append/list with q-NNN ids for human-in-the-loop triage
+- Run layout: `gsd-tools run init <run-id>` creates `.planning/run/<run-id>/` (gitignored) with DECISIONS.jsonl, MAILBOX.jsonl, RUN-META.json, parked/
+- Called by: discuss-phase question_triage step (Phase 11+) when `GSD_RUN_ID` is set; execute-phase when returning HIGH/MEDIUM confidence autonomous decisions
+- Data schema: `{decision, alternatives, evidence, confidence, escalated, escalation_verdict, escalation_reason, phase, context, question}`
+
+**Escalation Contract Layer (Phase 11+):**
+
+- Purpose: Deterministic, membership-check-based evaluation of autonomous decisions against four criteria (irreversibility, security boundary, scope change, spec ambiguity)
+- Location: `get-shit-done/references/escalation-contract.md`
+- Verdicts: `proceed` (HIGH confidence, no criteria met) | `proceed-and-log` (MEDIUM confidence or borderline, no criteria met) | `park-and-ask` (any criterion met or LOW after exhaustion)
+- Applied by: discuss-phase question_triage step (inline, no Task spawn) when a resolution loop decision is autonomously resolved and `GSD_RUN_ID` is set
+- Writes to: `.planning/run/<run-id>/DECISIONS.jsonl` with `escalation_verdict` and `escalation_reason` fields (write-once; verdict computed before append)
 
 **Workflow Layer (`get-shit-done/workflows/*.md`):**
 
@@ -62,6 +82,7 @@ Key characteristics:
 - Location: `get-shit-done/workflows/`
 - Depends on: `gsd-tools.cjs` (via bash blocks), agent sub-types (via Task tool)
 - Pattern: Loaded by commands via `@~/.claude/get-shit-done/workflows/<name>.md` reference — the Claude runtime injects the file content into the orchestrator's context
+- Discuss-phase changes (Phase 11): The question_triage step includes an inline escalation evaluator sub-step (fires only when `GSD_RUN_ID` is set). After the resolution loop resolves a decision autonomously, the evaluator reads the escalation contract, checks membership against four criteria, computes `escalation_verdict` + `escalation_reason`, and appends to ledger in a single write-once call before user presentation.
 
 **Command Layer (`commands/gsd2/*.md`):**
 
@@ -107,7 +128,7 @@ allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite, AskUserQue
 
 - Purpose: Behavioral reference documents loaded inline by agents/workflows. Define agent policies, patterns, and conventions.
 - Location: `get-shit-done/references/`
-- Key files: `model-profiles.md`, `ui-brand.md`, `continuation-format.md`, `verification-patterns.md`, `questioning.md`
+- Key files: `model-profiles.md`, `ui-brand.md`, `continuation-format.md`, `verification-patterns.md`, `questioning.md`, `escalation-contract.md` (Phase 11+)
 
 **Template Layer (`get-shit-done/templates/*.md`):**
 
@@ -133,6 +154,9 @@ allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite, AskUserQue
 
 **Verify Work Flow:**
 `/gsd2:verify-work <N>` → `gsd-verifier` reads PLAN.md + SUMMARY.md → checks must_haves, artifacts, commits → writes VERIFICATION.md → if gaps: creates gap-closure PLAN.md with `gap_closure: true` frontmatter
+
+**Autonomous Decision Flow (Phase 11+, harness-driven via GSD_RUN_ID):**
+discuss-phase question_triage: resolution loop resolves decision (HIGH/MEDIUM/LOW) → only when GSD_RUN_ID is set (harness run): inline escalation evaluator applies four contract criteria as membership checks → computes `escalation_verdict` (proceed|proceed-and-log|park-and-ask) + `escalation_reason` → appends to `.planning/run/<run-id>/DECISIONS.jsonl` (write-once) → if `park-and-ask`: user is asked interactively (Phase 11 calibration mode); if `proceed`/`proceed-and-log`: decision executes autonomously and is flagged in ledger for morning review
 
 **State Management:**
 All workflows read STATE.md first via `gsd-tools state load`. Writes happen at: plan start, plan completion, phase completion, blocker/decision recording. STATE.md stays under 100 lines; full decision log lives in PROJECT.md.
@@ -175,3 +199,6 @@ Orchestrators stay lean (~15% context budget) by delegating all heavy work to su
 
 **Runtime Compatibility:**
 Workflows detect the active runtime and adapt. Copilot does not reliably return subagent completion signals, so it forces sequential inline execution. Other non-Claude runtimes fall back similarly. The `Task()` subagent API is the Claude Code canonical path; absence of it triggers the fallback branch.
+
+**Autonomous Decision Evaluation (Phase 11+):**
+When `GSD_RUN_ID` is set (harness/overnight run), the discuss-phase question_triage evaluator applies the escalation contract inline (no Task spawn, no human roundtrip) to each autonomously resolved decision. The contract is a deterministic four-criterion membership check — conditions are literal, not heuristic. Verdicts are computed before ledger append (write-once). Borderline cases (condition resembles but doesn't literally match) default to `proceed-and-log` per tie-break rules, except borderline irreversibility or security → `park-and-ask`. This makes autonomous runs auditable and tunable — decisions flow through the ledger with their verdict and reason, visible in morning review.
