@@ -1,7 +1,7 @@
 ---
 name: gsd2:autonomous
 description: Run all remaining phases autonomously — discuss→plan→execute per phase
-argument-hint: "[--from N]"
+argument-hint: "[--from N] [--phase N]"
 allowed-tools:
   - Read
   - Write
@@ -31,6 +31,8 @@ Uses ROADMAP.md phase discovery and Skill() flat invocations for each phase comm
 
 <context>
 Optional flag: `--from N` — start from phase N instead of the first incomplete phase.
+
+Optional flag: `--phase N` — run exactly one phase and end with a `PHASE RESULT:` outcome line (used by the overnight runner; usable manually too).
 
 Project context, phase list, and state are resolved inside the workflow using init commands (`gsd-tools.cjs init milestone-op`, `gsd-tools.cjs roadmap analyze`). No upfront context loading needed.
 </context>

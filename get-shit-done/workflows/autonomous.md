@@ -315,7 +315,7 @@ If infrastructure: skip Sub-step 4, jump to Sub-step 5 with minimal CONTEXT.md d
 - Users **READ** -> content (structure, tone, depth, flow)
 - Being **ORGANIZED** -> organization (criteria, grouping, exceptions, naming)
 
-Skip grey areas already decided in prior phases. Generate 3-4 grey areas with ~4 questions each. For each question: pre-select recommended answer (based on prior decisions, codebase patterns, domain conventions, ROADMAP criteria), generate 1-2 alternatives, annotate with prior decision/code context where relevant.
+Skip grey areas already decided in prior phases. Triage first, then go only as deep as the phase demands: surface only the genuinely undecided areas (no fixed area count) and, within each, only the questions whose answer actually changes implementation (no fixed question count). A clear-cut phase may yield one area with one question; an ambiguous one may yield several. For each question: pre-select recommended answer (based on prior decisions, codebase patterns, domain conventions, ROADMAP criteria), generate 1-2 alternatives, annotate with prior decision/code context where relevant.
 
 ### Sub-step 4: Present Proposals Per Area
 
@@ -336,7 +336,7 @@ Ask via AskUserQuestion:
 
 **"Accept all"**: Record recommendations, next area.
 **"Change QN"**: Show alternatives + "You decide" for that question. Record choice, re-display updated table, re-present acceptance prompt.
-**"Discuss deeper"**: Switch to interactive mode for this area -- ask questions one-at-a-time with 2-3 options + "You decide". After 4 questions, offer "More questions" / "Next area". On "Next area", show final summary.
+**"Discuss deeper"**: Switch to interactive mode for this area -- ask questions one-at-a-time with 2-3 options + "You decide". Continue while genuinely undecided, implementation-changing questions remain; once what's left is low-stakes, offer "More questions" / "Next area". On "Next area", show final summary.
 **"Other" (free text)**: Interpret and incorporate, re-display table, re-present prompt.
 
 **Scope creep**: If user mentions something outside phase domain: note as deferred idea, redirect to current area.
