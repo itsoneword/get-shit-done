@@ -222,7 +222,7 @@
   1. Running `/gsd2:discuss-loop <artifact>` produces three-lens judgment of the artifact's content — each lens (Skeptic, User-Advocate, Architect) produces a distinct position grounded in the artifact text, not abstract opinions
   2. When lenses converge (content-delta test passes), the loop exits early with a resolution record; when the hard round cap is reached without convergence, the top two divergent positions are written to the mailbox as structured entries — a synthesized average is never produced
 
-**Plans**: TBD
+**Plans**: 3 plans — 14-01 (discuss-loop.cjs judgment primitives: validate/delta/survivors/transcript CLI, TDD, wave 1), 14-02 (three lens agents + /gsd2:discuss-loop stub, wave 1), 14-03 (orchestrator workflow + install + live smoke checkpoint, wave 2)
 
 ### Phase 15: Resume Logic + Backlog Triage Worker
 
@@ -260,7 +260,7 @@
 | 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete    | 2026-06-12 |
 | 12. Park-Don't-Block Mailbox | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 13. Overnight Runner | v1.6 | 0/TBD | Not started | - |
-| 14. Multi-Lens Discussion Loop | v1.6 | 0/TBD | Not started | - |
+| 14. Multi-Lens Discussion Loop | v1.6 | 0/3 | Planned | - |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/TBD | Not started | - |
 
 ## Backlog
