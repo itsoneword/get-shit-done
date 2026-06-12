@@ -13,7 +13,7 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { runGsdTools, createTempProject, cleanup } = require('./helpers.cjs');
+const { runGsdTools, createTempProject, cleanup, runGsdToolsWithInput } = require('./helpers.cjs');
 
 // ── Fixture helpers ──────────────────────────────────────────────────────────
 
@@ -301,5 +301,295 @@ describe('mailbox list and filter', () => {
       const obj = JSON.parse(line);
       assert.strictEqual(obj.status, 'open', `all returned records should have status=open, got: ${obj.status}`);
     }
+  });
+});
+
+// ── mailbox answer ────────────────────────────────────────────────────────────
+
+describe('mailbox answer - targeted record update', () => {
+  let tmp;
+  beforeEach(() => { tmp = createTempProject(); });
+  afterEach(() => { cleanup(tmp); });
+
+  test('exits 0, prints q-001, sets status=answered/answer/answered_ts, leaves q-002 unchanged', () => {
+    const runId = 'mb-ans-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q one?', phase: 3 })], tmp);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q two?', phase: 4 })], tmp);
+
+    const result = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001', '--answer', 'Use Redis'], tmp);
+    assert.ok(result.success, `mailbox answer failed: ${result.error}`);
+    assert.ok(result.output.includes('q-001'), `stdout should contain q-001, got: ${result.output}`);
+
+    const records = readMailboxRaw(tmp, runId);
+    assert.strictEqual(records.length, 2, 'file should still have exactly 2 lines');
+    assert.strictEqual(records[0].id, 'q-001', 'first record should be q-001');
+    assert.strictEqual(records[0].status, 'answered');
+    assert.strictEqual(records[0].answer, 'Use Redis');
+    assert.match(records[0].answered_ts, /^\d{4}-\d{2}-\d{2}T/);
+    // q-002 untouched
+    assert.strictEqual(records[1].id, 'q-002');
+    assert.strictEqual(records[1].status, 'open');
+    assert.strictEqual(records[1].answer, null);
+  });
+
+  test('nonexistent id exits 1, stderr contains "not found"', () => {
+    const runId = 'mb-ans-02';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q?' })], tmp);
+
+    const result = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-999', '--answer', 'X'], tmp);
+    assert.ok(!result.success, 'should exit non-zero for unknown id');
+    assert.ok(result.error.includes('not found'), `stderr should contain "not found", got: ${result.error}`);
+  });
+
+  test('missing --id or --answer exits 1, stderr contains usage text', () => {
+    const runId = 'mb-ans-03';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q?' })], tmp);
+
+    const res1 = runGsdTools(['mailbox', 'answer', runId, '--answer', 'X'], tmp);
+    assert.ok(!res1.success, 'should fail without --id');
+    assert.ok(
+      res1.error.includes('--id') && res1.error.includes('--answer'),
+      `stderr should contain --id and --answer usage, got: ${res1.error}`
+    );
+
+    const res2 = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001'], tmp);
+    assert.ok(!res2.success, 'should fail without --answer');
+    assert.ok(
+      res2.error.includes('--id') && res2.error.includes('--answer'),
+      `stderr should contain --id and --answer usage, got: ${res2.error}`
+    );
+  });
+
+  test('no run-id arg and no GSD_RUN_ID env exits 1, stderr contains "no run context"', () => {
+    const envWithout = { ...process.env };
+    delete envWithout.GSD_RUN_ID;
+
+    const result = runGsdTools(['mailbox', 'answer', '--id', 'q-001', '--answer', 'X'], tmp, { env: envWithout });
+    assert.ok(!result.success, 'should fail without run context');
+    assert.ok(result.error.includes('no run context'), `stderr should contain "no run context", got: ${result.error}`);
+  });
+
+  test('GSD_RUN_ID env fallback: exits 0 when run dir initialized and no run-id arg', () => {
+    const runId = 'mb-ans-env-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Env Q?' })], tmp);
+
+    const envWith = { ...process.env, GSD_RUN_ID: runId };
+    const result = runGsdTools(['mailbox', 'answer', '--id', 'q-001', '--answer', 'via env'], tmp, { env: envWith });
+    assert.ok(result.success, `env fallback should succeed: ${result.error}`);
+  });
+
+  test('re-answering an already-answered question exits 1, stderr contains "already answered"', () => {
+    const runId = 'mb-ans-04';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q?' })], tmp);
+    runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001', '--answer', 'First'], tmp);
+
+    const result = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001', '--answer', 'Second'], tmp);
+    assert.ok(!result.success, 'should exit non-zero when re-answering');
+    assert.ok(result.error.includes('already answered'), `stderr should contain "already answered", got: ${result.error}`);
+  });
+});
+
+// ── mailbox review ────────────────────────────────────────────────────────────
+
+describe('mailbox review - interactive loop', () => {
+  let tmp;
+  beforeEach(() => { tmp = createTempProject(); });
+  afterEach(() => { cleanup(tmp); });
+
+  test('answers 2 questions, skips 1 empty-stdin, ignores pre-answered; summary says answered:2 skipped:1', () => {
+    const runId = 'mb-rev-01';
+    initRunDir(tmp, runId);
+    // Two open via plain append
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Open one?' })], tmp);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Open two?' })], tmp);
+    // One pending via explicit status
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Pending three?', status: 'pending' })], tmp);
+    // One pre-answered: write directly
+    const answeredRec = {
+      id: 'q-004', ts: new Date().toISOString(), run_id: runId,
+      phase: null, decision_id: null, context: null, options: null, evidence: null,
+      status: 'answered', question: 'Already answered?', answer: 'yes', answered_ts: new Date().toISOString(),
+    };
+    fs.appendFileSync(mailboxFile(tmp, runId), JSON.stringify(answeredRec) + '\n', 'utf8');
+
+    const result = runGsdToolsWithInput(['mailbox', 'review', runId], tmp, 'first answer\nsecond answer\n\n');
+    assert.ok(result.success, `mailbox review failed: ${result.error}`);
+
+    // Presented 3 unanswered, not the pre-answered
+    assert.ok(result.output.includes('Open one?'), 'stdout should contain first question');
+    assert.ok(result.output.includes('Open two?'), 'stdout should contain second question');
+    assert.ok(result.output.includes('Pending three?'), 'stdout should contain pending question');
+    assert.ok(!result.output.includes('Already answered?'), 'stdout should NOT contain pre-answered question');
+
+    // Records updated correctly
+    const records = readMailboxRaw(tmp, runId);
+    assert.strictEqual(records[0].status, 'answered');
+    assert.strictEqual(records[0].answer, 'first answer');
+    assert.strictEqual(records[1].status, 'answered');
+    assert.strictEqual(records[1].answer, 'second answer');
+    // q-003 (empty line = skip) keeps its prior status
+    assert.notStrictEqual(records[2].status, 'answered');
+    // q-004 still answered
+    assert.strictEqual(records[3].status, 'answered');
+
+    // Summary line
+    assert.ok(result.output.includes('answered: 2'), `stdout should contain "answered: 2", got: ${result.output}`);
+    assert.ok(result.output.includes('skipped: 1'), `stdout should contain "skipped: 1", got: ${result.output}`);
+  });
+
+  test('context, options, evidence are presented inline', () => {
+    const runId = 'mb-rev-ctx-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({
+      question: 'Which db?',
+      context: 'We need a relational store',
+      options: ['postgres', 'sqlite'],
+      evidence: 'Benchmarks show postgres wins',
+    })], tmp);
+
+    const result = runGsdToolsWithInput(['mailbox', 'review', runId], tmp, 'postgres\n');
+    assert.ok(result.success, `review with context failed: ${result.error}`);
+    assert.ok(result.output.includes('We need a relational store'), 'context should appear');
+    assert.ok(result.output.includes('postgres'), 'options should appear');
+    assert.ok(result.output.includes('sqlite'), 'options should appear');
+    assert.ok(result.output.includes('Benchmarks show postgres wins'), 'evidence should appear');
+  });
+
+  test('zero unanswered questions exits 0, stdout contains "no pending questions"', () => {
+    const runId = 'mb-rev-empty-01';
+    initRunDir(tmp, runId);
+    // All answered
+    const rec = {
+      id: 'q-001', ts: new Date().toISOString(), run_id: runId,
+      phase: null, decision_id: null, context: null, options: null, evidence: null,
+      status: 'answered', question: 'Done?', answer: 'yes', answered_ts: new Date().toISOString(),
+    };
+    fs.appendFileSync(mailboxFile(tmp, runId), JSON.stringify(rec) + '\n', 'utf8');
+
+    const result = runGsdToolsWithInput(['mailbox', 'review', runId], tmp, '');
+    assert.ok(result.success, `review with no pending should succeed: ${result.error}`);
+    assert.ok(result.output.includes('no pending questions'), `stdout should say no pending, got: ${result.output}`);
+  });
+
+  test('both open and pending statuses are presented (explicit assertion on pending)', () => {
+    const runId = 'mb-rev-statuses-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Open question?' })], tmp);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Pending question?', status: 'pending' })], tmp);
+
+    const result = runGsdToolsWithInput(['mailbox', 'review', runId], tmp, 'ans1\nans2\n');
+    assert.ok(result.success, `review should handle open+pending: ${result.error}`);
+    assert.ok(result.output.includes('Pending question?'), 'pending status question should appear in review');
+    assert.ok(result.output.includes('Open question?'), 'open status question should appear in review');
+  });
+});
+
+// ── Resume handoff ────────────────────────────────────────────────────────────
+
+describe('mailbox answer/review - resume handoff', () => {
+  let tmp;
+  beforeEach(() => { tmp = createTempProject(); });
+  afterEach(() => { cleanup(tmp); });
+
+  function writeSnapshot(tmp, runId, phase) {
+    const parkedDir = path.join(tmp, '.planning', 'run', runId, 'parked');
+    fs.mkdirSync(parkedDir, { recursive: true });
+    const snap = {
+      phase,
+      blocked_at: 'x',
+      question_id: 'q-001',
+      phase_dir: null,
+      context_path: null,
+      resume_instruction: `Resume discuss-phase --auto for phase ${phase}`,
+      content_hashes: { 'STATE.md': null, 'ROADMAP.md': null, 'cross-phase-notes.md': null, 'CONTEXT.md': null },
+      git_head: null,
+      ts: new Date().toISOString(),
+    };
+    fs.writeFileSync(
+      path.join(parkedDir, `phase-${phase}.json`),
+      JSON.stringify(snap, null, 2) + '\n',
+      'utf8'
+    );
+  }
+
+  test('mailbox answer: snapshot present -> stdout contains "Resume handoff" and resume_instruction', () => {
+    const runId = 'mb-handoff-ans-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Park q?', phase: 5 })], tmp);
+    writeSnapshot(tmp, runId, 5);
+
+    const result = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001', '--answer', 'Done'], tmp);
+    assert.ok(result.success, `answer with snapshot failed: ${result.error}`);
+    assert.ok(result.output.includes('Resume handoff'), `stdout should contain "Resume handoff", got: ${result.output}`);
+    assert.ok(
+      result.output.includes('Resume discuss-phase --auto for phase 5'),
+      `stdout should contain resume instruction, got: ${result.output}`
+    );
+  });
+
+  test('mailbox review: snapshot present -> stdout contains "Resume handoff" and resume_instruction', () => {
+    const runId = 'mb-handoff-rev-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Park q review?', phase: 5 })], tmp);
+    writeSnapshot(tmp, runId, 5);
+
+    const result = runGsdToolsWithInput(['mailbox', 'review', runId], tmp, 'done\n');
+    assert.ok(result.success, `review with snapshot failed: ${result.error}`);
+    assert.ok(result.output.includes('Resume handoff'), `stdout should contain "Resume handoff", got: ${result.output}`);
+    assert.ok(
+      result.output.includes('Resume discuss-phase --auto for phase 5'),
+      `stdout should contain resume instruction, got: ${result.output}`
+    );
+  });
+
+  test('mailbox answer: no snapshot -> stdout does NOT contain "Resume handoff"', () => {
+    const runId = 'mb-handoff-nosnap-01';
+    initRunDir(tmp, runId);
+    // Question with phase 7 but no snapshot file
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'No snap q?', phase: 7 })], tmp);
+
+    const result = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001', '--answer', 'ok'], tmp);
+    assert.ok(result.success, `answer without snapshot should succeed: ${result.error}`);
+    assert.ok(!result.output.includes('Resume handoff'), `stdout should NOT contain "Resume handoff" when no snapshot, got: ${result.output}`);
+  });
+});
+
+// ── Append-path invariant after rewrite ───────────────────────────────────────
+
+describe('mailbox append-path invariant after answer rewrite', () => {
+  let tmp;
+  beforeEach(() => { tmp = createTempProject(); });
+  afterEach(() => { cleanup(tmp); });
+
+  test('after answer rewrite, two further appends each add exactly one line and answered record survives', () => {
+    const runId = 'mb-inv-01';
+    initRunDir(tmp, runId);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q one?' })], tmp);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q two?' })], tmp);
+
+    // Answer q-001 (triggers full-file rewrite)
+    const ansResult = runGsdTools(['mailbox', 'answer', runId, '--id', 'q-001', '--answer', 'Use Redis'], tmp);
+    assert.ok(ansResult.success, `answer failed: ${ansResult.error}`);
+
+    const countAfterAnswer = readMailboxRaw(tmp, runId).length;
+
+    // Two further appends
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q three?' })], tmp);
+    runGsdTools(['mailbox', 'append', runId, '--data', JSON.stringify({ question: 'Q four?' })], tmp);
+
+    const records = readMailboxRaw(tmp, runId);
+    assert.strictEqual(records.length, countAfterAnswer + 2, `expected ${countAfterAnswer + 2} records, got ${records.length}`);
+
+    // Answered record's fields survive intact
+    const answered = records.find(r => r.id === 'q-001');
+    assert.ok(answered, 'q-001 should still exist');
+    assert.strictEqual(answered.status, 'answered');
+    assert.strictEqual(answered.answer, 'Use Redis');
+    assert.match(answered.answered_ts, /^\d{4}-\d{2}-\d{2}T/);
   });
 });
