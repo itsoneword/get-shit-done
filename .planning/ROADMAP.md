@@ -260,7 +260,7 @@
 | 11. Escalation Contract + discuss-phase Wiring | v1.6 | 2/2 | Complete    | 2026-06-12 |
 | 12. Park-Don't-Block Mailbox | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 13. Overnight Runner | v1.6 | 3/3 | Complete    | 2026-06-12 |
-| 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete   | 2026-06-12 |
+| 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/TBD | Not started | - |
 
 ## Backlog
