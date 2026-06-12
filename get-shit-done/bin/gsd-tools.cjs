@@ -975,6 +975,24 @@ async function main() {
           mailbox.cmdMailboxList(cwd, runId, opts, raw);
           break;
         }
+        case 'answer': {
+          // mailbox answer [run-id] --id q-NNN --answer "text"
+          let effectiveRunId = runId;
+          if (runId === '--id' || runId === '--answer') effectiveRunId = undefined;
+          const idIdx = args.indexOf('--id');
+          const ansIdx = args.indexOf('--answer');
+          mailbox.cmdMailboxAnswer(cwd, effectiveRunId,
+            idIdx !== -1 ? args[idIdx + 1] : null,
+            ansIdx !== -1 ? args[ansIdx + 1] : null);
+          break;
+        }
+        case 'review': {
+          // mailbox review [run-id]
+          let effectiveRunId = runId;
+          if (effectiveRunId && effectiveRunId.startsWith('--')) effectiveRunId = undefined;
+          mailbox.cmdMailboxReview(cwd, effectiveRunId);
+          break;
+        }
         default:
           process.stderr.write(`mailbox: unknown subcommand: ${sub}\n`);
           process.exit(1);

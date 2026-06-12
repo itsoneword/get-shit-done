@@ -1,23 +1,33 @@
 /**
  * Mailbox — gsd-tools mailbox subcommand implementation
  *
- * Append-only question mailbox at .planning/run/<run-id>/MAILBOX.jsonl.
- * Deliberate deviations from lesson.cjs (same posture as ledger.cjs):
- *  1. NO writeMailbox / full-file rewrite — only appendFileSync writes MAILBOX.jsonl
- *  2. NO cmdUpdate / cmdMailboxPatch — Phase 12 fills answer via separate mechanism
- *  3. Required-field validation at write time (before appendFileSync)
- *  4. GSD_RUN_ID + run-dir-existence gate on cmdMailboxAppend
- *  5. Library functions return data, never process.exit — only cmd* handlers exit
+ * MAILBOX.jsonl appends are appendFileSync-only (cmdMailboxAppend).
+ * The ONLY full-file rewrite is the answer path (writeMailbox), because answers
+ * are terminal-state mutations of existing records — a question is answered
+ * exactly once. Never use writeMailbox to add records (concurrent parks would
+ * be lost — Pitfall 3).
+ *
+ * 'open' and 'pending' both count as unanswered. review and pending count treat
+ * them identically; no schema migration required.
  *
  * Plan 10-02 deliverables:
  *  - mailbox append: append-only, question-validated, run-context gated
  *  - mailbox list: read-only with optional --status filter
+ *
+ * Plan 12-02 deliverables:
+ *  - writeMailbox: full-file rewrite for terminal-state answer updates only
+ *  - answerRecord: pure function, terminal-state mutation (no re-answer)
+ *  - printResumeHandoff: print park snapshot resume info after answering
+ *  - cmdMailboxAnswer: targeted single-question answer
+ *  - cmdMailboxReview: stdin-driven loop over all pending questions
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const readline = require('node:readline');
+const park = require('./park.cjs');
 
 // ─── Required fields ──────────────────────────────────────────────────────────
 
@@ -141,6 +151,107 @@ function formatTable(records) {
   return lines.join('\n');
 }
 
+// ─── Full-file rewrite (answer path only) ────────────────────────────────────
+
+/**
+ * Full-file rewrite. ONLY for terminal-state answer updates — never for appends.
+ *
+ * Writes records back to MAILBOX.jsonl as JSONL (one record per line).
+ * For an empty records array writes an empty string.
+ *
+ * @param {string} cwd
+ * @param {string} runId
+ * @param {object[]} records
+ */
+function writeMailbox(cwd, runId, records) {
+  const content = records.length === 0
+    ? ''
+    : records.map(r => JSON.stringify(r)).join('\n') + '\n';
+  fs.writeFileSync(mailboxPath(cwd, runId), content, 'utf8');
+}
+
+// ─── Answer record (pure) ─────────────────────────────────────────────────────
+
+/**
+ * Pure function — mutate a copy of records to mark one record as answered.
+ *
+ * Returns:
+ *  { error: 'not found' }       — qId not in records
+ *  { error: 'already answered' } — record already has status === 'answered'
+ *  { records: [...], record: <updated> } — success
+ *
+ * @param {object[]} records
+ * @param {string} qId
+ * @param {string} answerText
+ */
+function answerRecord(records, qId, answerText) {
+  const idx = records.findIndex(r => r.id === qId);
+  if (idx === -1) return { error: 'not found' };
+  if (records[idx].status === 'answered') return { error: 'already answered' };
+
+  const updated = Object.assign({}, records[idx], {
+    status: 'answered',
+    answer: answerText,
+    answered_ts: new Date().toISOString(),
+  });
+  const newRecords = records.slice();
+  newRecords[idx] = updated;
+  return { records: newRecords, record: updated };
+}
+
+// ─── Resume handoff ───────────────────────────────────────────────────────────
+
+/**
+ * Print a resume handoff block when the answered question has a parked snapshot.
+ *
+ * Returns true if a handoff was printed, false otherwise (no snapshot, null phase,
+ * or snapshot unreadable).
+ *
+ * Never throws — corrupt snapshots are caught and print a warning.
+ *
+ * @param {string} cwd
+ * @param {string} runId
+ * @param {number|null} phase
+ * @param {NodeJS.WriteStream} [out] - defaults to process.stdout
+ * @returns {boolean}
+ */
+function printResumeHandoff(cwd, runId, phase, out) {
+  if (out == null) out = process.stdout;
+  if (phase == null) return false;
+
+  const sp = park.snapshotPath(cwd, runId, phase);
+  if (!fs.existsSync(sp)) return false;
+
+  let snapshot;
+  try {
+    snapshot = JSON.parse(fs.readFileSync(sp, 'utf8'));
+  } catch (_) {
+    out.write(`(snapshot unreadable: ${sp})\n`);
+    return false;
+  }
+
+  let staleness;
+  try {
+    staleness = park.checkStaleness(cwd, snapshot);
+  } catch (_) {
+    out.write(`(snapshot unreadable: ${sp})\n`);
+    return false;
+  }
+
+  const changedStr = staleness.changed.length > 0
+    ? staleness.changed.join(', ')
+    : 'nothing changed since park';
+  const gitRange = staleness.git_range || 'n/a';
+
+  out.write(`── Resume handoff: phase ${phase} ──\n`);
+  out.write(`resume: ${snapshot.resume_instruction || 'n/a'}\n`);
+  out.write(`staleness: ${changedStr}\n`);
+  out.write(`git range: ${gitRange}\n`);
+  out.write(`detail: gsd-tools park staleness ${runId} --phase ${phase}\n`);
+
+  return true;
+}
+
 // ─── cmd handlers ─────────────────────────────────────────────────────────────
 
 /**
@@ -235,6 +346,148 @@ function cmdMailboxList(cwd, runId, opts, raw) {
   }
 }
 
+/**
+ * Answer a single mailbox question by id.
+ *
+ * gsd-tools mailbox answer [run-id] --id q-NNN --answer <text>
+ *
+ * @param {string} cwd
+ * @param {string|undefined} runId  - explicit run-id arg (may be undefined for env fallback)
+ * @param {string|null} qId
+ * @param {string|null} answerText
+ */
+function cmdMailboxAnswer(cwd, runId, qId, answerText) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write('mailbox answer: no run context — set GSD_RUN_ID or pass run-id arg\n');
+    process.exit(1);
+  }
+
+  // 2. Validate required flags
+  if (!qId || !answerText) {
+    process.stderr.write('mailbox answer <run-id> --id <q-NNN> --answer <text>\n');
+    process.exit(1);
+  }
+
+  // 3. Run dir must exist
+  if (!fs.existsSync(runDir(cwd, effectiveRunId))) {
+    process.stderr.write(
+      `mailbox answer: run not initialized: ${effectiveRunId} (run: gsd-tools run init ${effectiveRunId})\n`
+    );
+    process.exit(1);
+  }
+
+  // 4. Read, apply update, check for errors
+  const records = readMailbox(cwd, effectiveRunId);
+  const result = answerRecord(records, qId, answerText);
+  if (result.error) {
+    process.stderr.write(`mailbox answer: question ${qId} ${result.error}\n`);
+    process.exit(1);
+  }
+
+  // 5. Full-file rewrite (terminal-state mutation)
+  writeMailbox(cwd, effectiveRunId, result.records);
+
+  // 6. Print resume handoff if snapshot exists
+  printResumeHandoff(cwd, effectiveRunId, result.record.phase);
+
+  // 7. Print answered id
+  process.stdout.write(qId + '\n');
+}
+
+/**
+ * Interactively review all unanswered questions for a run.
+ *
+ * gsd-tools mailbox review [run-id]
+ *
+ * Reads answers from stdin (one per question). Empty line = skip.
+ * Prints resume handoff for each answered question that has a parked snapshot.
+ * After loop: one writeMailbox call if any were answered, summary line.
+ *
+ * Works with both interactive TTYs and piped stdin (spawnSync with input).
+ *
+ * @param {string} cwd
+ * @param {string|undefined} runId
+ */
+async function cmdMailboxReview(cwd, runId) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write('mailbox review: no run context — set GSD_RUN_ID or pass run-id arg\n');
+    process.exit(1);
+  }
+
+  // 2. Run dir must exist
+  if (!fs.existsSync(runDir(cwd, effectiveRunId))) {
+    process.stderr.write(
+      `mailbox review: run not initialized: ${effectiveRunId} (run: gsd-tools run init ${effectiveRunId})\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. Load records, filter pending
+  let records = readMailbox(cwd, effectiveRunId);
+  const pending = records.filter(r => r.status !== 'answered');
+
+  if (pending.length === 0) {
+    process.stdout.write(`no pending questions for run ${effectiveRunId}\n`);
+    return;
+  }
+
+  // 4. Read all stdin lines up-front — works with both piped and interactive.
+  //    For piped stdin, we collect all lines then walk them in sync with questions.
+  const stdinLines = await new Promise(resolve => {
+    const lines = [];
+    const rl = readline.createInterface({ input: process.stdin });
+    rl.on('line', line => lines.push(line));
+    rl.on('close', () => resolve(lines));
+  });
+
+  let lineIdx = 0;
+
+  let answeredCount = 0;
+  let skippedCount = 0;
+
+  // 5. Loop over pending records
+  for (const rec of pending) {
+    const optionsStr = Array.isArray(rec.options) && rec.options.length > 0
+      ? rec.options.join(' | ')
+      : '-';
+
+    process.stdout.write(`── ${rec.id} (phase ${rec.phase != null ? rec.phase : '-'}) [${rec.status}] ──\n`);
+    process.stdout.write(`question: ${rec.question}\n`);
+    process.stdout.write(`context: ${rec.context || '-'}\n`);
+    process.stdout.write(`options: ${optionsStr}\n`);
+    process.stdout.write(`evidence: ${rec.evidence || '-'}\n`);
+    process.stdout.write('answer (empty = skip)> ');
+
+    const raw = lineIdx < stdinLines.length ? stdinLines[lineIdx++] : '';
+    const answer = raw.trim();
+
+    if (!answer) {
+      skippedCount++;
+      continue;
+    }
+
+    const result = answerRecord(records, rec.id, answer);
+    if (!result.error) {
+      records = result.records;
+      process.stdout.write(`recorded: ${rec.id}\n`);
+      printResumeHandoff(cwd, effectiveRunId, rec.phase);
+      answeredCount++;
+    }
+  }
+
+  // 6. One full-file rewrite if any answered
+  if (answeredCount > 0) {
+    writeMailbox(cwd, effectiveRunId, records);
+  }
+
+  // 7. Summary
+  process.stdout.write(`answered: ${answeredCount}  skipped: ${skippedCount}\n`);
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -245,6 +498,11 @@ module.exports = {
   filterMailbox,
   nextQId,
   formatTable,
+  writeMailbox,
+  answerRecord,
+  printResumeHandoff,
   cmdMailboxAppend,
   cmdMailboxList,
+  cmdMailboxAnswer,
+  cmdMailboxReview,
 };
