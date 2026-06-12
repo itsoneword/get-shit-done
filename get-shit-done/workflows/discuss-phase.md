@@ -390,7 +390,50 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" ledger append --data '{
 }'
 ```
 
-5. If the verdict is `park-and-ask`: STILL ask the human directly in this session, exactly as discuss-phase normally would (Phase 11 interactive calibration mode). Branch parking + mailbox routing arrive in Phase 12 — do not write to the mailbox here.
+5. If the verdict is `park-and-ask`, branch on session mode:
+
+   **Interactive session (no `--auto`)** — including calibration runs that have `GSD_RUN_ID` set: ask the human directly in this session, exactly as discuss-phase normally would. Do not write to the mailbox (Phase 11 interactive calibration behavior, unchanged).
+
+   **Autonomous context (`--auto` AND `GSD_RUN_ID` set)** — park instead of asking:
+
+   1. Append the question to the mailbox (status `pending` — parked entries are always `pending`; `open` is for manually-appended questions):
+
+   ```bash
+   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox append --data '{
+     "question": "<the original question text>",
+     "phase": <phase number>,
+     "decision_id": "<dec-NNN id printed by the ledger append in step 4>",
+     "context": "<one-sentence why this parked: criterion + condition number that fired>",
+     "options": ["<viable option A>", "<viable option B>"],
+     "evidence": "<loop evidence summary — same substance as the ledger record>",
+     "status": "pending"
+   }'
+   ```
+
+   Capture the `q-NNN` id it prints.
+
+   2. Write the resume snapshot (run-id comes from `GSD_RUN_ID`):
+
+   ```bash
+   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" park create \
+     --phase <phase number> \
+     --question <q-NNN> \
+     --blocked-at "discuss-phase --auto: question_triage" \
+     --resume "Resume discuss-phase --auto for phase <N>: re-enter question_triage with the answer to <q-NNN> applied as the decision for '<topic>'" \
+     --phase-dir "<phase_dir>" \
+     --context-path "<phase_dir>/<padded_phase>-CONTEXT.md"
+   ```
+
+   3. Halt this phase with a clear PARKED outcome. Stop the workflow immediately — do not finalize CONTEXT.md for the parked decision, do not auto-advance to plan-phase, and do NOT poll or wait on the mailbox (what runs next is the runner's call — Phase 13). Return:
+
+       ## PHASE PARKED
+
+       **Phase:** {phase number} — {phase name}
+       **Question:** {q-NNN} — {question text}
+       **Snapshot:** .planning/run/{run-id}/parked/phase-{N}.json
+       **Why:** {criterion + condition that fired}
+
+       Answer via `/gsd2:inbox` or `gsd-tools mailbox review {run-id}`; the branch resumes after the answer (Phase 15 wiring).
 </question_triage>
 
 **Discussion guidelines:**
