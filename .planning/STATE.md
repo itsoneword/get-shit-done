@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 13-01-PLAN.md
+stopped_at: Completed 13-02-PLAN.md
 last_updated: "2026-06-12T11:49:27.834Z"
 progress:
   total_phases: 15
@@ -15,7 +15,7 @@ progress:
 ## Current Position
 
 Phase: 13 (overnight-runner) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 (parallel session: Phase 14 multi-lens-discussion-loop also executing)
 
 ## Project Reference
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 - [Phase 14-multi-lens-discussion-loop]: validate errors written to stdout not stderr — matches plan spec pattern
 - [Phase 13]: readJsonlWithCount is a distinct function from readLedger — report needs the skipped count
 - [Phase 13]: cmdRunReport reads exactly three files: RUN-META.json, DECISIONS.jsonl, MAILBOX.jsonl — RUN-04 locked constraint
+- [Phase 13]: HARNESS_MODE gates are additive — interactive behavior is byte-equivalent when GSD_RUN_ID is unset
+- [Phase 13]: PHASE RESULT is the outcome contract for autonomous.md in single-phase mode — machine-greppable final line, ambiguous=failed per AGENT-SPEC
 
 ### Pending Todos
 
@@ -83,5 +85,5 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 ## Session Continuity
 
 Last session: 2026-06-12T11:49:27.829Z
-Stopped at: Completed 13-01-PLAN.md
+Stopped at: Completed 13-02-PLAN.md
 Resume file: None

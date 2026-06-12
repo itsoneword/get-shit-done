@@ -25,6 +25,17 @@ if echo "$ARGUMENTS" | grep -qE '\-\-from\s+[0-9]'; then
 fi
 ```
 
+Parse `$ARGUMENTS` for `--phase N` flag and detect harness mode:
+
+```bash
+SINGLE_PHASE=""
+if echo "$ARGUMENTS" | grep -qE '\-\-phase\s+[0-9]'; then
+  SINGLE_PHASE=$(echo "$ARGUMENTS" | grep -oE '\-\-phase\s+[0-9]+\.?[0-9]*' | awk '{print $2}')
+fi
+HARNESS_MODE=""
+if [ -n "$GSD_RUN_ID" ]; then HARNESS_MODE="true"; fi
+```
+
 ```bash
 INIT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
 ```
@@ -47,6 +58,10 @@ Display startup banner:
 
 If `FROM_PHASE` is set, display: `Starting from phase ${FROM_PHASE}`
 
+If `SINGLE_PHASE` is set, display: `Single-phase mode: phase ${SINGLE_PHASE}`
+
+If `HARNESS_MODE` is true, display: `Harness mode: run ${GSD_RUN_ID} — non-interactive routing active`
+
 </step>
 
 <step name="discover_phases">
@@ -58,6 +73,8 @@ ROADMAP=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Parse `phases` array. Filter to incomplete: `disk_status !== "complete"` OR `roadmap_complete === false`. If `FROM_PHASE` set, exclude phases where `number < FROM_PHASE` (numeric comparison for decimals like "5.1"). Sort by `number` ascending.
+
+**Single-phase mode (`SINGLE_PHASE` set):** restrict the phase list to exactly that phase number. If the phase is not in ROADMAP.md: end immediately with final line `PHASE RESULT: failed phase=${SINGLE_PHASE} reason=not-found`. If the phase is already complete (disk_status complete AND roadmap_complete): end immediately with final line `PHASE RESULT: completed phase=${SINGLE_PHASE} reason=already-complete`. In single-phase mode the lifecycle step (audit/complete/cleanup) is NEVER entered — after the one phase finishes, emit the PHASE RESULT line (see execute_phase step) and stop.
 
 If no incomplete phases remain:
 
@@ -117,7 +134,23 @@ PHASE_STATE=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op
 Parse `has_context`, `phase_dir` from JSON.
 
 - If `has_context` true: Display `Phase ${PHASE_NUM}: Context exists -- skipping discuss.` Proceed to 3b.
-- If false: Execute the smart_discuss step. After completion, re-fetch `PHASE_STATE` and verify `has_context`. If still false: handle_blocker "Smart discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
+- If false AND `HARNESS_MODE` is not true: Execute the smart_discuss step (unchanged interactive path). After completion, re-fetch `PHASE_STATE` and verify `has_context`. If still false: handle_blocker "Smart discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
+- If false AND `HARNESS_MODE` is true: do NOT run smart_discuss. Invoke the real discuss skill so the escalation evaluator (Phase 11) and park branch (Phase 12) fire:
+
+  ```
+  Skill(skill="gsd2:discuss-phase", args="${PHASE_NUM} --auto")
+  ```
+
+  Route on the skill's return:
+  - Output contains `PHASE PARKED` → the phase is parked (mailbox question + snapshot were already written by discuss-phase). Skip 3b/3c/3d entirely; the phase outcome is `parked` — capture the q-NNN id from the PHASE PARKED block for the PHASE RESULT line. In single-phase mode: end response with `PHASE RESULT: parked phase=${PHASE_NUM} q=q-NNN` (use captured q-NNN or `q-unknown` if id not in output).
+  - Output contains `design contract is required` (UI/Agentic auto-chain pause) → append a mailbox question so it surfaces in the morning inbox:
+
+    ```bash
+    node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox append --data '{"question":"Phase ${PHASE_NUM} needs an interactive design contract (ui-phase/agent-spec-phase) before planning — run it, then rerun the phase","phase":${PHASE_NUM},"context":"autonomous harness mode: discuss-phase --auto paused its chain at the design-contract gate","status":"pending"}'
+    ```
+
+    The phase outcome is `failed` with reason `needs-design-contract`. Skip 3b/3c/3d. In single-phase mode: end response with `PHASE RESULT: failed phase=${PHASE_NUM} reason=needs-design-contract`.
+  - Otherwise → discuss succeeded. Note: discuss-phase --auto auto-advances (it may have already chained plan-phase and even execute-phase). Re-fetch `PHASE_STATE` via `init phase-op` before each subsequent sub-step and SKIP what the chain already did: run 3b only if `has_plans` is false; run 3c only if no `*-VERIFICATION.md` exists in `${PHASE_DIR}`; always run 3d.
 
 **3b. Plan**
 
@@ -143,37 +176,67 @@ VERIFY_STATUS=$(grep "^status:" "${PHASE_DIR}"/*-VERIFICATION.md 2>/dev/null | h
 
 Route on VERIFY_STATUS:
 
-**Empty** (no file/field): handle_blocker "Execute phase ${PHASE_NUM} did not produce verification results."
+**Empty** (no file/field):
+- HARNESS_MODE: phase outcome is `failed` with reason `no-verification` — do not AskUserQuestion. In single-phase mode: emit `PHASE RESULT: failed phase=${PHASE_NUM} reason=no-verification` and stop. In multi-phase mode: treat as blocker (log it, skip to independent phases).
+- Interactive: handle_blocker "Execute phase ${PHASE_NUM} did not produce verification results."
 
-**`passed`**: Display `Phase ${PHASE_NUM} > ${PHASE_NAME} -- Verification passed`. Proceed to iterate.
+**`passed`**: Display `Phase ${PHASE_NUM} > ${PHASE_NAME} -- Verification passed`. Proceed to iterate. In single-phase mode: emit `PHASE RESULT: completed phase=${PHASE_NUM}` and stop.
 
-**`human_needed`**: Read human_verification items from VERIFICATION.md. Ask user:
-- "Phase ${PHASE_NUM} has items needing manual verification. Validate now or continue?"
-- Options: "Validate now" / "Continue without validation"
+**`human_needed`**:
+- HARNESS_MODE: do not ask. Read human_verification items from VERIFICATION.md. Append the deferred verification to the mailbox so it surfaces in the morning inbox:
 
-On "Validate now": Present items, then ask "Validation result?" with "All good -- continue" / "Found issues". Issues route to handle_blocker.
-On "Continue without validation": Display `Phase ${PHASE_NUM} > Human validation deferred`. Proceed to iterate.
+  ```bash
+  node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox append --data '{"question":"Phase ${PHASE_NUM} completed but needs human verification: <one-line summary of the human_verification items from VERIFICATION.md>","phase":${PHASE_NUM},"context":"autonomous harness mode: verification status human_needed — items listed in ${PHASE_DIR}/<file>-VERIFICATION.md","status":"pending"}'
+  ```
 
-**`gaps_found`**: Read gap summary. Display score. Ask user:
-- "Gaps found in phase ${PHASE_NUM}. How to proceed?"
-- Options: "Run gap closure" / "Continue without fixing" / "Stop autonomous mode"
+  Capture the printed q-NNN. Phase outcome is `completed` with `deferred_verification=q-NNN` on the PHASE RESULT line. Display `Phase ${PHASE_NUM} > Human validation deferred to inbox (q-NNN)`. In single-phase mode: emit `PHASE RESULT: completed phase=${PHASE_NUM} deferred_verification=q-NNN` and stop. In multi-phase mode: proceed to iterate.
+- Interactive: Read human_verification items from VERIFICATION.md. Ask user:
+  - "Phase ${PHASE_NUM} has items needing manual verification. Validate now or continue?"
+  - Options: "Validate now" / "Continue without validation"
 
-On "Run gap closure" (limit: 1 attempt -- WHY: prevents infinite loops):
+  On "Validate now": Present items, then ask "Validation result?" with "All good -- continue" / "Found issues". Issues route to handle_blocker.
+  On "Continue without validation": Display `Phase ${PHASE_NUM} > Human validation deferred`. Proceed to iterate.
+
+**`gaps_found`**:
+- HARNESS_MODE: do not ask. Run gap closure exactly once automatically (the existing 1-attempt limit applies):
+
+  ```
+  Skill(skill="gsd2:plan-phase", args="${PHASE_NUM} --gaps")
+  Skill(skill="gsd2:execute-phase", args="${PHASE_NUM} --no-transition")
+  ```
+
+  Re-read VERIFY_STATUS. `passed` → phase outcome `completed`; in single-phase mode emit `PHASE RESULT: completed phase=${PHASE_NUM}` and stop; otherwise proceed to iterate. `human_needed` → route per the harness human_needed branch above. Still `gaps_found` (or empty) → phase outcome `failed` with reason `gaps_found` (fail-safe direction: a wrongly-failed phase is reviewable in the morning; a wrongly-completed phase poisons downstream merges). In single-phase mode: emit `PHASE RESULT: failed phase=${PHASE_NUM} reason=gaps_found` and stop. In multi-phase mode: log and skip to independent phases.
+- Interactive: Read gap summary. Display score. Ask user:
+  - "Gaps found in phase ${PHASE_NUM}. How to proceed?"
+  - Options: "Run gap closure" / "Continue without fixing" / "Stop autonomous mode"
+
+  On "Run gap closure" (limit: 1 attempt -- WHY: prevents infinite loops):
+
+  ```
+  Skill(skill="gsd2:plan-phase", args="${PHASE_NUM} --gaps")
+  ```
+
+  Verify gap plans via `init phase-op`. If none: handle_blocker.
+
+  ```
+  Skill(skill="gsd2:execute-phase", args="${PHASE_NUM} --no-transition")
+  ```
+
+  Re-read VERIFY_STATUS. If `passed`/`human_needed`: route normally. If still `gaps_found`: ask "Gap closure did not fully resolve issues" with "Continue anyway" / "Stop autonomous mode".
+
+  On "Continue without fixing": Display `Phase ${PHASE_NUM} > Gaps deferred`. Proceed to iterate.
+  On "Stop autonomous mode": handle_blocker "User stopped -- gaps remain in phase ${PHASE_NUM}".
+
+**Single-phase mode:** after the phase resolves (via 3d routing, a parked discuss, or a failure), do not iterate. End the response with the outcome line as the FINAL line of output, exactly one of:
 
 ```
-Skill(skill="gsd2:plan-phase", args="${PHASE_NUM} --gaps")
+PHASE RESULT: completed phase=${PHASE_NUM}
+PHASE RESULT: completed phase=${PHASE_NUM} deferred_verification=q-NNN
+PHASE RESULT: parked phase=${PHASE_NUM} q=q-NNN
+PHASE RESULT: failed phase=${PHASE_NUM} reason=<short-kebab-reason>
 ```
 
-Verify gap plans via `init phase-op`. If none: handle_blocker.
-
-```
-Skill(skill="gsd2:execute-phase", args="${PHASE_NUM} --no-transition")
-```
-
-Re-read VERIFY_STATUS. If `passed`/`human_needed`: route normally. If still `gaps_found`: ask "Gap closure did not fully resolve issues" with "Continue anyway" / "Stop autonomous mode".
-
-On "Continue without fixing": Display `Phase ${PHASE_NUM} > Gaps deferred`. Proceed to iterate.
-On "Stop autonomous mode": handle_blocker "User stopped -- gaps remain in phase ${PHASE_NUM}".
+This line is the runner's outcome contract (AGENT-SPEC: ambiguous outcomes are treated as failed by the caller) — it must be machine-greppable: `^PHASE RESULT: (completed|parked|failed) phase=`. Multi-phase mode (no `--phase`) does not emit it.
 
 </step>
 
@@ -252,7 +315,7 @@ If infrastructure: skip Sub-step 4, jump to Sub-step 5 with minimal CONTEXT.md d
 - Users **READ** -> content (structure, tone, depth, flow)
 - Being **ORGANIZED** -> organization (criteria, grouping, exceptions, naming)
 
-Skip grey areas already decided in prior phases. Generate 3-4 grey areas with ~4 questions each. For each question: pre-select recommended answer (based on prior decisions, codebase patterns, domain conventions, ROADMAP criteria), generate 1-2 alternatives, annotate with prior decision/code context where relevant.
+Skip grey areas already decided in prior phases. Triage first, then go only as deep as the phase demands: surface only the genuinely undecided areas (no fixed area count) and, within each, only the questions whose answer actually changes implementation (no fixed question count). A clear-cut phase may yield one area with one question; an ambiguous one may yield several. For each question: pre-select recommended answer (based on prior decisions, codebase patterns, domain conventions, ROADMAP criteria), generate 1-2 alternatives, annotate with prior decision/code context where relevant.
 
 ### Sub-step 4: Present Proposals Per Area
 
@@ -273,7 +336,7 @@ Ask via AskUserQuestion:
 
 **"Accept all"**: Record recommendations, next area.
 **"Change QN"**: Show alternatives + "You decide" for that question. Record choice, re-display updated table, re-present acceptance prompt.
-**"Discuss deeper"**: Switch to interactive mode for this area -- ask questions one-at-a-time with 2-3 options + "You decide". After 4 questions, offer "More questions" / "Next area". On "Next area", show final summary.
+**"Discuss deeper"**: Switch to interactive mode for this area -- ask questions one-at-a-time with 2-3 options + "You decide". Continue while genuinely undecided, implementation-changing questions remain; once what's left is low-stakes, offer "More questions" / "Next area". On "Next area", show final summary.
 **"Other" (free text)**: Interpret and incorporate, re-display table, re-present prompt.
 
 **Scope creep**: If user mentions something outside phase domain: note as deferred idea, redirect to current area.
@@ -359,6 +422,8 @@ Display: `Created: {path}` and `Decisions captured: {count} across {area_count} 
 <step name="iterate">
 
 ## 4. Iterate
+
+**Single-phase mode (`SINGLE_PHASE` set):** never enter this step. After execute_phase completes, the PHASE RESULT line has already been emitted and the response ends. Do not loop.
 
 Re-read ROADMAP.md after each phase (WHY: catches phases inserted mid-execution, e.g., decimal phases like 5.1):
 
@@ -453,6 +518,10 @@ Cleanup shows its own dry-run and asks user for approval internally -- acceptabl
 
 ## 6. Handle Blocker
 
+**HARNESS_MODE: never AskUserQuestion.** Log the blocker description in the response output. In single-phase mode: the phase outcome is `failed` with a short kebab-case reason derived from the blocker description (e.g. `reason=no-plans-produced`) — emit the PHASE RESULT line and stop. In multi-phase harness mode: treat as the existing 'Skip this phase' branch (log `Phase {N} > {Name} — Skipped (harness): {description}`) and proceed to iterate.
+
+Interactive sessions: the existing 3-option AskUserQuestion, unchanged.
+
 Present 3 options via AskUserQuestion:
 - Prompt: "Phase {N} ({Name}) encountered an issue: {description}"
 - Options: "Fix and retry" / "Skip this phase" / "Stop autonomous mode"
@@ -478,6 +547,9 @@ Present 3 options via AskUserQuestion:
 </process>
 
 <success_criteria>
+- Single-phase mode (--phase N) runs exactly one phase, never enters lifecycle, and ends with exactly one PHASE RESULT line
+- Harness mode (GSD_RUN_ID set) delegates discuss to discuss-phase --auto and never calls smart_discuss
+- Harness mode never invokes AskUserQuestion anywhere in the workflow — every former pause routes to mailbox + continue or to a failed outcome
 - All incomplete phases executed in order (smart discuss -> plan -> execute each)
 - Smart discuss proposes grey area answers in tables; user accepts or overrides per area
 - Progress banners displayed between phases

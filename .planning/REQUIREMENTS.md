@@ -34,7 +34,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Overnight Runner (RUN)
 
-- [ ] **RUN-01**: `/gsd2:overnight` runs remaining phases unattended (wrapping `/gsd2:autonomous`) with ledger + escalation + mailbox active
+- [x] **RUN-01**: `/gsd2:overnight` runs remaining phases unattended (wrapping `/gsd2:autonomous`) with ledger + escalation + mailbox active
 - [ ] **RUN-02**: Per-phase execution is worktree-isolated; merge conflicts route to the mailbox, never silently swallowed (`cmdWorktreeMerge` exits 0 on conflict — runner must check `clean:false`)
 - [ ] **RUN-03**: Startup health check + `run.log`; auth/permission failures fail loudly, no silent retry
 - [x] **RUN-04**: Morning report summarizes decisions made, questions parked, phases completed
@@ -84,7 +84,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PARK-02 | Phase 12 | Complete |
 | PARK-03 | Phase 12 | Complete |
 | PARK-04 | Phase 12 | Complete |
-| RUN-01 | Phase 13 | Pending |
+| RUN-01 | Phase 13 | Complete |
 | RUN-02 | Phase 13 | Pending |
 | RUN-03 | Phase 13 | Pending |
 | RUN-04 | Phase 13 | Complete |
