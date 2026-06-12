@@ -288,10 +288,141 @@ function cmdLedgerList(cwd, runId, opts, raw) {
   }
 }
 
+// ─── Run-meta mutation helpers ────────────────────────────────────────────────
+
+const VALID_PHASE_STATUSES = ['completed', 'parked', 'failed'];
+const VALID_RUN_STATUSES = ['running', 'complete', 'stopped'];
+
+/**
+ * Local path helper — avoids importing park.cjs (keep ledger.cjs sibling-free).
+ */
+function metaFilePath(cwd, runId) {
+  return path.join(runDir(cwd, runId), 'RUN-META.json');
+}
+
+/**
+ * Append a validated phase outcome record to RUN-META.json phases[].
+ *
+ * gsd-tools run record-phase <run-id> --phase N --status S [--worktree X]
+ *   [--merge-clean true|false] [--started-ts ISO] [--ended-ts ISO] [--reason text]
+ */
+function cmdRunRecordPhase(cwd, runId, opts) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write(
+      'run record-phase: no run context — set GSD_RUN_ID or pass run-id arg\n'
+    );
+    process.exit(1);
+  }
+
+  // 2. Run dir must exist
+  if (!fs.existsSync(runDir(cwd, effectiveRunId))) {
+    process.stderr.write(
+      `run record-phase: run not initialized: ${effectiveRunId} (run: gsd-tools run init ${effectiveRunId})\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. --phase required
+  if (opts.phase == null || isNaN(opts.phase)) {
+    process.stderr.write(
+      'run record-phase: --phase <N> and --status <completed|parked|failed> are required\n'
+    );
+    process.exit(1);
+  }
+
+  // 4. Validate --status
+  if (!opts.status || !VALID_PHASE_STATUSES.includes(opts.status)) {
+    if (!opts.status) {
+      process.stderr.write(
+        'run record-phase: --phase <N> and --status <completed|parked|failed> are required\n'
+      );
+    } else {
+      process.stderr.write(
+        `run record-phase: invalid status: ${opts.status} (expected completed|parked|failed)\n`
+      );
+    }
+    process.exit(1);
+  }
+
+  // 5. Read RUN-META.json
+  const mp = metaFilePath(cwd, effectiveRunId);
+  const meta = JSON.parse(fs.readFileSync(mp, 'utf8'));
+  if (!Array.isArray(meta.phases)) meta.phases = [];
+
+  // 6. Push the new entry
+  meta.phases.push({
+    phase: opts.phase,
+    status: opts.status,
+    worktree: opts.worktree != null ? opts.worktree : null,
+    merge_clean: opts.mergeClean != null ? opts.mergeClean : null,
+    started_ts: opts.startedTs != null ? opts.startedTs : null,
+    ended_ts: opts.endedTs != null ? opts.endedTs : null,
+    reason: opts.reason != null ? opts.reason : null,
+  });
+
+  // 7. Write back
+  fs.writeFileSync(mp, JSON.stringify(meta, null, 2) + '\n', 'utf8');
+
+  process.stdout.write(`phase recorded: phase=${opts.phase} status=${opts.status}\n`);
+}
+
+/**
+ * Set the terminal status of a run in RUN-META.json.
+ *
+ * gsd-tools run status <run-id> --set <running|complete|stopped> [--reason text]
+ */
+function cmdRunStatus(cwd, runId, setValue, reason) {
+  // 1. Resolve run context
+  const effectiveRunId = runId || process.env.GSD_RUN_ID;
+  if (!effectiveRunId) {
+    process.stderr.write(
+      'run status: no run context — set GSD_RUN_ID or pass run-id arg\n'
+    );
+    process.exit(1);
+  }
+
+  // 2. Run dir must exist
+  if (!fs.existsSync(runDir(cwd, effectiveRunId))) {
+    process.stderr.write(
+      `run status: run not initialized: ${effectiveRunId} (run: gsd-tools run init ${effectiveRunId})\n`
+    );
+    process.exit(1);
+  }
+
+  // 3. --set required
+  if (!setValue) {
+    process.stderr.write(
+      'run status: usage: run status <run-id> --set <running|complete|stopped> [--reason <text>]\n'
+    );
+    process.exit(1);
+  }
+
+  // 4. Validate --set value
+  if (!VALID_RUN_STATUSES.includes(setValue)) {
+    process.stderr.write(
+      `run status: invalid status: ${setValue} (expected running|complete|stopped)\n`
+    );
+    process.exit(1);
+  }
+
+  // 5. Read, update, write RUN-META.json
+  const mp = metaFilePath(cwd, effectiveRunId);
+  const meta = JSON.parse(fs.readFileSync(mp, 'utf8'));
+  meta.status = setValue;
+  if (reason) meta.stopped_reason = reason;
+  fs.writeFileSync(mp, JSON.stringify(meta, null, 2) + '\n', 'utf8');
+
+  process.stdout.write(`run status: ${setValue}\n`);
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
   REQUIRED_FIELDS,
+  VALID_PHASE_STATUSES,
+  VALID_RUN_STATUSES,
   runDir,
   ledgerPath,
   readLedger,
@@ -301,4 +432,6 @@ module.exports = {
   cmdRunInit,
   cmdLedgerAppend,
   cmdLedgerList,
+  cmdRunRecordPhase,
+  cmdRunStatus,
 };
