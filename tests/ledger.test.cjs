@@ -388,3 +388,166 @@ describe('ledger list and filter', () => {
     assert.strictEqual(obj.id, 'dec-001');
   });
 });
+
+// ── run record-phase ─────────────────────────────────────────────────────────
+
+describe('run record-phase', () => {
+  let tmp;
+  beforeEach(() => { tmp = createTempProject(); });
+  afterEach(() => { cleanup(tmp); });
+
+  test('appends one entry to phases[] with correct fields; preserves run_id and started_ts', () => {
+    const runId = 'rp-run-001';
+    initRunDir(tmp, runId);
+    const metaBefore = JSON.parse(fs.readFileSync(metaFile(tmp, runId), 'utf8'));
+
+    const result = runGsdTools([
+      'run', 'record-phase', runId,
+      '--phase', '13',
+      '--status', 'completed',
+      '--worktree', 'overnight-phase-13',
+      '--merge-clean', 'true',
+    ], tmp);
+    assert.ok(result.success, `record-phase failed: ${result.error}`);
+
+    const meta = JSON.parse(fs.readFileSync(metaFile(tmp, runId), 'utf8'));
+    assert.strictEqual(meta.run_id, metaBefore.run_id, 'run_id must be preserved');
+    assert.strictEqual(meta.started_ts, metaBefore.started_ts, 'started_ts must be preserved');
+    assert.strictEqual(meta.phases.length, 1, 'phases should have one entry');
+
+    const entry = meta.phases[0];
+    assert.strictEqual(entry.phase, 13);
+    assert.strictEqual(entry.status, 'completed');
+    assert.strictEqual(entry.worktree, 'overnight-phase-13');
+    assert.strictEqual(entry.merge_clean, true);
+    assert.strictEqual(entry.started_ts, null);
+    assert.strictEqual(entry.ended_ts, null);
+    assert.strictEqual(entry.reason, null);
+  });
+
+  test('two sequential record-phase calls append two entries in order (no overwrite)', () => {
+    const runId = 'rp-run-002';
+    initRunDir(tmp, runId);
+
+    runGsdTools(['run', 'record-phase', runId, '--phase', '13', '--status', 'completed'], tmp);
+    runGsdTools(['run', 'record-phase', runId, '--phase', '14', '--status', 'parked'], tmp);
+
+    const meta = JSON.parse(fs.readFileSync(metaFile(tmp, runId), 'utf8'));
+    assert.strictEqual(meta.phases.length, 2, 'should have 2 entries');
+    assert.strictEqual(meta.phases[0].phase, 13);
+    assert.strictEqual(meta.phases[0].status, 'completed');
+    assert.strictEqual(meta.phases[1].phase, 14);
+    assert.strictEqual(meta.phases[1].status, 'parked');
+  });
+
+  test('--status bogus exits 1 and stderr contains "record-phase: invalid status"; phases stays empty', () => {
+    const runId = 'rp-run-003';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'record-phase', runId, '--phase', '13', '--status', 'bogus'], tmp);
+    assert.ok(!result.success, 'should fail on invalid status');
+    assert.ok(
+      result.error.includes('record-phase: invalid status'),
+      `stderr should contain "record-phase: invalid status", got: ${result.error}`
+    );
+
+    const meta = JSON.parse(fs.readFileSync(metaFile(tmp, runId), 'utf8'));
+    assert.strictEqual(meta.phases.length, 0, 'phases should stay empty on invalid status');
+  });
+
+  test('missing --phase exits 1', () => {
+    const runId = 'rp-run-004';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'record-phase', runId, '--status', 'completed'], tmp);
+    assert.ok(!result.success, 'should fail with missing --phase');
+    assert.ok(
+      result.error.includes('required') || result.error.includes('--phase'),
+      `stderr should mention --phase required, got: ${result.error}`
+    );
+  });
+
+  test('missing --status exits 1', () => {
+    const runId = 'rp-run-005';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'record-phase', runId, '--phase', '13'], tmp);
+    assert.ok(!result.success, 'should fail with missing --status');
+    assert.ok(
+      result.error.includes('required') || result.error.includes('--status'),
+      `stderr should mention --status required, got: ${result.error}`
+    );
+  });
+
+  test('no run-id arg and no GSD_RUN_ID env exits 1 and stderr contains "no run context"', () => {
+    const envWithout = { ...process.env };
+    delete envWithout.GSD_RUN_ID;
+
+    const result = runGsdTools(['run', 'record-phase', '--phase', '13', '--status', 'completed'], tmp, { env: envWithout });
+    assert.ok(!result.success, 'should fail with no run context');
+    assert.ok(
+      result.error.includes('no run context'),
+      `stderr should contain "no run context", got: ${result.error}`
+    );
+  });
+
+  test('uninitialized run-id exits 1 and stderr contains "not initialized"', () => {
+    const result = runGsdTools(['run', 'record-phase', 'nonexistent-run-xyz', '--phase', '13', '--status', 'completed'], tmp);
+    assert.ok(!result.success, 'should fail for uninitialized run');
+    assert.ok(
+      result.error.includes('not initialized'),
+      `stderr should contain "not initialized", got: ${result.error}`
+    );
+  });
+});
+
+// ── run status ───────────────────────────────────────────────────────────────
+
+describe('run status', () => {
+  let tmp;
+  beforeEach(() => { tmp = createTempProject(); });
+  afterEach(() => { cleanup(tmp); });
+
+  test('--set complete exits 0 and meta.status is "complete"', () => {
+    const runId = 'rs-run-001';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'status', runId, '--set', 'complete'], tmp);
+    assert.ok(result.success, `run status failed: ${result.error}`);
+
+    const meta = JSON.parse(fs.readFileSync(metaFile(tmp, runId), 'utf8'));
+    assert.strictEqual(meta.status, 'complete');
+  });
+
+  test('--set stopped --reason auth-failure sets status="stopped" and stopped_reason="auth-failure"', () => {
+    const runId = 'rs-run-002';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'status', runId, '--set', 'stopped', '--reason', 'auth-failure'], tmp);
+    assert.ok(result.success, `run status with reason failed: ${result.error}`);
+
+    const meta = JSON.parse(fs.readFileSync(metaFile(tmp, runId), 'utf8'));
+    assert.strictEqual(meta.status, 'stopped');
+    assert.strictEqual(meta.stopped_reason, 'auth-failure');
+  });
+
+  test('--set bogus exits 1 and stderr contains "invalid status"', () => {
+    const runId = 'rs-run-003';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'status', runId, '--set', 'bogus'], tmp);
+    assert.ok(!result.success, 'should fail on invalid status');
+    assert.ok(
+      result.error.includes('invalid status'),
+      `stderr should contain "invalid status", got: ${result.error}`
+    );
+  });
+
+  test('missing --set exits 1', () => {
+    const runId = 'rs-run-004';
+    initRunDir(tmp, runId);
+
+    const result = runGsdTools(['run', 'status', runId], tmp);
+    assert.ok(!result.success, 'should fail with missing --set');
+  });
+});
