@@ -195,3 +195,10 @@
 - Ledger write-once is preserved across the answer path: human answers live in MAILBOX.jsonl only; the SUPERSEDING ledger record is appended when the resumed branch acts on the answer — that append is Phase 15's responsibility.
 - The `/gsd2:inbox` skill deliberately does not hardcode decision-type-only assumptions, but triage-type entries (six-verdict proposals) are NOT handled in Phase 12 — Phase 15 extends the inbox for TRIAGE-01/02.
 - Signal: [STRONG, specialist-backed] — direct consequence of the 12/15 boundary decision.
+
+### From Phase 14 discussion (2026-06-12)
+
+**For Phase 13: Overnight Runner / Phase 15: Resume Logic**
+- Discuss-loop autonomous invocation is NOT wired in Phase 14 — the command ships standalone; what calls it during overnight runs is runner/resume territory. If 13/15 want the harness to use it on project-level open questions, that wiring is theirs.
+- Signal: [STRONG] — boundary stated explicitly during scoping, user did not contest.
+- Context: came up while bounding Phase 14 scope; converged modifications route through the escalation contract, so runner-invoked loops inherit the same park/proceed semantics automatically.
