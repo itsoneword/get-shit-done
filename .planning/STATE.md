@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 12-park-don-t-block-mailbox-02-PLAN.md
-last_updated: "2026-06-12T08:25:40.288Z"
+stopped_at: Completed 12-park-don-t-block-mailbox-03-PLAN.md
+last_updated: "2026-06-12T08:53:13.563Z"
 progress:
   total_phases: 15
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 ## Current Position
@@ -56,6 +56,7 @@ Recent decisions affecting current work:
 - [Phase 12-park-don-t-block-mailbox]: STUCK FLAG header suppressed in --raw mode to keep raw output machine-parseable JSONL
 - [Phase 12-park-don-t-block-mailbox]: Collect all stdin lines via readline close event before iterating questions — rl.question in async loop drops questions on piped-stdin EOF
 - [Phase 12-park-don-t-block-mailbox]: writeMailbox used once per review session (after the loop) — one full-file rewrite for N answers, not per-question
+- [Phase 12]: Autonomous park-and-ask bifurcates: interactive asks directly (Phase 11 behavior), autonomous writes mailbox pending + park snapshot + PHASE PARKED halt
 
 ### Pending Todos
 
@@ -75,6 +76,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-12T08:25:40.282Z
-Stopped at: Completed 12-park-don-t-block-mailbox-02-PLAN.md
+Last session: 2026-06-12T08:53:13.557Z
+Stopped at: Completed 12-park-don-t-block-mailbox-03-PLAN.md
 Resume file: None
