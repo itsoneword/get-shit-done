@@ -42,7 +42,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Discussion Loop (LOOP)
 
 - [x] **LOOP-01**: `/gsd2:discuss-loop` runs multi-lens judgment (skeptic / user-advocate / architect) anchored to a concrete artifact, not abstract positions
-- [ ] **LOOP-02**: A convergence brake tests content delta with a hard round cap; non-convergence escalates the top divergent positions to the mailbox — never a synthesized average
+- [x] **LOOP-02**: A convergence brake tests content delta with a hard round cap; non-convergence escalates the top divergent positions to the mailbox — never a synthesized average
 
 ### Triage Worker (TRIAGE)
 
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RUN-03 | Phase 13 | Pending |
 | RUN-04 | Phase 13 | Pending |
 | LOOP-01 | Phase 14 | Complete |
-| LOOP-02 | Phase 14 | Pending |
+| LOOP-02 | Phase 14 | Complete |
 | TRIAGE-01 | Phase 15 | Pending |
 | TRIAGE-02 | Phase 15 | Pending |
 
