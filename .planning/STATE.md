@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-06-12T11:49:27.834Z"
+stopped_at: Completed 13-03-PLAN.md
+last_updated: "2026-06-12T12:04:42.948Z"
 progress:
   total_phases: 15
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 12
 ---
 
 ## Current Position
 
-Phase: 13 (overnight-runner) — EXECUTING
-Plan: 3 of 3
+Phase: 13 (overnight-runner) — COMPLETE (all 3 plans executed)
+Plan: 3 of 3 — DONE
 (parallel session: Phase 14 multi-lens-discussion-loop also executing)
 
 ## Project Reference
@@ -65,6 +65,10 @@ Recent decisions affecting current work:
 - [Phase 13]: cmdRunReport reads exactly three files: RUN-META.json, DECISIONS.jsonl, MAILBOX.jsonl — RUN-04 locked constraint
 - [Phase 13]: HARNESS_MODE gates are additive — interactive behavior is byte-equivalent when GSD_RUN_ID is unset
 - [Phase 13]: PHASE RESULT is the outcome contract for autonomous.md in single-phase mode — machine-greppable final line, ambiguous=failed per AGENT-SPEC
+- [Phase 13-03]: Sandbox-first posture locked: overnight.md NEVER uses bypassPermissions; denials auto-route to mailbox
+- [Phase 13-03]: AUTH_FAILURE = hard stop, zero silent retries; all other failures use skip-to-independent
+- [Phase 13-03]: run.log TYPE vocabulary locked to 16 tokens — the grep contract IS the observability API
+- [Phase 13-03]: ESC-03 gate PASS count = 0 at build; overnight health check fails closed until human completes calibration
 
 ### Pending Todos
 
@@ -84,6 +88,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-12T11:49:27.829Z
-Stopped at: Completed 13-02-PLAN.md
+Last session: 2026-06-12T12:04:42.942Z
+Stopped at: Completed 13-03-PLAN.md
 Resume file: None

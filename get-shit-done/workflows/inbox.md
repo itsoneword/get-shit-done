@@ -1,5 +1,5 @@
 <purpose>
-Morning inbox session for the GSD autonomous supervision harness. Presents every unanswered parked question with full context, evidence, and staleness state inline — one session, no tab-switching. Records answers via the mailbox CLI. Prints per-phase resume handoffs.
+Morning inbox session for the GSD autonomous supervision harness. Opens with the run's morning report (via `gsd-tools run report`) so the session starts with what happened overnight. Presents every unanswered parked question with full context, evidence, and staleness state inline — one session, no tab-switching. Records answers via the mailbox CLI. Prints per-phase resume handoffs.
 
 **THIN constraint:** This skill reads the mailbox and records answers. It does NOT resume branches, replan, or execute — the resume handoff is printed, not performed (branch replay is Phase 15; runner orchestration is Phase 13).
 </purpose>
@@ -32,6 +32,17 @@ ls .planning/run/ 2>/dev/null
   ```
 
   Use AskUserQuestion with each run-id as an option, or accept free-form input.
+</step>
+
+<step name="run_report_header">
+**Print the morning report as the session header.**
+
+```bash
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" run report <run-id>
+```
+
+- Exit 0: surface the report output VERBATIM before walking any questions — this is the run's summary (decisions made, phases completed, questions parked) computed from the ledger artifacts alone.
+- Non-zero exit (run not initialized / no RUN-META.json — e.g. a mailbox-only fixture): skip the header silently and continue to load_questions. The header is additive; its absence must never block the inbox.
 </step>
 
 <step name="load_questions">
