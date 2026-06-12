@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: unknown
-stopped_at: Checkpoint at 14-03-PLAN.md Task 3 (human-verify)
-last_updated: "2026-06-12T13:59:04.797Z"
+status: executing
+stopped_at: Completed 14-03-PLAN.md (all tasks done)
+last_updated: "2026-06-12T14:44:00Z"
 progress:
   total_phases: 15
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
   completed_plans: 13
 ---
 
 ## Current Position
 
-Phase: 14 (multi-lens-discussion-loop) — EXECUTING
-Plan: 3 of 3 (Tasks 1–2 complete; awaiting human-verify on Task 3)
+Phase: 14 (multi-lens-discussion-loop) — COMPLETE
+Plan: 3 of 3 — all tasks complete (Task 3 live smoke run confirmed 2026-06-12T14:33Z)
 
 ## Project Reference
 
@@ -72,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase 14-03]: Interactive sessions never write MAILBOX.jsonl; bifurcation (--auto AND GSD_RUN_ID) is the first branch in escalation_path
 - [Phase 14-03]: mailbox append status must be explicitly "pending" — CLI default is "open", wrong for parked harness questions
 - [Phase 14-03]: Escalation-contract gating scoped to converged-modify on tracked committed files only
+- [Phase 14-03 smoke]: Hard-wrapped artifacts cause frequent anchor-validation failures (5/9 in smoke run) — one-retry ladder absorbs it but burns retries; consider whitespace normalization in anchor matching
+- [Phase 14-03 smoke]: survivors --data requires NESTED array (array of rounds, each an array of blocks) — flat input throws "round is not iterable"; workflow prose reads as flat, needs clarification
 
 ### Pending Todos
 
@@ -91,6 +93,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-12T13:59:04.793Z
-Stopped at: Checkpoint at 14-03-PLAN.md Task 3 (human-verify)
+Last session: 2026-06-12T14:44:00Z
+Stopped at: Completed 14-03-PLAN.md (all 3 tasks; smoke run confirmed)
 Resume file: None
