@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-06-17T19:30:43.398Z"
+stopped_at: Completed 15-01-PLAN.md (triage module TDD + gsd-tools dispatch)
+last_updated: "2026-06-17T19:33:31.070Z"
 progress:
   total_phases: 15
   completed_phases: 5
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 ## Current Position
 
 Phase: 15 (resume-logic-backlog-triage-worker) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Project Reference
 
@@ -76,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 14-03 smoke]: survivors --data requires NESTED array (array of rounds, each an array of blocks) — flat input throws "round is not iterable"; workflow prose reads as flat, needs clarification
 - [Phase 15-resume-logic-backlog-triage-worker]: Resume detection fires at step 3a.0 before has_context check — short-circuits to replay rather than re-running discuss from scratch
 - [Phase 15-resume-logic-backlog-triage-worker]: CONTEXT.md write happens strictly before ledger append (write-before-replay invariant); idempotency check (EXISTING_SUPER) runs before any write to prevent duplicate ledger entries on re-run
+- [Phase 15-resume-logic-backlog-triage-worker]: cmdTriageRun emits 'needs-input' as structural default; LLM assigns real verdicts in workflow prose
+- [Phase 15-resume-logic-backlog-triage-worker]: context field prefix 'triage-verdict:' enables inbox-triage-presenter discrimination; inline require for mailbox/ledger in functions avoids circular deps
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-17T19:30:43.394Z
-Stopped at: Completed 15-02-PLAN.md
+Last session: 2026-06-17T19:33:31.064Z
+Stopped at: Completed 15-01-PLAN.md (triage module TDD + gsd-tools dispatch)
 Resume file: None

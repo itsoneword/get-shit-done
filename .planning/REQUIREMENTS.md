@@ -46,8 +46,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Triage Worker (TRIAGE)
 
-- [ ] **TRIAGE-01**: `/gsd2:triage` analyzes pending todos/backlog against codebase + roadmap and emits six-verdict proposals (already-done / obsolete / fold-into-phase / new-phase / needs-input / defer) into the mailbox, each with evidence
-- [ ] **TRIAGE-02**: Triage writes only to the mailbox; routing (promote, fold, mark done, delete) executes only on human acceptance in the inbox
+- [x] **TRIAGE-01**: `/gsd2:triage` analyzes pending todos/backlog against codebase + roadmap and emits six-verdict proposals (already-done / obsolete / fold-into-phase / new-phase / needs-input / defer) into the mailbox, each with evidence
+- [x] **TRIAGE-02**: Triage writes only to the mailbox; routing (promote, fold, mark done, delete) executes only on human acceptance in the inbox
 
 ## Future Requirements
 
@@ -90,8 +90,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RUN-04 | Phase 13 | Complete |
 | LOOP-01 | Phase 14 | Complete |
 | LOOP-02 | Phase 14 | Complete |
-| TRIAGE-01 | Phase 15 | Pending |
-| TRIAGE-02 | Phase 15 | Pending |
+| TRIAGE-01 | Phase 15 | Complete |
+| TRIAGE-02 | Phase 15 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 18 total
