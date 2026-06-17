@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Completed 15-01-PLAN.md (triage module TDD + gsd-tools dispatch)
-last_updated: "2026-06-17T19:33:31.070Z"
+stopped_at: 15-03 checkpoint:human-verify — Tasks 1-4 complete, awaiting smoke-verify
+last_updated: "2026-06-17T19:40:00Z"
 progress:
   total_phases: 15
   completed_phases: 5
