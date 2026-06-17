@@ -125,7 +125,7 @@ Progress bar: 8 chars wide, filled/empty segments based on P%.
 
 **3a.0 Resume Detection (HARNESS_MODE only)**
 
-If `HARNESS_MODE` is not true, skip to step 3a immediately.
+If HARNESS_MODE is not true, skip to step 3a immediately.
 
 Set the snapshot file path:
 
