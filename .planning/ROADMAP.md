@@ -238,7 +238,7 @@
   1. When a parked branch is resumed after a human answers a mailbox question, `autonomous.md` re-reads `STATE.md`, `ROADMAP.md`, and `cross-phase-notes.md` before replaying the blocked step — the staleness diff between park-time snapshot and current state is surfaced to the human before execution continues
   2. Running `/gsd2:triage` reads pending todos against the codebase and roadmap and appends proposals to `MAILBOX.jsonl` — each proposal carries one of six verdicts (already-done / obsolete / fold-into-phase / new-phase / needs-input / defer) with evidence; nothing is promoted, folded, or deleted until the human accepts via `gsd-tools mailbox review`
 
-**Plans**: TBD
+**Plans**: 3 plans — 15-01 (triage.cjs module + tests, TDD, wave 1), 15-02 (autonomous.md resume branch, wave 1), 15-03 (overnight.md triage step + inbox.md triage-entry + workflows/triage.md + commands/gsd2/triage.md, wave 2)
 
 ## Progress
 
@@ -261,7 +261,7 @@
 | 12. Park-Don't-Block Mailbox | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 13. Overnight Runner | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
-| 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/TBD | Not started | - |
+| 15. Resume Logic + Backlog Triage Worker | v1.6 | 0/3 | Not started | - |
 
 ## Backlog
 
