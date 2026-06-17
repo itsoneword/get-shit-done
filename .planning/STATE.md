@@ -3,26 +3,26 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Phase 15 planned (3 plans, 2 waves) — verification passed
-last_updated: "2026-06-17T15:24:37.602Z"
+stopped_at: Completed 15-02-PLAN.md
+last_updated: "2026-06-17T19:30:43.398Z"
 progress:
   total_phases: 15
   completed_phases: 5
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 ## Current Position
 
-Phase: 14 (multi-lens-discussion-loop) — COMPLETE
-Plan: 3 of 3 — all tasks complete (Task 3 live smoke run confirmed 2026-06-12T14:33Z)
+Phase: 15 (resume-logic-backlog-triage-worker) — EXECUTING
+Plan: 2 of 3
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-10)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 14 — multi-lens-discussion-loop
+**Current focus:** Phase 15 — resume-logic-backlog-triage-worker
 
 ## Performance Metrics
 
@@ -74,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 14-03]: Escalation-contract gating scoped to converged-modify on tracked committed files only
 - [Phase 14-03 smoke]: Hard-wrapped artifacts cause frequent anchor-validation failures (5/9 in smoke run) — one-retry ladder absorbs it but burns retries; consider whitespace normalization in anchor matching
 - [Phase 14-03 smoke]: survivors --data requires NESTED array (array of rounds, each an array of blocks) — flat input throws "round is not iterable"; workflow prose reads as flat, needs clarification
+- [Phase 15-resume-logic-backlog-triage-worker]: Resume detection fires at step 3a.0 before has_context check — short-circuits to replay rather than re-running discuss from scratch
+- [Phase 15-resume-logic-backlog-triage-worker]: CONTEXT.md write happens strictly before ledger append (write-before-replay invariant); idempotency check (EXISTING_SUPER) runs before any write to prevent duplicate ledger entries on re-run
 
 ### Pending Todos
 
@@ -93,6 +95,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-17T15:24:37.597Z
-Stopped at: Phase 15 planned (3 plans, 2 waves) — verification passed
-Resume file: .planning/v1.6/phases/15-resume-logic-backlog-triage-worker/15-01-PLAN.md
+Last session: 2026-06-17T19:30:43.394Z
+Stopped at: Completed 15-02-PLAN.md
+Resume file: None
