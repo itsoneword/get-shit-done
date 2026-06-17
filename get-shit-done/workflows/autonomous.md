@@ -123,6 +123,170 @@ Display progress banner with N = phase number, T = total phases from `phase_coun
 
 Progress bar: 8 chars wide, filled/empty segments based on P%.
 
+**3a.0 Resume Detection (HARNESS_MODE only)**
+
+If `HARNESS_MODE` is not true, skip to step 3a immediately.
+
+Set the snapshot file path:
+
+```bash
+SNAPSHOT_FILE="$(pwd)/.planning/run/$GSD_RUN_ID/parked/phase-${PHASE_NUM}.json"
+```
+
+If the snapshot file is absent (`[ -f "$SNAPSHOT_FILE" ]` is false), skip to step 3a (normal new-phase path).
+
+If the snapshot file exists:
+
+Read `QUESTION_ID` from the snapshot using a synchronous node one-liner:
+
+```bash
+QUESTION_ID=$(node -e "const s=JSON.parse(require('fs').readFileSync('$SNAPSHOT_FILE','utf8')); process.stdout.write(s.question_id||'')")
+```
+
+Query the mailbox for that question's status:
+
+```bash
+MAILBOX_STATUS=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox list $GSD_RUN_ID --raw | \
+  node -e "const d=[];process.stdin.on('data',c=>d.push(c));process.stdin.on('close',()=>{const recs=d.join('').split('\n').filter(Boolean).map(l=>{try{return JSON.parse(l)}catch{return null}}).filter(Boolean);const r=recs.find(r=>r.id==='$QUESTION_ID');process.stdout.write(r?r.status:'missing');})")
+```
+
+If `MAILBOX_STATUS` is not `"answered"`: skip to step 3a (still parked). In single-phase mode: emit `PHASE RESULT: parked phase=${PHASE_NUM} q=${QUESTION_ID}` and stop.
+
+If `MAILBOX_STATUS` is `"answered"`: enter the **RESUME ROUTE** (four sub-steps below). Any path that enters the resume route does NOT proceed to existing step 3a. Step 3a runs only when the snapshot file is absent or the mailbox question is not answered.
+
+---
+
+**Step R1: Re-read planning state**
+
+```bash
+cat .planning/STATE.md
+cat .planning/ROADMAP.md
+cat .planning/cross-phase-notes.md 2>/dev/null
+```
+
+Extract `ANSWER_TEXT` from the mailbox record (same pipeline as `MAILBOX_STATUS` but writes `r.answer` instead of `r.status`):
+
+```bash
+ANSWER_TEXT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox list $GSD_RUN_ID --raw | \
+  node -e "const d=[];process.stdin.on('data',c=>d.push(c));process.stdin.on('close',()=>{const recs=d.join('').split('\n').filter(Boolean).map(l=>{try{return JSON.parse(l)}catch{return null}}).filter(Boolean);const r=recs.find(r=>r.id==='$QUESTION_ID');process.stdout.write(r&&r.answer?r.answer:'');})")
+```
+
+---
+
+**Step R2: Staleness gate**
+
+Run the staleness check:
+
+```bash
+STALENESS_RAW=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" park staleness $GSD_RUN_ID --phase $PHASE_NUM --raw 2>&1)
+```
+
+Check if the output is valid JSON (pipe to node -e JSON.parse, exit 0 on success, exit 1 on parse error):
+
+```bash
+echo "$STALENESS_RAW" | node -e "process.stdin.on('data',d=>{try{JSON.parse(d.toString());process.exit(0);}catch{process.exit(1);}})"
+```
+
+If parse error (exit 1): log the failure to run.log, emit the PHASE RESULT line, and stop — no CONTEXT.md write and no ledger append:
+
+```bash
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) PHASE_FAILURE phase=$PHASE_NUM reason=staleness-parse-error" >> "$GSD_RUN_LOG"
+echo "PHASE RESULT: failed phase=${PHASE_NUM} reason=staleness-parse-error"
+# stop execute_phase
+```
+
+If valid JSON: extract the four fields using separate node -e inline scripts on `$STALENESS_RAW`:
+
+```bash
+CHANGED=$(echo "$STALENESS_RAW" | node -e "process.stdin.on('data',d=>{const s=JSON.parse(d.toString());process.stdout.write(JSON.stringify(s.changed));})")
+MISSING=$(echo "$STALENESS_RAW" | node -e "process.stdin.on('data',d=>{const s=JSON.parse(d.toString());process.stdout.write(JSON.stringify(s.missing));})")
+RESUME_INSTRUCTION=$(echo "$STALENESS_RAW" | node -e "process.stdin.on('data',d=>{const s=JSON.parse(d.toString());process.stdout.write(s.resume_instruction||'');})")
+GIT_RANGE=$(echo "$STALENESS_RAW" | node -e "process.stdin.on('data',d=>{const s=JSON.parse(d.toString());process.stdout.write(s.git_range||'n/a');})")
+```
+
+Display the staleness block: changed files, missing files, git range.
+
+If `CHANGED` is not `[]` OR `MISSING` is not `[]` (drift detected): do NOT write CONTEXT.md, do NOT call ledger append. Append a new mailbox question with `"status":"pending"` and context mentioning "state moved since park", the changed files, and the git_range:
+
+```bash
+Q_NEW=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" mailbox append --data \
+  "{\"question\":\"Phase $PHASE_NUM parked branch cannot resume: planning state moved since park. Re-answer with current context.\",\"phase\":$PHASE_NUM,\"context\":\"Staleness check at resume: changed=$CHANGED git_range=$GIT_RANGE. Original question: $QUESTION_ID. Original answer: $ANSWER_TEXT.\",\"status\":\"pending\"}")
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) PHASE_PARKED phase=$PHASE_NUM q=$Q_NEW" >> "$GSD_RUN_LOG"
+echo "PHASE RESULT: parked phase=${PHASE_NUM} q=${Q_NEW}"
+# stop execute_phase
+```
+
+If `CHANGED` is `[]` AND `MISSING` is `[]` (clean): proceed to Step R3.
+
+---
+
+**Step R3: Idempotency check + CONTEXT.md write**
+
+Run the idempotency check before any write: scan the ledger for any record where `r.supersedes === QUESTION_ID` OR where `r.evidence` contains `QUESTION_ID`. Capture result as `"true"` or `"false"` in `EXISTING_SUPER`:
+
+```bash
+EXISTING_SUPER=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" ledger list $GSD_RUN_ID --raw | \
+  node -e "process.stdin.on('data',d=>{const lines=d.toString().split('\n').filter(Boolean);const qid='$QUESTION_ID';const found=lines.some(l=>{try{const r=JSON.parse(l);return r.supersedes===qid||(typeof r.evidence==='string'&&r.evidence.includes(qid));}catch{return false;}});process.stdout.write(found?'true':'false');})")
+```
+
+If `EXISTING_SUPER` is `"true"`: a superseding record already exists from a prior partial attempt; CONTEXT.md already has the answer. Skip to Step R4.
+
+If `EXISTING_SUPER` is `"false"`:
+
+Read `CONTEXT_PATH` from the snapshot:
+
+```bash
+CONTEXT_PATH=$(node -e "const s=JSON.parse(require('fs').readFileSync('$SNAPSHOT_FILE','utf8')); process.stdout.write(s.context_path||'')")
+```
+
+Write the settled answer as a `### Resume Decision (from q-${QUESTION_ID})` subsection with `- ${ANSWER_TEXT}` as a bullet inside the phase CONTEXT.md `<decisions>` block, before the closing `</decisions>` tag.
+
+If the write fails: log `PHASE_FAILURE phase=$PHASE_NUM reason=context-write-error` to `$GSD_RUN_LOG`, emit `PHASE RESULT: failed phase=${PHASE_NUM} reason=context-write-error`, and stop. Do NOT call ledger append.
+
+```bash
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) PHASE_FAILURE phase=$PHASE_NUM reason=context-write-error" >> "$GSD_RUN_LOG"
+echo "PHASE RESULT: failed phase=${PHASE_NUM} reason=context-write-error"
+# stop execute_phase
+```
+
+If the write succeeds: run `gsd-tools ledger append` with the superseding record JSON:
+
+```bash
+node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" ledger append --data \
+  "{\"decision\":\"Answer to parked question $QUESTION_ID\",\"alternatives\":[],\"evidence\":\"Resumed after human answered $QUESTION_ID: $ANSWER_TEXT\",\"confidence\":\"HIGH\",\"escalated\":null,\"supersedes\":\"$QUESTION_ID\",\"phase\":\"$PHASE_NUM\"}"
+```
+
+If `ledger append` exits non-zero: log `PHASE_FAILURE phase=$PHASE_NUM reason=ledger-write-error` to `$GSD_RUN_LOG`, emit `PHASE RESULT: failed phase=${PHASE_NUM} reason=ledger-write-error`, and stop.
+
+```bash
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) PHASE_FAILURE phase=$PHASE_NUM reason=ledger-write-error" >> "$GSD_RUN_LOG"
+echo "PHASE RESULT: failed phase=${PHASE_NUM} reason=ledger-write-error"
+# stop execute_phase
+```
+
+---
+
+**Step R4: Replay the blocked step**
+
+Display the resume instruction and the answer that was applied:
+
+```
+Resume: ${RESUME_INSTRUCTION}
+Answer applied: ${ANSWER_TEXT}
+```
+
+Re-enter the workflow at the step named in `RESUME_INSTRUCTION`. The answer is locked in CONTEXT.md — the replayed step MUST read CONTEXT.md decisions and treat `### Resume Decision` entries as locked (do NOT re-ask the answered question).
+
+If the replay succeeds (verification passes): log `PHASE_COMPLETE phase=$PHASE_NUM` to `$GSD_RUN_LOG`, then proceed to 3b/3c/3d for the remainder of the phase.
+
+```bash
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) PHASE_COMPLETE phase=$PHASE_NUM" >> "$GSD_RUN_LOG"
+```
+
+If the replay parks again (a new question arose during replay): capture the new q-NNN from the output and emit `PHASE RESULT: parked phase=${PHASE_NUM} q=q-NEW-NNN`.
+
+---
+
 **3a. Smart Discuss**
 
 Fetch phase state (cache result -- reuse in 3b and 3d):
