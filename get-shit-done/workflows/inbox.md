@@ -75,6 +75,53 @@ Stop here.
 
 This is a DISCUSSION, not a form. Present everything the user needs inline — they must never need to open another file.
 
+**Entry type detection:**
+
+Before presenting an entry, check whether its `context` field starts with `triage-verdict:`.
+
+**If context starts with triage-verdict: — Triage Proposal presentation:**
+
+Parse the context field to extract: the `verdict` token (the word after `triage-verdict: ` up to the first space or ` target=`) and the `target` value (after `target=`, if present). If the verdict token is not one of the six valid tokens (`already-done`, `obsolete`, `fold-into-phase`, `new-phase`, `needs-input`, `defer`), set `verdict = 'needs-input'` and note an unknown verdict token warning.
+
+Present the proposal using this template:
+
+```
+---
+Triage Proposal {q-NNN}
+Verdict: <verdict>  Target: <target>
+<warning if applicable: "(unknown verdict token in triage entry — treating as needs-input)">
+
+Item: <entry.question with "Triage proposal: " prefix stripped for display>
+Evidence: <entry.evidence>
+
+Options:
+  A. accept - record accepted verdict and print routing command
+  B. defer  - leave for a future triage session (mark answered with "deferred")
+```
+
+**On accept:** call `gsd-tools mailbox answer <run-id> --id <q-NNN> --answer "accepted: <verdict>"`. Then print the routing command for the accepted verdict using the six-verdict routing table below. Print it verbatim; do NOT execute it.
+
+Routing commands (print only, never execute):
+
+| Verdict | Routing command printed |
+|---------|------------------------|
+| `already-done` | `gsd-tools todo complete <todo-filename>` — or for backlog items: `# manual: work is complete per evidence above` |
+| `obsolete` | `# manual: delete .planning/todos/pending/<filename>` |
+| `fold-into-phase` | `# manual: add this item to the target phase notes or ROADMAP.md phase section` |
+| `new-phase` | `# manual: add to ROADMAP.md ## Backlog as a new ### B-item with goal and evidence` |
+| `needs-input` | `# No command - provide the missing input and re-run /gsd2:triage` |
+| `defer` | `# No command - item remains in pending for a future triage session` |
+
+Surface the `mailbox answer` CLI output verbatim after printing the routing command.
+
+**On defer:** call `gsd-tools mailbox answer <run-id> --id <q-NNN> --answer "deferred"`.
+
+**Never modify todo files, ROADMAP.md, or any planning artifact inside this step. Print the routing command; the human runs it as a separate explicit step. This is the propose-never-dispose invariant.**
+
+After handling the triage proposal, continue to the next inbox entry. Skip the normal phase-question presentation block for this entry.
+
+**If context does NOT start with triage-verdict: — normal phase-question presentation:**
+
 **Present the question block:**
 
 ```
@@ -156,6 +203,8 @@ If nothing was answered (all skipped/deferred): note that — "No questions answ
 - Never edit planning files (CONTEXT.md, ROADMAP.md, STATE.md, etc.) — read them only.
 - Never mark a question answered without an explicit user-settled answer.
 - Never resume, replan, or execute a parked branch — print the handoff, stop there.
-- Do not hardcode decision-type-only assumptions about mailbox entries — Phase 15 adds triage-type entries flowing through this same inbox; the workflow must handle any question shape.
+- Triage-type entries (context starting with `triage-verdict:`) are presented as proposals with a distinct Verdict/Item/Evidence template; the accept path prints a routing command and does NOT execute it (propose-never-dispose invariant).
+- Never modify todo files, ROADMAP.md, or any planning artifact from inside the inbox — all mutations require a separate explicit human step after reviewing the printed routing command.
+- An unknown verdict token in a triage entry is treated as `needs-input` with a warning (corrupt entry must not block the inbox session).
 - The single-sitting rule: everything the user needs to answer must be presented inline. If a field is missing from the mailbox record, note the gap and proceed — do not ask the user to look up source files.
 </rules>
