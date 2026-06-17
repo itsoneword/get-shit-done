@@ -5,7 +5,7 @@ Create executable phase prompts (PLAN.md files) for a roadmap phase with integra
 <required_reading>
 Read all files referenced by the invoking prompt's execution_context before starting.
 
-@~/.claude/get-shit-done/references/ui-brand.md
+For user-facing output formatting (banners, status lines), read `~/.claude/get-shit-done/references/ui-brand.md` only when you reach a step that renders such output — do not load it up front.
 </required_reading>
 
 <available_agent_types>
