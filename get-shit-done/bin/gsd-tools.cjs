@@ -184,6 +184,7 @@ const lesson = require('./lib/lesson.cjs');
 const ledger = require('./lib/ledger.cjs');
 const mailbox = require('./lib/mailbox.cjs');
 const park = require('./lib/park.cjs');
+const triage = require('./lib/triage.cjs');
 const discussLoop = require('./lib/discuss-loop.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
@@ -1030,6 +1031,26 @@ async function main() {
           break;
         default:
           process.stderr.write(`park: unknown subcommand: ${sub}\n`);
+          process.exit(1);
+      }
+      break;
+    }
+
+    case 'triage': {
+      const sub = args[1];
+      // run-id is args[2] unless it starts with '--' (env fallback)
+      let runId = args[2];
+      if (runId && runId.startsWith('--')) runId = undefined;
+
+      switch (sub) {
+        case 'run':
+          Promise.resolve(triage.cmdTriageRun(cwd, runId)).catch(e => {
+            process.stderr.write((e.message || String(e)) + '\n');
+            process.exit(1);
+          });
+          break;
+        default:
+          process.stderr.write(`triage: unknown subcommand: ${sub}\n`);
           process.exit(1);
       }
       break;
