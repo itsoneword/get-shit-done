@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
 status: unknown
-stopped_at: Phase 15 context gathered
-last_updated: "2026-06-17T14:36:21.436Z"
+stopped_at: Phase 15 AGENT-SPEC approved
+last_updated: "2026-06-17T14:53:55.646Z"
 progress:
   total_phases: 15
   completed_phases: 5
@@ -93,6 +93,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-17T14:36:21.431Z
-Stopped at: Phase 15 context gathered
-Resume file: .planning/v1.6/phases/15-resume-logic-backlog-triage-worker/15-CONTEXT.md
+Last session: 2026-06-17T14:53:55.642Z
+Stopped at: Phase 15 AGENT-SPEC approved
+Resume file: .planning/v1.6/phases/15-resume-logic-backlog-triage-worker/15-AGENT-SPEC.md
