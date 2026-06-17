@@ -325,6 +325,27 @@ After all phases are processed:
   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" run status --set stopped --reason no-independent-work
   ```
 
+**Step 6.5: Triage**
+
+Run the triage worker to analyze pending todos and ROADMAP backlog items and append proposals to the morning inbox. This step always runs even if phases failed or were skipped. Triage proposals appear in the same inbox session as phase questions.
+
+```bash
+TRIAGE_OUT=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" triage run 2>&1)
+TRIAGE_EXIT=$?
+```
+
+If TRIAGE_EXIT is non-zero: log `PHASE_FAILURE phase=triage reason=triage-failed` to `$GSD_RUN_LOG`. Log the failure but continue — triage failure does not abort the morning report.
+
+```bash
+if [ $TRIAGE_EXIT -ne 0 ]; then
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) PHASE_FAILURE phase=triage reason=triage-failed" >> "$GSD_RUN_LOG"
+fi
+```
+
+If TRIAGE_EXIT is 0: surface TRIAGE_OUT in the session output for observability.
+
+> **Note:** Verdict assignment in the triage run is driven by LLM judgment per the triage.md workflow. In overnight mode, `gsd-tools triage run` reads items and appends proposals; the actual LLM verdict reasoning happens during a standalone /gsd2:triage session. The overnight step's proposals serve as placeholders that the inbox session will surface for human review.
+
 Then print the morning report and inbox pointer:
 
 ```bash
