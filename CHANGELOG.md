@@ -2,6 +2,10 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.6.0] - 2026-06-18
+
+Autonomous Supervision Harness milestone (phases 10-15): append-only decision ledger + mailbox CLI, written escalation contract with discuss-phase evaluator, park-don't-block mailbox with staleness-checked resume, overnight runner (/gsd2:overnight) with worktree isolation + morning report, multi-lens discussion loop (/gsd2:discuss-loop), and backlog triage worker (/gsd2:triage) emitting propose-only six-verdict proposals to the morning inbox.
+
 ## [1.5.2] - 2026-06-11
 
 - Fix stale MODEL_ALIAS_MAP: retired claude-haiku-3-5 and deprecated claude-opus-4-0 replaced with current aliases; fable added
