@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: complete
+status: unknown
 stopped_at: Completed 15-03-PLAN.md (triage wiring — overnight step 6.5, inbox triage-verdict detection, triage workflow + command stub)
-last_updated: "2026-06-18T00:00:00Z"
+last_updated: "2026-06-18T15:10:50.380Z"
 progress:
   total_phases: 15
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 16
   completed_plans: 16
 ---

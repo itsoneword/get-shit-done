@@ -261,7 +261,7 @@
 | 12. Park-Don't-Block Mailbox | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 13. Overnight Runner | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
-| 15. Resume Logic + Backlog Triage Worker | v1.6 | 3/3 | Complete   | 2026-06-18 |
+| 15. Resume Logic + Backlog Triage Worker | v1.6 | 3/3 | Complete    | 2026-06-18 |
 
 ## Backlog
 
