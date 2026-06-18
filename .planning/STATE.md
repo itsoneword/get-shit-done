@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Autonomous Supervision Harness
-status: unknown
-stopped_at: 15-03 checkpoint:human-verify — Tasks 1-4 complete, awaiting smoke-verify
-last_updated: "2026-06-17T19:40:00Z"
+status: complete
+stopped_at: Completed 15-03-PLAN.md (triage wiring — overnight step 6.5, inbox triage-verdict detection, triage workflow + command stub)
+last_updated: "2026-06-18T00:00:00Z"
 progress:
   total_phases: 15
   completed_phases: 5
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 ## Current Position
 
-Phase: 15 (resume-logic-backlog-triage-worker) — EXECUTING
-Plan: 3 of 3
+Phase: 15 (resume-logic-backlog-triage-worker) — COMPLETE
+Plan: 3 of 3 (all plans complete)
 
 ## Project Reference
 
@@ -78,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 15-resume-logic-backlog-triage-worker]: CONTEXT.md write happens strictly before ledger append (write-before-replay invariant); idempotency check (EXISTING_SUPER) runs before any write to prevent duplicate ledger entries on re-run
 - [Phase 15-resume-logic-backlog-triage-worker]: cmdTriageRun emits 'needs-input' as structural default; LLM assigns real verdicts in workflow prose
 - [Phase 15-resume-logic-backlog-triage-worker]: context field prefix 'triage-verdict:' enables inbox-triage-presenter discrimination; inline require for mailbox/ledger in functions avoids circular deps
+- [Phase 15-03]: propose-never-dispose: inbox accept path calls mailbox answer then prints routing command verbatim; never executes it — human runs routing command as separate explicit step
+- [Phase 15-03]: unknown verdict tokens degrade to needs-input with warning; corrupt triage entry must not block inbox session
+- [Phase 15-03]: step 6.5 positioned after RUN_COMPLETE/RUN_STOP determination and before run report; triage failure logs PHASE_FAILURE phase=triage but does not abort morning report
 
 ### Pending Todos
 
@@ -97,6 +100,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-06-17T19:33:31.064Z
-Stopped at: Completed 15-01-PLAN.md (triage module TDD + gsd-tools dispatch)
+Last session: 2026-06-18T00:00:00Z
+Stopped at: Completed 15-03-PLAN.md (triage wiring — overnight step 6.5, inbox triage-verdict detection, triage workflow + command stub)
 Resume file: None
