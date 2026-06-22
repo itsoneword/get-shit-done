@@ -471,6 +471,63 @@ describe('validate health command', () => {
     );
   });
 
+  // ─── Check 4b: STATE.md milestone drift (W010) ───────────────────────────
+
+  test('detects W010 when STATE.md milestone has no phases dir but a real one exists', () => {
+    writeMinimalProjectMd(tmpDir);
+    // ROADMAP marks v0.1.2 as the active milestone
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), '# Roadmap\n\n## v0.1.2: Tech Debt\n\n### Phase 1: Foo\n');
+    // STATE.md frontmatter still points at stale v1.0
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'),
+      '---\nmilestone: v1.0\nmilestone_name: old\nstatus: executing\n---\n\n# Session State\n\nPhase 1.\n');
+    writeValidConfigJson(tmpDir);
+    // Real milestone dir exists on disk
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'v0.1.2', 'phases', '01-foo'), { recursive: true });
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    const w010 = output.warnings.find(w => w.code === 'W010');
+    assert.ok(w010, `Expected W010 in warnings: ${JSON.stringify(output.warnings)}`);
+    assert.strictEqual(w010.repairable, true, 'W010 should be repairable');
+  });
+
+  test('does not emit W010 when STATE.md milestone dir exists', () => {
+    writeMinimalProjectMd(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), '# Roadmap\n\n## v0.1.2: Tech Debt\n\n### Phase 1: Foo\n');
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'STATE.md'),
+      '---\nmilestone: v0.1.2\nmilestone_name: Tech Debt\nstatus: executing\n---\n\n# Session State\n\nPhase 1.\n');
+    writeValidConfigJson(tmpDir);
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'v0.1.2', 'phases', '01-foo'), { recursive: true });
+
+    const result = runGsdTools('validate health', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(
+      !output.warnings.some(w => w.code === 'W010'),
+      `Should not have W010: ${JSON.stringify(output.warnings)}`
+    );
+  });
+
+  test('--repair rewrites stale STATE.md milestone frontmatter (W010)', () => {
+    writeMinimalProjectMd(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), '# Roadmap\n\n## v0.1.2: Tech Debt\n\n### Phase 1: Foo\n');
+    const statePath = path.join(tmpDir, '.planning', 'STATE.md');
+    fs.writeFileSync(statePath,
+      '---\nmilestone: v1.0\nmilestone_name: old\nstatus: executing\n---\n\n# Session State\n\nPhase 1.\n');
+    writeValidConfigJson(tmpDir);
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'v0.1.2', 'phases', '01-foo'), { recursive: true });
+
+    const result = runGsdTools('validate health --repair', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const rewritten = fs.readFileSync(statePath, 'utf-8');
+    assert.match(rewritten, /^milestone: v0\.1\.2$/m, `STATE.md milestone not rewritten: ${rewritten}`);
+    assert.match(rewritten, /^milestone_name: Tech Debt$/m, 'milestone_name not rewritten');
+  });
+
   // ─── Overall status ────────────────────────────────────────────────────────
 
   test("returns 'healthy' when all checks pass", () => {
