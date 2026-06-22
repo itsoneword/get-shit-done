@@ -940,6 +940,32 @@ describe('phasesDir partition-aware resolution', () => {
     } finally { cleanup(tmp); }
   });
 
+  test('recovers real milestone dir when STATE.md frontmatter is stale (on-disk scan)', () => {
+    // Reproduces the reported bug: STATE.md says v1.0 but the only milestone dir
+    // on disk is v0.1.2. Must NOT create a stray .planning/v1.0/phases.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-test-'));
+    fs.mkdirSync(path.join(tmp, '.planning', 'v0.1.2', 'phases'), { recursive: true });
+    withStateMilestone(tmp, 'v1.0');
+    try {
+      const dir = phasesDir(tmp);
+      assert.strictEqual(dir, path.join(tmp, '.planning', 'v0.1.2', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
+  test('recovers via ROADMAP in-progress marker when on-disk scan is ambiguous', () => {
+    // Two milestone dirs exist → scan can't disambiguate; the 🚧 marker decides.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gsd-test-'));
+    fs.mkdirSync(path.join(tmp, '.planning', 'v0.1.2', 'phases'), { recursive: true });
+    fs.mkdirSync(path.join(tmp, '.planning', 'v0.2.0', 'phases'), { recursive: true });
+    withStateMilestone(tmp, 'v1.0');
+    fs.writeFileSync(path.join(tmp, '.planning', 'ROADMAP.md'),
+      '# Roadmap\n\n- 🚧 **v0.2.0 Next** — Phases 1-3 (in progress)\n');
+    try {
+      const dir = phasesDir(tmp);
+      assert.strictEqual(dir, path.join(tmp, '.planning', 'v0.2.0', 'phases'));
+    } finally { cleanup(tmp); }
+  });
+
   test('planningPaths(cwd).phases is partition-aware (getter)', () => {
     const tmp = createPartitionedFixture('v1.4');
     try {

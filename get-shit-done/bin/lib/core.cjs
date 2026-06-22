@@ -284,9 +284,14 @@ function planningPaths(cwd) {
  *
  * Resolution order:
  *   1. If STATE.md frontmatter has `milestone: vX.Y` AND `.planning/{milestone}/phases/` exists → return that.
- *   2. Else if legacy `.planning/phases/` exists → return legacy path (back-compat).
- *   3. Else if milestone is set (but partitioned dir not yet created) → return the partitioned path anyway (writers create it).
- *   4. Else → return legacy `.planning/phases/` (writers create it; pre-Phase-5 default).
+ *   2. Else if the STATE.md milestone dir is absent, the frontmatter may be stale
+ *      (it drifts when STATE.md hasn't been rewritten since the active milestone
+ *      advanced). Recover the real milestone from corroborating evidence — the
+ *      ROADMAP-derived active milestone, or an unambiguous on-disk milestone dir —
+ *      before creating a stray `.planning/{stale}/phases/` tree.
+ *   3. Else if legacy `.planning/phases/` exists → return legacy path (back-compat).
+ *   4. Else if milestone is set (but no dir to corroborate) → return the partitioned path (writers create it).
+ *   5. Else → return legacy `.planning/phases/` (writers create it; pre-Phase-5 default).
  *
  * @param {string} cwd
  * @returns {string} absolute path to phases dir
@@ -306,12 +311,48 @@ function phasesDir(cwd) {
   if (milestone) {
     const partitioned = path.join(planning, milestone, 'phases');
     if (fs.existsSync(partitioned)) return partitioned;
-    // Partitioned dir missing — legacy fallback if legacy tree exists
+    // Partitioned dir missing — STATE.md milestone may be stale. Recover the real
+    // milestone dir from ROADMAP/on-disk evidence before trusting the frontmatter.
+    const recovered = recoverMilestoneDir(cwd, planning, milestone);
+    if (recovered) return recovered;
+    // Nothing corroborates — legacy fallback if legacy tree exists
     if (fs.existsSync(legacy)) return legacy;
     // Neither exists → return partitioned (writer-creates)
     return partitioned;
   }
   return legacy;
+}
+
+/**
+ * When STATE.md's `milestone:` frontmatter points at a milestone whose
+ * `.planning/{milestone}/phases/` dir doesn't exist, the frontmatter is likely
+ * stale. Recover the real milestone phases dir from corroborating evidence so we
+ * don't create a stray partition under the stale name.
+ *
+ * @param {string} cwd
+ * @param {string} planning  absolute `.planning` path
+ * @param {string} staleMilestone  the (suspect) milestone from STATE.md
+ * @returns {string|null} absolute phases dir if recovered, else null
+ */
+function recoverMilestoneDir(cwd, planning, staleMilestone) {
+  // 1. Trust the ROADMAP-derived active milestone if its dir actually exists.
+  try {
+    const info = getMilestoneInfo(cwd);
+    if (info && info.version && info.version !== staleMilestone) {
+      const roadmapDir = path.join(planning, info.version, 'phases');
+      if (fs.existsSync(roadmapDir)) return roadmapDir;
+    }
+  } catch { /* fall through */ }
+  // 2. Scan for existing milestone phase dirs. If exactly one exists (other than
+  //    the stale name), it is unambiguously the real milestone.
+  try {
+    const candidates = fs.readdirSync(planning, { withFileTypes: true })
+      .filter(e => e.isDirectory() && /^v\d+(?:\.\d+)+$/.test(e.name) && e.name !== staleMilestone)
+      .filter(e => fs.existsSync(path.join(planning, e.name, 'phases')))
+      .map(e => e.name);
+    if (candidates.length === 1) return path.join(planning, candidates[0], 'phases');
+  } catch { /* fall through */ }
+  return null;
 }
 
 /**
