@@ -2,6 +2,10 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.6.1] - 2026-06-22
+
+fix: phase add no longer creates stray milestone dirs from stale STATE.md frontmatter feat: gsd2:health detects & repairs stale STATE.md milestone (W010)
+
 ## [1.6.0] - 2026-06-18
 
 Autonomous Supervision Harness milestone (phases 10-15): append-only decision ledger + mailbox CLI, written escalation contract with discuss-phase evaluator, park-don't-block mailbox with staleness-checked resume, overnight runner (/gsd2:overnight) with worktree isolation + morning report, multi-lens discussion loop (/gsd2:discuss-loop), and backlog triage worker (/gsd2:triage) emitting propose-only six-verdict proposals to the morning inbox.
