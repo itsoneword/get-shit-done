@@ -14,7 +14,6 @@ flowchart LR
     Router --> Roadmap[roadmap.cjs<br/>ROADMAP.md parse]
     Router --> Milestone[milestone.cjs<br/>archive and complete]
     Router --> Init[init.cjs<br/>workflow bootstrap]
-    Router --> Template[template.cjs<br/>template select/fill]
     Router --> Verify[verify.cjs<br/>summary verification]
     Router --> Config[config.cjs<br/>config.json CRUD]
     Router --> Frontmatter[frontmatter.cjs<br/>YAML CRUD]
@@ -56,8 +55,6 @@ All command functions follow the `output(result, raw, rawValue)` pattern for res
 **milestone.cjs** — milestone completion and archival: `milestone complete <version> [--archive-phases]` (source: `get-shit-done/bin/gsd-tools.cjs:53-56`).
 
 **init.cjs** — compound init commands that bundle all workflow context into a single JSON response. Primary way orchestrators load state (source: `.planning/codebase/STRUCTURE.md:119`). Each workflow starts with `node gsd-tools.cjs init <workflow>` as the first step (source: `.planning/codebase/STRUCTURE.md:179`).
-
-**template.cjs** — template selection and fill. See [[templates-references]] for the template catalog and selection heuristics.
 
 **verify.cjs** — `verify-summary <path>` validates a SUMMARY.md against the expected schema (source: `get-shit-done/bin/gsd-tools.cjs:23`).
 
@@ -106,7 +103,7 @@ Add the command function to the appropriate lib module in `get-shit-done/bin/lib
 ## Related
 
 - [[workflows]] — every workflow `.md` starts with `init <workflow>` calling this CLI
-- [[agents]] — agents call `resolve-model <agent-type>` to pick their model; [[templates-references]] loaded by `template.cjs`
+- [[agents]] — agents call `resolve-model <agent-type>` to pick their model; [[templates-references]] read directly by agents/workflows
 - [[installer]] — installs this CLI to `~/.claude/get-shit-done/bin/gsd-tools.cjs`
 
 ## Gaps

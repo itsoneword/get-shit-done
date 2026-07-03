@@ -31,7 +31,7 @@ flowchart TD
 
 - [[installer]] — `bin/install.js` cross-runtime npm installer. Deploys GSD assets into Claude, Codex, Cursor, Copilot, Antigravity, Gemini CLI, and Opencode with per-runtime transforms (Codex sandbox levels, Copilot tool renaming, Cursor MCP conversion).
 
-- [[tool-cli]] — `get-shit-done/bin/gsd-tools.cjs` + 15 lib modules. Single CLI entrypoint invoked by every workflow. Centralizes config, model resolution, phase lookup, state mutation, git commits, template fill, summary verification, and workflow bootstrap.
+- [[tool-cli]] — `get-shit-done/bin/gsd-tools.cjs` + 14 lib modules. Single CLI entrypoint invoked by every workflow. Centralizes config, model resolution, phase lookup, state mutation, git commits, summary verification, and workflow bootstrap.
 
 - [[agents]] — 20 persona files in `agents/gsd-*.md`. Each declares tools + behavior via YAML frontmatter. Workflows spawn agents via `Task(subagent_type=...)`; `model-profiles.cjs` maps agent → `{quality, balanced, budget}` → model.
 

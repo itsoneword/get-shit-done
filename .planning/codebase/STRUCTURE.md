@@ -47,7 +47,7 @@ get-shit-done/                        # Repository root
 ├── get-shit-done/                    # Runtime assets — installed to ~/.claude/get-shit-done/
 │   ├── bin/
 │   │   ├── gsd-tools.cjs             # CLI router — the tool entrypoint called by all workflows
-│   │   └── lib/                      # Domain logic modules (28 modules)
+│   │   └── lib/                      # Domain logic modules (27 modules)
 │   │       ├── core.cjs              # Shared utilities, config, git, phase lookup, markdown normalization
 │   │       ├── state.cjs             # STATE.md read/write and progression
 │   │       ├── phase.cjs             # Phase CRUD and lifecycle
@@ -55,7 +55,6 @@ get-shit-done/                        # Repository root
 │   │       ├── milestone.cjs         # Milestone completion and archival
 │   │       ├── commands.cjs          # Utility commands (slug, timestamp, todos, progress)
 │   │       ├── config.cjs            # config.json CRUD
-│   │       ├── template.cjs          # Template selection and fill
 │   │       ├── verify.cjs            # Verification suite
 │   │       ├── init.cjs              # Compound init commands (workflow bootstrap)
 │   │       ├── frontmatter.cjs       # YAML frontmatter parse/serialize/CRUD
@@ -96,7 +95,6 @@ get-shit-done/                        # Repository root
 │       ├── state.md
 │       ├── project.md
 │       ├── roadmap.md
-│       ├── phase-prompt.md
 │       ├── UAT.md
 │       ├── VALIDATION.md
 │       ├── summary-standard.md

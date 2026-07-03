@@ -1,7 +1,7 @@
 # Subsystem: Templates & References
 
 **Updated:** 2026-04-17 by /gsd2:document (full run)
-**Sources:** `get-shit-done/templates/*.md`, `get-shit-done/references/*.md`, `get-shit-done/bin/lib/template.cjs`, `.planning/codebase/STRUCTURE.md:61-78`
+**Sources:** `get-shit-done/templates/*.md`, `get-shit-done/references/*.md`, `.planning/codebase/STRUCTURE.md:61-78`
 
 ## Shape
 
@@ -11,7 +11,6 @@ flowchart LR
         TplProject[project.md]
         TplState[state.md]
         TplRoadmap[roadmap.md]
-        TplPhase[phase-prompt.md]
         TplUAT[UAT.md]
         TplVal[VALIDATION.md]
         TplSumStd[summary-standard.md]
@@ -37,9 +36,8 @@ flowchart LR
         RefPatterns[AGENTIC-PATTERNS.md]
         RefProfile[user-profiling.md]
     end
-    Workflow[Workflow or Agent] -->|template select and fill| TemplateCjs[template.cjs]
-    TemplateCjs --> Templates
-    TemplateCjs --> Artifact[Write filled artifact to disk]
+    Workflow[Workflow or Agent] -->|Read and fill manually| Templates
+    Templates --> Artifact[Write filled artifact to disk]
     Workflow -->|@-include or Read| References
     Agent[Agent persona] -->|@-include| References
 ```
@@ -50,7 +48,7 @@ flowchart LR
 
 The subsystem splits into two categories (source: `.planning/codebase/STRUCTURE.md:61-78`):
 
-- **Templates** (`get-shit-done/templates/*.md`, 31 files) — document scaffolding filled once per artifact by either `template.cjs` programmatically or by agents reading the file and producing output manually.
+- **Templates** (`get-shit-done/templates/*.md`, 30 files) — document scaffolding filled once per artifact by agents reading the file and producing output manually.
 - **References** (`get-shit-done/references/*.md`, 15 files) — read-only behavioral policy loaded by workflows and agents on every run via `@`-includes. Not filled; not mutated.
 
 ### Templates Inventory
@@ -62,7 +60,6 @@ Per directory listing:
 | `project.md` | PROJECT.md (project seed) |
 | `state.md` | STATE.md (per-project state tracker) |
 | `roadmap.md` | ROADMAP.md (milestone + phase breakdown) |
-| `phase-prompt.md` | Phase kickoff prompt |
 | `requirements.md` | REQUIREMENTS.md |
 | `milestone.md`, `milestone-archive.md` | Milestone files |
 | `discovery.md`, `discussion-log.md` | Discuss-phase artifacts |
@@ -85,9 +82,7 @@ Per directory listing:
 
 ### Template Selection
 
-`template.cjs` exposes `template select` and `template fill` via [[tool-cli]] (source: `get-shit-done/bin/gsd-tools.cjs`). Summary selection uses a heuristic over task count, mentioned-file count, and decision-keyword presence to pick minimal/standard/complex variants (source: `get-shit-done/bin/lib/template.cjs`).
-
-Templates not filled programmatically by `template.cjs` are read directly by agents and workflows, which produce the filled output manually.
+Templates are read directly by agents and workflows, which choose the summary-minimal/standard/complex variant and produce the filled output manually. (The dead programmatic-fill CLI module was removed 2026-07 — no runtime caller remained.)
 
 ### References Inventory
 
@@ -118,12 +113,11 @@ Templates produce a filled output file exactly once per artifact. References are
 
 ### Inputs (Templates)
 
-- `template select --kind <summary|...> [--tasks N] [--files N]` — returns chosen template path
-- `template fill <template> --fields k=v ...` — returns filled content
+- `@get-shit-done/templates/<name>.md` — read directly by the agent or workflow that fills it
 
 ### Outputs (Templates)
 
-- Stdout (machine-readable with `--raw`) or a written file at the orchestrator's chosen path
+- A written file at the orchestrator's chosen path
 - Filled Markdown body with frontmatter updated
 
 ### Inputs (References)
@@ -136,8 +130,7 @@ Templates produce a filled output file exactly once per artifact. References are
 
 ## Related
 
-- [[tool-cli]] — `template.cjs` implements template selection and fill
-- [[workflows]] — workflows `@`-include references and call `template select`/`fill`
+- [[workflows]] — workflows `@`-include references and read/fill templates directly
 - [[agents]] — agents load references (`AGENTIC-PATTERNS`, `questioning`, `verification-patterns`, `tdd`) as behavioral policy; `model-profiles.md` mirrors `model-profiles.cjs`
 - [[installer]] — copies both directories to the runtime install location
 

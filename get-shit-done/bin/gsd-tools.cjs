@@ -123,16 +123,6 @@
  *   verify key-links <plan-file>       Check must_haves.key_links
  *   verify commands <plan-file>        Run must_haves.truths[].verify[] cmds
  *
- * Template Fill:
- *   template fill summary --phase N    Create pre-filled SUMMARY.md
- *     [--plan M] [--name "..."]
- *     [--fields '{json}']
- *   template fill plan --phase N       Create pre-filled PLAN.md
- *     [--plan M] [--type execute|tdd]
- *     [--wave N] [--fields '{json}']
- *   template fill verification         Create pre-filled VERIFICATION.md
- *     --phase N [--fields '{json}']
- *
  * State Progression:
  *   state advance-plan                 Increment plan counter
  *   state record-metric --phase N      Record execution metrics
@@ -173,7 +163,6 @@ const phase = require('./lib/phase.cjs');
 const roadmap = require('./lib/roadmap.cjs');
 const verify = require('./lib/verify.cjs');
 const config = require('./lib/config.cjs');
-const template = require('./lib/template.cjs');
 const milestone = require('./lib/milestone.cjs');
 const commands = require('./lib/commands.cjs');
 const init = require('./lib/init.cjs');
@@ -222,7 +211,7 @@ async function main() {
   const command = args[0];
 
   if (!command) {
-    error('Usage: gsd-tools <command> [args] [--raw] [--cwd <path>]\nCommands: state, resolve-model, find-phase, commit, verify-summary, verify, frontmatter, template, generate-slug, current-timestamp, list-todos, verify-path-exists, config-ensure-section, init');
+    error('Usage: gsd-tools <command> [args] [--raw] [--cwd <path>]\nCommands: state, resolve-model, find-phase, commit, verify-summary, verify, frontmatter, generate-slug, current-timestamp, list-todos, verify-path-exists, config-ensure-section, init');
   }
 
   switch (command) {
@@ -353,32 +342,6 @@ async function main() {
       const countIndex = args.indexOf('--check-count');
       const checkCount = countIndex !== -1 ? parseInt(args[countIndex + 1], 10) : 2;
       verify.cmdVerifySummary(cwd, summaryPath, checkCount, raw);
-      break;
-    }
-
-    case 'template': {
-      const subcommand = args[1];
-      if (subcommand === 'select') {
-        template.cmdTemplateSelect(cwd, args[2], raw);
-      } else if (subcommand === 'fill') {
-        const templateType = args[2];
-        const phaseIdx = args.indexOf('--phase');
-        const planIdx = args.indexOf('--plan');
-        const nameIdx = args.indexOf('--name');
-        const typeIdx = args.indexOf('--type');
-        const waveIdx = args.indexOf('--wave');
-        const fieldsIdx = args.indexOf('--fields');
-        template.cmdTemplateFill(cwd, templateType, {
-          phase: phaseIdx !== -1 ? args[phaseIdx + 1] : null,
-          plan: planIdx !== -1 ? args[planIdx + 1] : null,
-          name: nameIdx !== -1 ? args[nameIdx + 1] : null,
-          type: typeIdx !== -1 ? args[typeIdx + 1] : 'execute',
-          wave: waveIdx !== -1 ? args[waveIdx + 1] : '1',
-          fields: fieldsIdx !== -1 ? JSON.parse(args[fieldsIdx + 1]) : {},
-        }, raw);
-      } else {
-        error('Unknown template subcommand. Available: select, fill');
-      }
       break;
     }
 

@@ -49,7 +49,6 @@ All business logic lives in `get-shit-done/bin/lib/*.cjs`. Every module uses Com
 | `profile-pipeline.cjs` | Reads Claude Code session JSONL history from `~/.claude/projects/` for behavioral profiling |
 | `roadmap.cjs` | Roadmap parsing and progress analysis |
 | `state.cjs` | `STATE.md` read/write/patch/frontmatter operations |
-| `template.cjs` | Template rendering with variable substitution |
 | `uat.cjs` | UAT audit scanning across all phase directories |
 | `verify.cjs` | Verification suite: summary validation, consistency checks, `.planning/` health repair |
 

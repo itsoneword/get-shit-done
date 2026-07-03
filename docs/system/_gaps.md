@@ -42,4 +42,4 @@ Un-sourced behaviors flagged during subsystem documentation runs. Each entry lin
 
 ## Subsystem: templates-references
 
-- **`template.cjs` type coverage**: The subsystem doc claims templates are filled by either `template.cjs` programmatically or by agents reading the file directly. The exact set of template kinds handled programmatically by `template.cjs` versus read-and-filled manually by agents was not enumerated with a file:line citation.
+- (Gap resolved 2026-07: the programmatic-fill CLI module referenced here was dead code and has been removed. Templates are read-and-filled manually by agents; no further coverage question applies.)

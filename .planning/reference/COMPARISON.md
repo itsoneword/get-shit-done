@@ -693,19 +693,20 @@ Subcommands exposed (the surface the markdown workflows call):
 - **`validate`** — consistency, health (`--repair`).
 - **`init`** — compound context bundles for each workflow (execute-phase,
   plan-phase, new-project, quick, resume, verify-work, map-codebase, …).
-- **`template fill`**, **`frontmatter`** CRUD, **`scaffold`**, **`progress`**,
+- **`frontmatter`** CRUD, **`scaffold`**, **`progress`**,
   **`stats`**, **`todo`**, **`audit-uat`**, **`requirements mark-complete`**,
   **`history-digest`**, **`summary-extract`**, **`websearch`** (Brave API).
+  (programmatic template-fill CLI subcommands removed 2026-07 as dead code.)
 - **Profiling pipeline** — `scan-sessions`, `extract-messages`, `profile-sample`,
   `write-profile`, `generate-claude-md/-profile/-dev-preferences`.
 
 `--cwd` and `--raw` are the only global flags. No `--pick`, no `--json-errors`, no
 `--ws`, no `@file:` output protocol, no project-root/worktree resolution layer.
 
-### `lib/*.cjs` modules (16 files, ~10K lines total)
+### `lib/*.cjs` modules (15 files, ~10K lines total)
 Flat, hand-written, no router layer:
 `core` (output/error/timestamps), `state`, `phase`, `roadmap`, `config`,
-`template`, `milestone`, `commands` (grab-bag command impls), `init` (compound
+`milestone`, `commands` (grab-bag command impls), `init` (compound
 context), `frontmatter`, `verify`, `uat`, `migration`, `model-profiles`,
 `profile-pipeline`, `profile-output`. Each module exports `cmdXxx(cwd, …, raw)`
 functions called directly from the switch.

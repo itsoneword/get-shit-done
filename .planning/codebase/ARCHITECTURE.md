@@ -48,7 +48,6 @@ Key characteristics:
   - `milestone.cjs` — Milestone completion and archival, REQUIREMENTS.md management
   - `commands.cjs` — Utility commands: slug, timestamp, todo list, history digest, progress
   - `config.cjs` — `.planning/config.json` CRUD
-  - `template.cjs` — Template selection and fill for SUMMARY.md / PLAN.md / VERIFICATION.md
   - `verify.cjs` — Summary verification, phase completeness, reference checking, artifact validation
   - `init.cjs` — Compound init commands that bundle context for workflow initialization
   - `frontmatter.cjs` — YAML frontmatter parse/serialize/CRUD for all `.planning/` markdown files
@@ -141,7 +140,7 @@ allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, Task, TodoWrite, AskUserQue
 
 - Purpose: Document templates for project artifacts created during workflows
 - Location: `get-shit-done/templates/`
-- Key templates: `state.md`, `project.md`, `roadmap.md`, `phase-prompt.md`, `UAT.md`, `VALIDATION.md`, `summary-standard.md`, `summary-minimal.md`, `summary-complex.md`, `claude-md.md`
+- Key templates: `state.md`, `project.md`, `roadmap.md`, `UAT.md`, `VALIDATION.md`, `summary-standard.md`, `summary-minimal.md`, `summary-complex.md`, `claude-md.md`
 
 ---
 
