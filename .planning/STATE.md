@@ -84,11 +84,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-3 pending (see `.planning/todos/pending/`):
+4 pending (see `.planning/todos/pending/`):
 
 - Add user sync checkpoints to plan-phase subagent chains (workflows)
 - Update command should sync project-local hooks (tooling)
-- generate-claude-md cleanup + hybrid shape + sidecar staleness mitigation (tooling)
+- ESC-03 live-run confirmation (test-in-prod) — steps 2-3 of the calibration (harness)
+- Executor+planner persona deep-dive and inter-agent handoff contracts (workflows)
 
 Carry-over from v1.5: archival via /gsd2:complete-milestone pending; human UAT open for phases 02/06/09.
 
