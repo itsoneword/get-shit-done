@@ -2,6 +2,10 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.6.2] - 2026-07-03
+
+Token-cut cleanup: dedupe executor prompt blocks, shared project-context reference for 7 agents, ui-brand trimmed to cheat sheet, removed dead template.cjs CLI verb and orphaned phase-prompt.md template
+
 ## [1.6.1] - 2026-06-22
 
 fix: phase add no longer creates stray milestone dirs from stale STATE.md frontmatter feat: gsd2:health detects & repairs stale STATE.md milestone (W010)
