@@ -273,3 +273,21 @@
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)
+
+### B2: Planner task-count discipline (BACKLOG)
+
+**Goal:** Stop plans from accumulating excessive tasks. gsd-planner.md has no upper bound on task count and no "is this task worth existing" litmus. Fix shape: add a task-count cap / requirement-trace litmus to gsd-planner.md, plus a gsd-plan-checker rule flagging plans over N tasks or tasks with no requirement trace. Surfaced 2026-07-02 usability discussion (user pain point: tasks excessive sometimes).
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd2:review-backlog when ready)
+
+### B3: Global state overview / cross-phase transparency (BACKLOG)
+
+**Goal:** Give the user a milestone-wide view instead of current-phase-only. Pain points from 2026-07-02 usability discussion: /gsd2:progress shows only the current phase; routing a feature to the next or a prior phase is opaque; the backlog → new-version flow ("ask model to create new version based on what was solved") is not transparent about what happens under the hood. Fix shape: a global overview view (all phases + status + backlog + what landed where), plus explicit feature-routing guidance. Related: B1 (output form), self-audit Topic 4 recs 3/4/6 (backlog/seed rot).
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd2:review-backlog when ready)
