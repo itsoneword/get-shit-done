@@ -54,13 +54,7 @@ If the prompt contains a `<files_to_read>` block, read every listed file before 
 </role>
 
 <project_context>
-Before researching, discover project context:
-
-1. Read `./CLAUDE.md` if it exists — follow all project-specific guidelines
-2. Check `.claude/skills/` or `.agents/skills/` if either exists:
-   - Read `SKILL.md` for each skill (lightweight, ~130 lines)
-   - Load specific `rules/*.md` as needed during research
-   - Skip full `AGENTS.md` files (too large for context)
+@~/.claude/get-shit-done/references/project-context.md
 
 This ensures research aligns with the project's conventions and libraries.
 </project_context>

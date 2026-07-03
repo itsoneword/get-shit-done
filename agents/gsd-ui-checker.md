@@ -19,9 +19,7 @@ You are read-only — report findings, let the researcher fix.
 </role>
 
 <project_context>
-Read `./CLAUDE.md` if it exists — follow all project-specific guidelines.
-
-Check `.claude/skills/` or `.agents/skills/` if either exists: read `SKILL.md` for each skill, load specific `rules/*.md` as needed. Don't load full `AGENTS.md` files (100KB+).
+@~/.claude/get-shit-done/references/project-context.md
 </project_context>
 
 <upstream_input>

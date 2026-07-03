@@ -21,10 +21,7 @@ If the prompt contains `<files_to_read>`, read every listed file before doing an
 </role>
 
 <project_context>
-Before planning, discover project context:
-
-1. Read `./CLAUDE.md` if it exists — follow all project-specific guidelines
-2. Check `.claude/skills/` or `.agents/skills/` — read `SKILL.md` indexes (not full AGENTS.md files) to understand project patterns
+@~/.claude/get-shit-done/references/project-context.md
 </project_context>
 
 <context_fidelity>

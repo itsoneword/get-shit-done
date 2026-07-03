@@ -258,7 +258,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
 
    If `WORKTREE_MODE` is `false` (sandbox denial, git failure, or the above caveat applies): fall back to in-place execution (current shared-tree behavior). Remind the executor to use `--no-verify` on commits to avoid hook contention.
 
-   **Worktree mode prompt (WORKTREE_MODE=true):**
+   **Executor prompt (both modes):**
 
    ```
    Task(
@@ -270,13 +270,7 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
        Commit each task atomically. Create SUMMARY.md. Update STATE.md and ROADMAP.md.
        </objective>
 
-       <worktree_isolation>
-       This executor has been assigned a dedicated worktree at: {WORKTREE_DIR}
-       Write all files relative to {WORKTREE_DIR} as your working root. Do NOT write
-       to absolute paths under the main repo root — those would bypass isolation and
-       land in the main tree. If you cannot resolve your work under {WORKTREE_DIR},
-       report this in your SUMMARY.md so the orchestrator can address it.
-       </worktree_isolation>
+       {MODE_BLOCK}
 
        <execution_context>
        @~/.claude/get-shit-done/workflows/execute-plan.md
@@ -313,60 +307,29 @@ Execute each wave in sequence. Within a wave: parallel if `PARALLELIZATION=true`
    )
    ```
 
-   **In-place fallback prompt (WORKTREE_MODE=false):**
+   If WORKTREE_MODE=true, `{MODE_BLOCK}` is:
 
    ```
-   Task(
-     subagent_type="gsd-executor",
-     model="{executor_model}",  # MUST pass — from init JSON executor_model field
-     prompt="
-       <objective>
-       Execute plan {plan_number} of phase {phase_number}-{phase_name}.
-       Commit each task atomically. Create SUMMARY.md. Update STATE.md and ROADMAP.md.
-       </objective>
+   <worktree_isolation>
+   This executor has been assigned a dedicated worktree at: {WORKTREE_DIR}
+   Write all files relative to {WORKTREE_DIR} as your working root. Do NOT write
+   to absolute paths under the main repo root — those would bypass isolation and
+   land in the main tree. If you cannot resolve your work under {WORKTREE_DIR},
+   report this in your SUMMARY.md so the orchestrator can address it.
+   </worktree_isolation>
+   ```
 
-       <parallel_execution>
-       You are running as a PARALLEL executor agent in in-place mode (no dedicated
-       worktree). Use --no-verify on all git commits to avoid pre-commit hook
-       contention with other agents. The orchestrator validates hooks once after all
-       agents complete.
-       For gsd-tools commits: add --no-verify flag.
-       For direct git commits: use git commit --no-verify -m "..."
-       </parallel_execution>
+   If WORKTREE_MODE=false, `{MODE_BLOCK}` is:
 
-       <execution_context>
-       @~/.claude/get-shit-done/workflows/execute-plan.md
-       @~/.claude/get-shit-done/templates/summary.md
-       @~/.claude/get-shit-done/references/checkpoints.md
-       @~/.claude/get-shit-done/references/tdd.md
-       </execution_context>
-
-       <files_to_read>
-       Read these files at execution start using the Read tool:
-       - {phase_dir}/{plan_file} (Plan)
-       - .planning/PROJECT.md (Project context — core value, requirements, evolution rules)
-       - .planning/STATE.md (State)
-       - .planning/config.json (Config, if exists)
-       - ./CLAUDE.md (Project instructions, if exists — follow project-specific guidelines)
-       - .claude/skills/ or .agents/skills/ (Project skills, if either exists — list skills, read SKILL.md for each)
-       </files_to_read>
-
-       <mcp_tools>
-       If CLAUDE.md or project instructions reference MCP tools (e.g. jCodeMunch, context7),
-       prefer those over Grep/Glob for code navigation when available — they save tokens
-       by providing structured code indexes. Check tool availability first; fall back to
-       Grep/Glob if MCP tools are not accessible.
-       </mcp_tools>
-
-       <success_criteria>
-       - [ ] All tasks executed
-       - [ ] Each task committed individually
-       - [ ] SUMMARY.md created in plan directory
-       - [ ] STATE.md updated with position and decisions
-       - [ ] ROADMAP.md updated with plan progress (via `roadmap update-plan-progress`)
-       </success_criteria>
-     "
-   )
+   ```
+   <parallel_execution>
+   You are running as a PARALLEL executor agent in in-place mode (no dedicated
+   worktree). Use --no-verify on all git commits to avoid pre-commit hook
+   contention with other agents. The orchestrator validates hooks once after all
+   agents complete.
+   For gsd-tools commits: add --no-verify flag.
+   For direct git commits: use git commit --no-verify -m "..."
+   </parallel_execution>
    ```
 
 3. **Wait for all agents in wave to complete.**

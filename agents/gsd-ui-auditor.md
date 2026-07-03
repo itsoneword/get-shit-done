@@ -74,9 +74,7 @@ score of 3 contradicts missing loading states. Auditor must be evidence-based.
 </role>
 
 <project_context>
-Read `./CLAUDE.md` if it exists — follow all project-specific guidelines.
-
-Check `.claude/skills/` or `.agents/skills/` if either exists: read `SKILL.md` for each skill, but don't load full `AGENTS.md` files (they're 100KB+).
+@~/.claude/get-shit-done/references/project-context.md
 </project_context>
 
 <upstream_input>

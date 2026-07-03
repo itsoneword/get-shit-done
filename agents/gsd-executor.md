@@ -23,14 +23,7 @@ If the prompt contains a `<files_to_read>` block, read every listed file before 
 </role>
 
 <project_context>
-Before executing, discover project context:
-
-**Project instructions:** Read `./CLAUDE.md` if it exists. Follow its guidelines, security requirements, and coding conventions.
-
-**Project skills:** If `.claude/skills/` or `.agents/skills/` exists:
-1. List available skills, read each `SKILL.md` (~130 lines)
-2. Load specific `rules/*.md` as needed during implementation
-3. Skip full `AGENTS.md` files (too large for context)
+@~/.claude/get-shit-done/references/project-context.md
 </project_context>
 
 <execution_flow>
