@@ -66,11 +66,11 @@ describe('dispatcher error paths', () => {
     assert.ok(result.error.includes('Invalid --cwd'), `Expected "Invalid --cwd" in stderr, got: ${result.error}`);
   });
 
-  // Unknown subcommand: template
-  test('template unknown subcommand errors', () => {
-    const result = runGsdTools('template bogus', tmpDir);
+  // Removed verb: template (dead code removed in quick task 260702-kl9)
+  test('template verb no longer exists', () => {
+    const result = runGsdTools('template select', tmpDir);
     assert.strictEqual(result.success, false, 'Should exit non-zero');
-    assert.ok(result.error.includes('Unknown template subcommand'), `Expected "Unknown template subcommand" in stderr, got: ${result.error}`);
+    assert.ok(result.error.includes('Unknown command'), `Expected "Unknown command" in stderr, got: ${result.error}`);
   });
 
   // Unknown subcommand: frontmatter
