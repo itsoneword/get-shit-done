@@ -14,10 +14,10 @@ progress:
 
 ## Current Position
 
-Phase: 16 - Planning Graph Model + CLI (not started)
-Plan: —
-Status: Roadmap complete, ready for phase planning
-Last activity: 2026-07-04 — ROADMAP.md created for v1.7 Planning-Graph Layer (Phases 16-19)
+Phase: 16 - Planning Graph Model + CLI (planned, ready to execute)
+Plan: 2 plans in 2 waves (16-01, 16-02) — checker VERIFICATION PASSED (0 issues)
+Status: Ready for execution — /gsd2:execute-phase 16
+Last activity: 2026-07-04 — Phase 16 planned & verified (GRAPH-01/02/03); research skipped, context authored from approved design
 
 ## Project Reference
 
