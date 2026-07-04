@@ -115,6 +115,7 @@ Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check 
 |---|-------------|------|--------|-----------|
 | 260702-kl9 | Token-cut cleanup batch from 2026-07-01 self-audit | 2026-07-03 | 3aef10f | [260702-kl9-token-cut-cleanup-batch-from-2026-07-01-](./quick/260702-kl9-token-cut-cleanup-batch-from-2026-07-01-/) |
 | 260704-lbp | Hard/soft dependency distinction in roadmap (`sequence_after` field, parallel-gate proof, roadmapper guidance) | 2026-07-04 | ac7b20e | [260704-lbp-hard-soft-dependency-distinction-in-road](./quick/260704-lbp-hard-soft-dependency-distinction-in-road/) |
+| 260704-m9p | Parallel-phase frontier scheduler: `roadmap frontier` command, `max_parallel_phases` config + `config-get` defaults fallback, autonomous.md per-worktree headless runner | 2026-07-04 | ecb7afb | [260704-m9p-parallel-phase-frontier-scheduler-per-wo](./quick/260704-m9p-parallel-phase-frontier-scheduler-per-wo/) |
 
 ## Session Continuity
 
