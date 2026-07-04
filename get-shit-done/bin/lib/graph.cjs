@@ -15,7 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { extractFrontmatter } = require('./frontmatter.cjs');
+const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { phasesDir, planningPaths, extractCurrentMilestone } = require('./core.cjs');
 const { parsePhaseSections, parseDependsOnPhaseRefs } = require('./roadmap.cjs');
 
@@ -63,6 +63,34 @@ function phaseNumFromSlug(slug) {
   if (typeof slug !== 'string') return null;
   const m = slug.match(/^(\d+[A-Z]?(?:\.\d+)*)/);
   return m ? m[1] : null;
+}
+
+/**
+ * Parse one PLAN `must_haves.key_links` item into a `{from, to}` pair, or
+ * `null` if the item has no discernible from/to shape.
+ *
+ * Real items come in two shapes: a structured `{from, to}` object, or a
+ * free-text arrow string (the majority shape in this repo's real PLAN.md
+ * files) with an optional trailing `(broken = ...)` parenthetical to strip.
+ *
+ * @param {string|{from: string, to: string}} item
+ * @returns {{from: string, to: string}|null}
+ */
+function parseKeyLinkItem(item) {
+  if (item && typeof item === 'object' && item.from && item.to) {
+    return { from: String(item.from).trim(), to: String(item.to).trim() };
+  }
+  if (typeof item === 'string') {
+    const parts = item.split(/->|→/);
+    if (parts.length >= 2) {
+      const from = parts[0].trim().replace(/^["'`]|["'`]$/g, '');
+      let to = parts.slice(1).join('->').trim();
+      to = to.replace(/\s*\([^)]*\)\s*$/, ''); // strip trailing "(broken = ...)" parenthetical
+      to = to.replace(/^["'`]|["'`]$/g, '').replace(/["'`]$/g, '');
+      return { from, to };
+    }
+  }
+  return null;
 }
 
 /**
@@ -150,6 +178,65 @@ function buildGraph(cwd) {
         currentPhaseNum: phaseNum,
         files: new Set(filesModified),
       });
+
+      // ── Source 2: PLAN must_haves.key_links -> wires edges + artifact nodes ──
+      const keyLinkItems = parseMustHavesBlock(content, 'key_links');
+      for (const item of keyLinkItems) {
+        const link = parseKeyLinkItem(item);
+        if (!link) continue;
+        const fromId = `artifact:${link.from}`;
+        const toId = `artifact:${link.to}`;
+        addNode(fromId, 'artifact');
+        addNode(toId, 'artifact');
+        addEdge(fromId, toId, 'wires', 'plan_key_links');
+      }
+    }
+
+    // ── Source 1: SUMMARY requires/affects -> provides/affects edges ──
+    let summaryFiles = [];
+    try {
+      summaryFiles = fs.readdirSync(phaseDirPath).filter(f => f.endsWith('-SUMMARY.md') || f === 'SUMMARY.md');
+    } catch { /* unreadable phase dir */ }
+
+    for (const file of summaryFiles) {
+      const fullPath = path.join(phaseDirPath, file);
+      let content;
+      try {
+        content = fs.readFileSync(fullPath, 'utf-8');
+      } catch { continue; }
+
+      const fm = extractFrontmatter(content);
+      const phaseNum = phaseNumFromSlug(fm.phase);
+      if (!phaseNum || fm.plan === undefined || fm.plan === null) continue;
+      const planNum = String(fm.plan).padStart(2, '0');
+      const thisPlanId = `plan:${phaseNum}-${planNum}`;
+
+      const dg = fm.dependency_graph || fm;
+
+      const requiresList = Array.isArray(dg.requires) ? dg.requires : [];
+      for (const item of requiresList) {
+        let ref = typeof item === 'string' ? item : (item && item.phase);
+        // extractFrontmatter flattens `- phase: X` dash-list items (with a
+        // `provides:` continuation line) into a bare "phase: X" string
+        // rather than a real {phase, provides} object — normalize that
+        // shape here rather than special-casing it at every call site.
+        if (typeof ref === 'string') {
+          const m = ref.match(/^phase:\s*(.+)$/i);
+          if (m) ref = m[1];
+        }
+        const target = refToNodeId(ref);
+        if (target) {
+          addEdge(target, thisPlanId, 'provides', 'summary_requires');
+        }
+      }
+
+      const affectsList = Array.isArray(dg.affects) ? dg.affects : [];
+      for (const item of affectsList) {
+        const target = refToNodeId(item);
+        if (target) {
+          addEdge(thisPlanId, target, 'affects', 'summary_affects');
+        }
+      }
     }
   }
 
@@ -179,6 +266,62 @@ function buildGraph(cwd) {
     }
   }
 
+  // ── Source 3: REQUIREMENTS.md traceability -> requirement nodes + satisfies edges ──
+  const requirementsPath = planningPaths(cwd).requirements;
+  if (fs.existsSync(requirementsPath)) {
+    const reqContent = fs.readFileSync(requirementsPath, 'utf-8');
+    const rowRe = /^\|\s*([A-Z][A-Z0-9-]*)\s*\|\s*([^|]+?)\s*\|/gm;
+    let m;
+    while ((m = rowRe.exec(reqContent)) !== null) {
+      const reqId = m[1];
+      if (reqId === 'Requirement') continue; // header row
+      const phaseRef = refToNodeId(m[2]);
+      addNode(`requirement:${reqId}`, 'requirement');
+      if (phaseRef) {
+        addEdge(`requirement:${reqId}`, phaseRef, 'satisfies', 'requirements_traceability');
+      }
+    }
+  }
+
+  // ── Source 4: todo depends_on/related_to -> todo nodes + depends_on edges ──
+  const todoDirs = [
+    path.join(cwd, '.planning', 'todos', 'pending'),
+    path.join(cwd, '.planning', 'todos', 'done'),
+  ];
+  const todoFiles = []; // { id, dependsOn, relatedTo }
+  for (const todoDir of todoDirs) {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(todoDir).filter(f => f.endsWith('.md'));
+    } catch { continue; }
+    for (const file of entries) {
+      const slug = file.slice(0, -3);
+      const todoId = `todo:${slug}`;
+      addNode(todoId, 'todo');
+      const fullPath = path.join(todoDir, file);
+      let content;
+      try {
+        content = fs.readFileSync(fullPath, 'utf-8');
+      } catch { continue; }
+      const fm = extractFrontmatter(content);
+      todoFiles.push({
+        id: todoId,
+        dependsOn: Array.isArray(fm.depends_on) ? fm.depends_on : [],
+        relatedTo: Array.isArray(fm.related_to) ? fm.related_to : [],
+      });
+    }
+  }
+  for (const todo of todoFiles) {
+    for (const item of todo.dependsOn) {
+      const target = `todo:${item}`;
+      addEdge(todo.id, target, 'depends_on', 'todo_depends_on');
+    }
+    for (const item of todo.relatedTo) {
+      const target = `todo:${item}`;
+      addEdge(todo.id, target, 'depends_on', 'todo_related_to');
+    }
+  }
+
   const nodes = [...nodeMap.values()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   edges.sort((a, b) => {
     if (a.from !== b.from) return a.from < b.from ? -1 : 1;
@@ -191,8 +334,65 @@ function buildGraph(cwd) {
   return { nodes, edges };
 }
 
+const NODE_TYPE_ORDER = ['phase', 'plan', 'requirement', 'todo', 'artifact'];
+const EDGE_TYPE_ORDER = ['depends_on', 'provides', 'affects', 'satisfies', 'wires'];
+
+/**
+ * Print a human-readable summary of the planning graph to stdout: node
+ * counts by type, edge counts by type, and an adjacency listing.
+ *
+ * @param {string} cwd
+ * @param {boolean} raw - ignored; this command IS the human-readable form.
+ */
+function cmdGraphAnalyze(cwd, raw) { // eslint-disable-line no-unused-vars
+  const { nodes, edges } = buildGraph(cwd);
+
+  const lines = [];
+  lines.push('Planning Graph Analysis');
+  lines.push('');
+
+  lines.push(`Nodes: ${nodes.length} total`);
+  for (const type of NODE_TYPE_ORDER) {
+    const count = nodes.filter(n => n.type === type).length;
+    if (count > 0) lines.push(`  ${type}: ${count}`);
+  }
+  lines.push('');
+
+  lines.push(`Edges: ${edges.length} total`);
+  for (const type of EDGE_TYPE_ORDER) {
+    const count = edges.filter(e => e.type === type).length;
+    if (count > 0) lines.push(`  ${type}: ${count}`);
+  }
+  lines.push('');
+
+  const nodeIds = nodes.map(n => n.id).sort();
+  for (const id of nodeIds) {
+    const outgoing = edges.filter(e => e.from === id);
+    if (outgoing.length === 0) continue;
+    for (const e of outgoing) {
+      lines.push(`${e.from} --${e.type}--> ${e.to} [${e.source}]`);
+    }
+  }
+
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
+/**
+ * Print the planning graph as JSON to stdout: `{ nodes, edges }`.
+ *
+ * @param {string} cwd
+ * @param {boolean} raw - ignored; JSON IS the machine-readable form.
+ */
+function cmdGraphExport(cwd, raw) { // eslint-disable-line no-unused-vars
+  const { nodes, edges } = buildGraph(cwd);
+  process.stdout.write(JSON.stringify({ nodes, edges }, null, 2) + '\n');
+}
+
 module.exports = {
   buildGraph,
   refToNodeId,
   resolvePlanDepRef,
+  parseKeyLinkItem,
+  cmdGraphAnalyze,
+  cmdGraphExport,
 };

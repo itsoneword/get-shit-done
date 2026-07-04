@@ -214,8 +214,8 @@ subsystem: infra
 tags: []
 dependency_graph:
   requires:
-    - phase: "01-01"
-      provides: "some helper"
+    - phase: 01-01
+      provides: some helper
   affects:
     - "02-01"
 duration: 5min

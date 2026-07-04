@@ -179,6 +179,7 @@ const discussLoop = require('./lib/discuss-loop.cjs');
 const profileOutput = require('./lib/profile-output.cjs');
 const worktree = require('./lib/worktree.cjs');
 const parallelGate = require('./lib/parallel-gate.cjs');
+const graph = require('./lib/graph.cjs');
 
 // ─── CLI Router ───────────────────────────────────────────────────────────────
 
@@ -1127,6 +1128,18 @@ async function main() {
         default:
           process.stderr.write(`discuss-loop: unknown subcommand: ${sub}\n`);
           process.exit(1);
+      }
+      break;
+    }
+
+    case 'graph': {
+      const sub = args[1];
+      if (sub === 'analyze') {
+        graph.cmdGraphAnalyze(cwd, raw);
+      } else if (sub === 'export') {
+        graph.cmdGraphExport(cwd, raw);
+      } else {
+        error('Unknown graph subcommand. Available: analyze, export');
       }
       break;
     }
