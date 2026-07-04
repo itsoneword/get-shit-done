@@ -1,9 +1,10 @@
-# Roadmap: GSD v1.6 Autonomous Supervision Harness
+# Roadmap: GSD v1.7 Planning-Graph Layer
 
 ## Milestones
 
 - ✅ **v1.5 Capability Port** - Phases 1-9 (shipped 2026-06-08)
 - ✅ **v1.6 Autonomous Supervision Harness** - Phases 10-15 (shipped 2026-07-04)
+- 🚧 **v1.7 Planning-Graph Layer** - Phases 16-19 (in progress)
 
 ## Phases
 
@@ -38,10 +39,17 @@
 
 </details>
 
+**v1.7 Planning-Graph Layer** (in progress)
+
+- [ ] **Phase 16: Planning Graph Model + CLI** - Normalize phase `depends_on` and build a single `graph.cjs` node/edge model over all existing edge sources, inspectable via `gsd-tools graph analyze|export`
+- [ ] **Phase 17: Graph Algorithms + Integrity Check** - Code-based `topoSort`/`detectCycles`/`blastRadius` + `gsd-tools graph validate` + a `/gsd2:health` integrity check — the trust gate before the graph drives any decision
+- [ ] **Phase 18: Consumer Repoint** - `parallel-gate.cjs` and `overnight.md` read the graph instead of hand-rolled traversal — still advisory, still non-authoritative
+- [ ] **Phase 19: Authoritative Promotion** - Computed/cross-checked wave numbers in `phase.cjs` and `requires`-closure context selection in plan-phase — the graph overrides planner/executor output
+
 ## Phase Details
 
 <details>
-<summary>✅ v1.6 Phases 10-15 (shipped — full detail)</summary>
+<summary>✅ v1.5 + v1.6 Phases 1-15 (shipped — full detail)</summary>
 
 <details>
 <summary>✅ v1.5 Phases 1-9 (complete — see git history for details)</summary>
@@ -248,10 +256,88 @@
 
 </details>
 
+### Phase 16: Planning Graph Model + CLI
+
+**Goal**: A single normalized `{nodes, edges}` graph model exists over every fragmented edge encoding GSD already declares (phase depends_on, plan depends_on/wave, files_modified overlap, SUMMARY requires/provides/affects, PLAN key_links, requirement→phase, todo edges), inspectable by a human via CLI — read-only, zero behavior change to any existing consumer
+
+**Depends on**: Nothing (first v1.7 phase)
+
+**Requirements**: GRAPH-01, GRAPH-02, GRAPH-03
+
+**Discussion focus**: Node/edge type taxonomy (node type ∈ phase|plan|requirement|todo|artifact; edge type ∈ depends_on|provides|affects|satisfies|wires) — confirm this covers all 7 existing edge kinds without forcing a lossy mapping; where `graph.cjs` sits relative to `roadmap.cjs`/`frontmatter.cjs`/the SUMMARY parser (reuse vs re-implement); analyze vs export output shape (human-readable text vs JSON schema)
+
+**Success Criteria** (what must be TRUE):
+  1. Phase `depends_on` in ROADMAP.md is parsed by `roadmap.cjs` into a structured array (not a raw prose string) exposed to callers
+  2. `graph.cjs` builds one `{nodes, edges}` model that includes edges from phase depends_on, plan depends_on/wave, files_modified overlap, SUMMARY requires/provides/affects, PLAN key_links, requirement→phase traceability, and todo depends_on/related_to
+  3. Running `gsd-tools graph analyze` prints the normalized model in a readable form covering all node/edge types present in this repo's own `.planning/` tree
+  4. Running `gsd-tools graph export` emits the identical model as machine-readable JSON
+  5. No existing consumer (`roadmap.cjs` callers, `parallel-gate.cjs`, `phase.cjs`, `overnight.md`, `gsd-plan-checker.md`) changes behavior — this phase only adds a reader
+
+**Plans**: TBD
+
+### Phase 17: Graph Algorithms + Integrity Check
+
+**Goal**: The graph proves structural properties by code instead of LLM eyeballing — topological order, cycle detection, and transitive blast-radius closure — and `/gsd2:health` surfaces integrity problems (dangling edges, cycles, affects-vs-files_modified contradictions), forming the trust gate that must show clean numbers before any consumer is allowed to treat the graph as authoritative
+
+**Depends on**: Phase 16 (algorithms and validation operate on the normalized model built there)
+
+**Requirements**: GRAPH-04, GRAPH-05, GRAPH-06
+
+**Discussion focus**: Cycle-detection algorithm choice (DFS coloring vs Kahn's algorithm byproduct) and how `gsd-plan-checker.md`'s current LLM-eyeball cycle instruction is retired in favor of pointing at `graph validate`; blast-radius depth semantics — exact definition of level 1 (direct)/2 (one-hop)/3 (full closure) and which edge types participate (`affects`/`provides` only, per requirement text); what counts as an `affects`-vs-`files_modified` "contradiction" precisely, given requires/provides/affects are author-supplied and often sloppy (`requires: []` common) — this is the key risk this phase exists to catch
+
+**Success Criteria** (what must be TRUE):
+  1. `graph.cjs` computes a topological order of all nodes from the edge model in code
+  2. Running `gsd-tools graph validate` on a roadmap with a deliberately introduced dependency cycle exits non-zero and reports the specific cycle
+  3. `gsd-tools graph validate` also reports dangling edge references (an edge pointing to a node id that doesn't exist) and wave/dependency contradictions
+  4. Running `gsd-tools graph blast-radius <node>` returns the transitive affects/provides closure at a requested depth — depth 1 returns only direct edges, depth 2 adds one hop, depth 3 returns the full closure
+  5. Running `/gsd2:health` includes a graph-integrity check that flags dangling references, cycles, and cases where a phase's declared `affects` contradicts its actual `files_modified` overlap — with zero change to any execution behavior elsewhere
+
+**Plans**: TBD
+
+**Risk**: `requires`/`provides`/`affects` are author-supplied by the executor agent and are frequently sloppy or empty. A graph built on bad edges gives confident wrong answers, which is worse than no graph. This phase's integrity check is the explicit mitigation — Phase 19 (authoritative promotion) must not proceed until this check reports clean numbers on the live repo.
+
+### Phase 18: Consumer Repoint
+
+**Goal**: `parallel-gate.cjs` and `overnight.md` stop re-deriving traversal/coupling logic by hand and read the graph instead — deleting duplicated logic while remaining strictly advisory (no consumer's decision becomes authoritative over planner/executor output yet)
+
+**Depends on**: Phase 17 (repointing to the graph is only safe once validate/integrity checks exist to catch a bad model before it silently drives a wrong verdict)
+
+**Requirements**: GRAPH-07, GRAPH-08
+
+**Discussion focus**: Regression strategy for `hasPhaseDecisionCoupling` replacement — how "identical-or-better verdicts on existing phases" is measured (golden set of current phase pairs + expected coupling verdict, run before/after); whether the old hand-rolled functions are deleted outright or kept temporarily behind a flag during rollout; how `overnight.md`'s regex-based BLOCKED/SKIPPED extraction is swapped for a topo-order read without changing the run.log observability contract
+
+**Success Criteria** (what must be TRUE):
+  1. `parallel-gate.cjs`'s axis-B coupling decision is computed from a graph edge query instead of the hand-rolled `hasPhaseDecisionCoupling` string check
+  2. Running the repointed `parallel-gate.cjs` against this repo's existing shipped phases (10-15, 1-9) produces coupling verdicts identical to or more accurate than the pre-repoint check — no regressions
+  3. `overnight.md`'s BLOCKED/SKIPPED phase traversal reads the graph's topological order instead of ad-hoc regex extraction over ROADMAP.md text
+  4. A dry run of the overnight phase-ordering logic on the current ROADMAP.md produces the same phase sequence as before the repoint
+
+**Plans**: TBD
+
+### Phase 19: Authoritative Promotion
+
+**Goal**: The graph becomes the source of truth for wave ordering and context selection — `phase.cjs` cross-checks and can correct planner-assigned wave numbers, and plan-phase assembles upstream context from the graph's `requires` transitive closure — the highest-risk tier because the graph now overrides, not just observes, planner/executor output
+
+**Depends on**: Phase 18 (consumer repoint must be stable; more importantly, Phase 17's integrity check must report clean numbers on the live repo before this phase is authorized — authoritative promotion on a graph with unresolved dangling/cycle/contradiction findings would produce confident wrong decisions)
+
+**Requirements**: GRAPH-09, GRAPH-10
+
+**Discussion focus**: Repair vs flag-only semantics when a plan's frozen `wave:N` contradicts the graph's computed order (auto-correct the integer vs surface a blocking warning for human/planner review); how `phase.cjs:305`'s current wave-bucketing is modified without breaking existing plans that already carry (correct) wave numbers; what "requires-closure context selection" concretely replaces in plan-phase's current context-gathering step; rollback plan if authoritative promotion produces a wrong wave/context decision on a real phase
+
+**Success Criteria** (what must be TRUE):
+  1. Plan wave numbers are computed or cross-checked against the graph's topological order at phase-execution time in `phase.cjs`, rather than trusted as the planner-assigned integer alone
+  2. A plan whose frozen `wave:N` contradicts its declared dependencies is flagged or automatically repaired — never silently executed out of dependency order
+  3. plan-phase context selection assembles upstream context from the graph's `requires` transitive closure, delivering the "transitive closure for context selection" that `templates/summary.md` already promises but no code computed before this phase
+  4. Running phase.cjs on a roadmap with a deliberately wrong wave number (contradicting depends_on) surfaces the contradiction rather than executing in the wrong order
+
+**Plans**: TBD
+
+**Risk**: This is the authoritative tier — the graph now drives real execution decisions instead of only observing them. It must not begin until Phase 17's integrity check shows clean numbers on the live repo; a graph promoted to authority while still built on sloppy `requires`/`provides`/`affects` edges would produce confident wrong wave/context decisions, silently, at execution time.
+
 ## Progress
 
-**Execution Order:** 10 → 11 → 12 → 13 → 14 → 15
-(13 requires Wave-0 research before discuss-phase; 14 and 15 can begin after 11 and 12 respectively, but are sequenced after 13 for stable foundations)
+**Execution Order:** 10 → 11 → 12 → 13 → 14 → 15 (v1.6, shipped) → 16 → 17 → 18 → 19 (v1.7)
+(v1.7: strict linear order — advisory foundation (16, 17) must ship and pass integrity checks before consumer repoint (18); consumer repoint must be stable before authoritative promotion (19))
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -270,6 +356,10 @@
 | 13. Overnight Runner | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 3/3 | Complete    | 2026-06-18 |
+| 16. Planning Graph Model + CLI | v1.7 | 0/? | Not started | - |
+| 17. Graph Algorithms + Integrity Check | v1.7 | 0/? | Not started | - |
+| 18. Consumer Repoint | v1.7 | 0/? | Not started | - |
+| 19. Authoritative Promotion | v1.7 | 0/? | Not started | - |
 
 ## Backlog
 

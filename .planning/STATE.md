@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Planning-Graph Layer
 status: planning
-stopped_at: "Milestone v1.7 Planning-Graph Layer started — defining requirements (v1.6 archived)"
-last_updated: "2026-07-04T14:46:31.382Z"
+stopped_at: "Roadmap created — 4 phases (16-19), 10/10 GRAPH requirements mapped. Next: /gsd2:plan-phase 16"
+last_updated: "2026-07-04T15:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -14,23 +14,23 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 16 - Planning Graph Model + CLI (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-04 — Milestone v1.7 Planning-Graph Layer started
+Status: Roadmap complete, ready for phase planning
+Last activity: 2026-07-04 — ROADMAP.md created for v1.7 Planning-Graph Layer (Phases 16-19)
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** v1.7 Planning-Graph Layer — defining requirements
+**Current focus:** v1.7 Planning-Graph Layer — Phase 16 (Planning Graph Model + CLI) is next
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0 (v1.6)
+- Total plans completed: 0 (v1.7)
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -41,11 +41,13 @@ See: .planning/PROJECT.md (updated 2026-07-04)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- Advisory before authoritative — graph ships read-only (Phases 16-17), earns trust via integrity-check numbers, only then repoints consumers (Phase 18) and goes authoritative (Phase 19) — same rollout pattern as the symmetry-check
+- Advisory foundation split across two phases (16: model+CLI, 17: algorithms+integrity) rather than one — six GRAPH requirements is too large for a single phase per granularity guidance
+- Strict linear dependency chain for v1.7: 16 → 17 → 18 → 19 — no parallel phases; each tier gates the next
+- Phase 17's integrity check (dangling refs, cycles, affects-vs-files_modified contradictions) is the explicit mitigation for the key risk: requires/provides/affects are author-supplied and often sloppy — a graph on bad edges gives confident wrong answers
 - Harness proposes, never disposes — all autonomous decisions auditable from ledger alone, no transcript replay
 - Orchestrator-level only — subagents lack Skill/Agent grants; runner + evaluator run at top-level session
 - Zero new npm dependencies — JSONL via fs, headless claude -p, system cron; all primitives confirmed present
-- Trust ladder — interactive single-phase ledger review + escalation calibration gates overnight multi-phase runs (ESC-03 is a structural gate before Phase 13)
-- Wave-0 required for Phase 13 — headless session lifespan and bypassPermissions behavior are undocumented; must be empirically tested before scheduling logic is built
 - [Phase 10]: Append-only ledger: no writeLedger/cmdUpdate/patch exports; audit guarantee requires immutable JSONL
 - [Phase 10]: Required-field validation uses 'in' operator so escalated:null passes (field present, value nullable)
 - [Phase 10]: Run-context gate enforces GSD_RUN_ID or explicit arg; interactive sessions always hit exit 1 (never silent write)
@@ -92,15 +94,16 @@ Recent decisions affecting current work:
 - Update command should sync project-local hooks (tooling)
 - ESC-03 live-run confirmation (test-in-prod) — steps 2-3 of the calibration (harness)
 - Executor+planner persona deep-dive and inter-agent handoff contracts (workflows)
-- Add graph.cjs planning-graph layer normalizing existing edges (tooling)
+- Add graph.cjs planning-graph layer normalizing existing edges (tooling) — consumed by this roadmap (Phases 16-19); mark resolved once v1.7 ships
 
 Carry-over from v1.5: archival via /gsd2:complete-milestone pending; human UAT open for phases 02/06/09.
+Carry-over from v1.6: archival note recorded in MILESTONES.md; deferred human-UAT on phases 11 & 14; ESC-03 live-run calibration gate still pending before first real overnight run.
 
 ### Blockers/Concerns
 
-None for v1.6 (Phase 10 has no external dependencies).
+None for v1.7 Phase 16 (no external dependencies — first phase of the milestone).
 
-Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless session lifespan / bypassPermissions behavior must be confirmed before discuss-phase for that phase.
+Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check reporting clean numbers on the live repo — do not start Phase 19 discussion until that gate is confirmed.
 
 ### Quick Tasks Completed
 
@@ -110,6 +113,6 @@ Phase 13 (Overnight Runner) is blocked on Wave-0 empirical research — headless
 
 ## Session Continuity
 
-Last session: 2026-07-03
-Stopped at: Completed quick task 260702-kl9: token-cut cleanup batch (prompt dedupe, shared project-context ref, ui-brand trim, dead template.cjs + phase-prompt.md removal)
+Last session: 2026-07-04
+Stopped at: Created ROADMAP.md for v1.7 Planning-Graph Layer — 4 phases (16-19), 10/10 GRAPH requirements mapped, REQUIREMENTS.md traceability filled. Next: `/gsd2:plan-phase 16`
 Resume file: None
