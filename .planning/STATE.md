@@ -1,28 +1,30 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Autonomous Supervision Harness
-status: unknown
-stopped_at: "Completed quick task 260702-kl9: token-cut cleanup batch (prompt dedupe, shared project-context ref, ui-brand trim, dead template.cjs + phase-prompt.md removal)"
+milestone: v1.7
+milestone_name: Planning-Graph Layer
+status: planning
+stopped_at: "Milestone v1.7 Planning-Graph Layer started — defining requirements (v1.6 archived)"
 last_updated: "2026-07-04T14:46:31.382Z"
 progress:
-  total_phases: 15
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 ## Current Position
 
-Phase: 15 (resume-logic-backlog-triage-worker) — COMPLETE
-Plan: 3 of 3 (all plans complete)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-04 — Milestone v1.7 Planning-Graph Layer started
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-10)
+See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 15 — resume-logic-backlog-triage-worker
+**Current focus:** v1.7 Planning-Graph Layer — defining requirements
 
 ## Performance Metrics
 
