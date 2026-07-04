@@ -6,9 +6,9 @@ const { test, describe, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
-const { createTempProject, cleanup } = require('./helpers.cjs');
+const { createTempProject, cleanup, runGsdTools } = require('./helpers.cjs');
 
-const { buildGraph, refToNodeId, resolvePlanDepRef } = require('../get-shit-done/bin/lib/graph.cjs');
+const { buildGraph, refToNodeId, resolvePlanDepRef, parseKeyLinkItem } = require('../get-shit-done/bin/lib/graph.cjs');
 
 describe('graph.cjs refToNodeId', () => {
   test('resolves "Phase 16" to phase:16', () => {
@@ -174,5 +174,242 @@ autonomous: true
     const edgeKeys = g1.edges.map(e => `${e.from}|${e.to}|${e.type}|${e.source}`);
     const sortedEdgeKeys = [...edgeKeys].sort();
     assert.deepStrictEqual(edgeKeys, sortedEdgeKeys, 'edges sorted by (from,to,type,source)');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Plan 16-02: remaining buildGraph edge sources + graph CLI
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('graph.cjs parseKeyLinkItem', () => {
+  test('structured {from,to} object passes through', () => {
+    assert.deepStrictEqual(parseKeyLinkItem({ from: 'a.cjs', to: 'b.cjs' }), { from: 'a.cjs', to: 'b.cjs' });
+  });
+
+  test('arrow-string form splits on -> and strips trailing parenthetical', () => {
+    assert.deepStrictEqual(
+      parseKeyLinkItem('plan-phase step 5.6 grep -> UI-SPEC check (broken = ignores domain classification)'),
+      { from: 'plan-phase step 5.6 grep', to: 'UI-SPEC check' }
+    );
+  });
+
+  test('no arrow returns null', () => {
+    assert.strictEqual(parseKeyLinkItem('no arrow here'), null);
+  });
+});
+
+describe('graph.cjs buildGraph (Source 1: SUMMARY requires/affects)', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  test('nested dependency_graph form: requires -> provides edge, affects -> affects edge', () => {
+    const dir = path.join(tmpDir, '.planning', 'phases', '02-bar');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '02-02-SUMMARY.md'), `---
+phase: 02-bar
+plan: "02"
+subsystem: infra
+tags: []
+dependency_graph:
+  requires:
+    - phase: "01-01"
+      provides: "some helper"
+  affects:
+    - "02-01"
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+    const { edges } = buildGraph(tmpDir);
+    assert.ok(edges.some(e => e.from === 'plan:01-01' && e.to === 'plan:02-02' && e.type === 'provides' && e.source === 'summary_requires'));
+    assert.ok(edges.some(e => e.from === 'plan:02-02' && e.to === 'plan:02-01' && e.type === 'affects' && e.source === 'summary_affects'));
+  });
+
+  test('flat top-level form: requires string form resolves; unresolvable affects entry produces no edge', () => {
+    const dir = path.join(tmpDir, '.planning', 'phases', '03-baz');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '03-01-SUMMARY.md'), `---
+phase: 03-baz
+plan: "01"
+subsystem: infra
+tags: []
+requires:
+  - "01-01 (helper)"
+affects:
+  - "add-backlog"
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+    const { nodes, edges } = buildGraph(tmpDir);
+    assert.ok(edges.some(e => e.from === 'plan:01-01' && e.to === 'plan:03-01' && e.type === 'provides' && e.source === 'summary_requires'));
+    const affectsEdges = edges.filter(e => e.source === 'summary_affects');
+    assert.strictEqual(affectsEdges.length, 0, 'unresolvable affects entry produces no edge');
+    assert.ok(!nodes.some(n => n.id.includes('add-backlog')), 'no fabricated node for unresolvable affects entry');
+  });
+});
+
+describe('graph.cjs buildGraph (Source 2: PLAN key_links wires)', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  test('structured and arrow-string key_links both produce wires edges + artifact nodes', () => {
+    const dir = path.join(tmpDir, '.planning', 'phases', '04-qux');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '04-01-PLAN.md'), `---
+phase: 04-qux
+plan: "01"
+type: auto
+wave: 1
+depends_on: []
+files_modified: []
+autonomous: true
+must_haves:
+  key_links:
+    - from: "x.cjs"
+      to: "y.cjs"
+    - "z.cjs -> w.cjs (broken = ...)"
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+    const { nodes, edges } = buildGraph(tmpDir);
+    assert.ok(edges.some(e => e.from === 'artifact:x.cjs' && e.to === 'artifact:y.cjs' && e.type === 'wires' && e.source === 'plan_key_links'));
+    assert.ok(edges.some(e => e.from === 'artifact:z.cjs' && e.to === 'artifact:w.cjs' && e.type === 'wires' && e.source === 'plan_key_links'));
+    for (const id of ['artifact:x.cjs', 'artifact:y.cjs', 'artifact:z.cjs', 'artifact:w.cjs']) {
+      assert.ok(nodes.some(n => n.id === id), `${id} node present`);
+    }
+  });
+});
+
+describe('graph.cjs buildGraph (Source 3: REQUIREMENTS.md traceability)', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  test('requirement rows produce requirement nodes + satisfies edges to phase', () => {
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'REQUIREMENTS.md'), `# Requirements
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| GRAPH-01 | Phase 16 | Pending |
+| GRAPH-02 | Phase 16 | Pending |
+`);
+    const { nodes, edges } = buildGraph(tmpDir);
+    assert.ok(nodes.some(n => n.id === 'requirement:GRAPH-01' && n.type === 'requirement'));
+    assert.ok(nodes.some(n => n.id === 'requirement:GRAPH-02' && n.type === 'requirement'));
+    assert.ok(edges.some(e => e.from === 'requirement:GRAPH-01' && e.to === 'phase:16' && e.type === 'satisfies' && e.source === 'requirements_traceability'));
+  });
+});
+
+describe('graph.cjs buildGraph (Source 4: todo depends_on/related_to)', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  function writeTodo(name, extraFrontmatter) {
+    const dir = path.join(tmpDir, '.planning', 'todos', 'pending');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${name}.md`), `---
+created: 2026-07-04T00:00:00.000Z
+title: ${name}
+area: tooling
+${extraFrontmatter}
+---
+
+## Problem
+`);
+  }
+
+  test('depends_on and related_to both produce todo->todo depends_on edges (distinct source)', () => {
+    writeTodo('todo-a', '');
+    writeTodo('todo-b', 'depends_on:\n  - todo-a\nrelated_to: []');
+    writeTodo('todo-c', 'related_to:\n  - todo-a');
+
+    const { edges } = buildGraph(tmpDir);
+    assert.ok(edges.some(e => e.from === 'todo:todo-b' && e.to === 'todo:todo-a' && e.type === 'depends_on' && e.source === 'todo_depends_on'));
+    assert.ok(edges.some(e => e.from === 'todo:todo-c' && e.to === 'todo:todo-a' && e.type === 'depends_on' && e.source === 'todo_related_to'));
+  });
+
+  test('date-prefixed dangling todo reference is retained as a dangling edge, never misparsed via refToNodeId', () => {
+    writeTodo('2026-07-04-real-slug-example', "depends_on:\n  - '2026-01-01-nonexistent-slug-that-was-never-created'");
+
+    const { nodes, edges } = buildGraph(tmpDir);
+    assert.ok(edges.some(e =>
+      e.from === 'todo:2026-07-04-real-slug-example' &&
+      e.to === 'todo:2026-01-01-nonexistent-slug-that-was-never-created' &&
+      e.type === 'depends_on' &&
+      e.source === 'todo_depends_on'
+    ), 'dangling todo depends_on edge retained');
+    assert.ok(!nodes.some(n => n.id === 'todo:2026-01-01-nonexistent-slug-that-was-never-created'), 'target node absent (genuinely dangling)');
+    assert.ok(!nodes.some(n => /^plan:2026-/.test(n.id)), 'no fabricated plan: node from date-prefixed slug misparse');
+  });
+});
+
+describe('gsd-tools graph CLI', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+    const dir = path.join(tmpDir, '.planning', 'phases', '01-foo');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '01-01-PLAN.md'), `---
+phase: 01-foo
+plan: "01"
+type: auto
+wave: 1
+depends_on: []
+files_modified: []
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+  });
+
+  afterEach(() => { cleanup(tmpDir); });
+
+  test('graph analyze exits 0 and prints Nodes/Edges summary', () => {
+    const result = runGsdTools(['graph', 'analyze'], tmpDir);
+    assert.strictEqual(result.success, true, result.error);
+    assert.ok(result.output.includes('Nodes:'));
+    assert.ok(result.output.includes('Edges:'));
+  });
+
+  test('graph export exits 0 and prints parseable JSON with array nodes/edges', () => {
+    const result = runGsdTools(['graph', 'export'], tmpDir);
+    assert.strictEqual(result.success, true, result.error);
+    const parsed = JSON.parse(result.output);
+    assert.ok(Array.isArray(parsed.nodes));
+    assert.ok(Array.isArray(parsed.edges));
+  });
+
+  test('graph bogus subcommand exits non-zero', () => {
+    const result = runGsdTools(['graph', 'bogus'], tmpDir);
+    assert.strictEqual(result.success, false);
   });
 });
