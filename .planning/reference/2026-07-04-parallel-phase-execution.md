@@ -45,6 +45,28 @@
 
 P2–P4 are the v1.6 supervision-harness milestone (phases 10–15): DAG scheduler + worktree runner. Slot in, don't fork.
 
+## P3 isolation spike — RESULT: GO (2026-07-04)
+
+Verified in a throwaway repo: `git worktree add` → launch `claude -p "<edits>" --dangerously-skip-permissions` with cwd=worktree → the process wrote all edits *inside* the worktree; main tree stayed untouched (no leaked files, HEAD unchanged). Committed on the branch, then `gsd-tools worktree merge` returned `{clean:true}` and all edits landed in main via merge commit.
+
+Conclusion: per-worktree **separate-process** execution holds isolation, unlike in-process Task subagents (the `execute-phase.md:242` leak). This is the mechanism P4 builds on.
+
+Deltas for P4 design:
+- Each parallel phase = a background `claude -p ... --dangerously-skip-permissions` process with cwd set to its worktree (NOT a Task spawn). Launched from the orchestrator shell.
+- Runs are unpermissioned by construction (headless skip-permissions) — acceptable for autonomous/unattended; note in ledger.
+- Clean merge depends on non-overlapping files across concurrent phases → keep the parallel-gate axis-A file-overlap check as a co-scheduling guard (don't run file-overlapping phases together).
+- Each phase is a full process (real token/latency cost) — cap concurrency ~4–6.
+
+## P4 — IMPLEMENTED (2026-07-04)
+
+Quick task 260704-m9p built the frontier scheduler + parallel runner:
+
+- `gsd-tools roadmap frontier` — the scheduling brain (testable lib, node:test covered): incomplete phases whose hard `depends_on` are all satisfied, `sequence_after` never read, split into `coschedulable[]` / `serialized[]` via the axis-A file-overlap guard reused from `parallel-gate.cjs` (`getPhaseFiles`, now exported).
+- `max_parallel_phases` config key (default 4), alongside the existing `parallelization` toggle.
+- `config-get` defaults-fallback fix: keys omitted from the on-disk `config.json` (true for this repo's own config) now resolve to the `loadConfig` default instead of erroring — unblocks the scheduler reading `parallelization`/`max_parallel_phases` cleanly on any project.
+- `autonomous.md` `<step name="iterate">` rewritten as prose: each round launches co-schedulable frontier phases as per-worktree headless `claude -p --dangerously-skip-permissions` processes from the orchestrator shell (not Task subagents), capped at `max_parallel_phases`; unconditional per-phase stdout capture to a run-scoped log drives the merge-vs-leave decision; clean merges remove the worktree, conflicts surface without aborting; falls back to the serial inline path when parallelization is off or the frontier is singular.
+- Every launch, merge, and removal is written to the ledger (auditable-from-ledger, no transcript replay needed).
+
 ## int_prep application (after P1)
 - v0.1.3 migration wave 01–11 is a genuine chain (each island builds on the prior proven bridge pattern); real parallelism is limited.
 - True parallel opportunities: **Phase 14** (roadmap says independent of 01–13), **Phase 12** (hard-depends only on 04; "after 11" is soft), **02∥03** (03's dep on 02 is soft).

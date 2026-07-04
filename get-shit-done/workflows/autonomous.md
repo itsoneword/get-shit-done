@@ -2,6 +2,8 @@
 
 Drive all remaining milestone phases autonomously. For each incomplete phase: discuss, plan, execute via Skill() invocations. Pauses only for explicit user decisions. Re-reads ROADMAP.md after each phase to catch dynamically inserted phases.
 
+The iterate loop now runs independent frontier phases in parallel: each round it computes the runnable frontier (`roadmap frontier`), and any co-schedulable phases (no shared `files_modified`) launch as per-worktree headless processes, capped by the `max_parallel_phases` config key (default 4). Falls back to today's serial inline execution when `parallelization=false` or only one phase is runnable this round.
+
 </purpose>
 
 <required_reading>
@@ -795,4 +797,5 @@ Present 3 options via AskUserQuestion:
 - Complete-milestone invoked with ${milestone_version} arg
 - Cleanup internal confirmation is acceptable (CTRL-01)
 - Progress bar uses phase number / total milestone phases (not position among incomplete)
+- Frontier scheduler runs co-schedulable phases in parallel (per-worktree headless, capped at `max_parallel_phases`, default 4) and falls back to the serial inline path when `parallelization=false` or only one phase is runnable
 </success_criteria>
