@@ -67,7 +67,8 @@ Plans:
 
 ### Phase 3: [Name]
 **Goal**: [What this phase delivers]
-**Depends on**: Phase 2
+**Depends on**: Nothing
+**Sequence after**: Phase 2 (soft — riskier work sequenced after the proven pattern; not a technical requirement)
 **Requirements**: [REQ-06, REQ-07, REQ-08]
 **Success Criteria** (what must be TRUE):
   1. [Observable behavior from user perspective]
@@ -81,7 +82,8 @@ Plans:
 
 ### Phase 4: [Name]
 **Goal**: [What this phase delivers]
-**Depends on**: Phase 3
+**Depends on**: Nothing
+**Sequence after**: Nothing (independent — safe to run in parallel)
 **Requirements**: [REQ-09, REQ-10]
 **Success Criteria** (what must be TRUE):
   1. [Observable behavior from user perspective]
@@ -113,6 +115,10 @@ Phases execute in numeric order: 2 → 2.1 → 2.2 → 3 → 3.1 → 4
 - No time estimates (this isn't enterprise PM)
 - Progress table updated by execute workflow
 - Plan count can be "TBD" initially, refined during planning
+
+**Depends on vs Sequence after:**
+- `**Depends on**` = hard technical dependency only (phase B needs phase A's artifact to compile/run). Always present; use `Nothing` if none.
+- `**Sequence after**` = soft risk/preference ordering — a tiebreak, never a scheduling gate. Use `Nothing (independent — safe to run in parallel)` to flag phases with no hard or soft coupling.
 
 **Success criteria:**
 - 2-5 observable behaviors per phase (from user's perspective)

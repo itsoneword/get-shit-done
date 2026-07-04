@@ -101,6 +101,19 @@ Options:
 
 </goal_backward_phases>
 
+<hard_vs_soft_dependencies>
+
+## Hard vs Soft Dependencies
+
+`**Depends on**` and `**Sequence after**` are separate lines with separate meanings — do not conflate them.
+
+- **`**Depends on**`** — a hard technical dependency ONLY: phase B literally needs phase A's artifact (code, schema, API) to compile or run. Every phase MUST carry this line; use `Nothing` when there is no hard dependency.
+- **`**Sequence after**`** — soft risk/preference ordering (e.g. build the risky one first, proven-pattern-first). This is a tiebreak for planning order, NOT a scheduling gate. Use `Nothing (independent — safe to run in parallel)` to explicitly flag a phase with no hard deps AND no soft ordering, so it surfaces as a parallel candidate.
+
+Rationale: soft edges written into `**Depends on**` create false serial edges that block parallel scheduling — a phase merely sequenced-after another gets treated as hard-coupled and refused for parallel execution when it could safely run concurrently.
+
+</hard_vs_soft_dependencies>
+
 <phase_identification>
 
 ## Deriving Phases from Requirements
@@ -205,6 +218,18 @@ ROADMAP.md requires two phase representations. Both are needed because downstrea
 ### Phase 2: Name
 **Goal**: What this phase delivers
 **Depends on**: Phase 1
+...
+
+### Phase 3: Name
+**Goal**: What this phase delivers
+**Depends on**: Nothing
+**Sequence after**: Phase 2 (soft — riskier work, build proven pattern first; not a technical requirement)
+...
+
+### Phase 4: Name
+**Goal**: What this phase delivers
+**Depends on**: Nothing
+**Sequence after**: Nothing (independent — safe to run in parallel)
 ...
 ```
 
