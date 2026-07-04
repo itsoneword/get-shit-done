@@ -41,7 +41,7 @@
 
 **v1.7 Planning-Graph Layer** (in progress)
 
-- [ ] **Phase 16: Planning Graph Model + CLI** - Normalize phase `depends_on` and build a single `graph.cjs` node/edge model over all existing edge sources, inspectable via `gsd-tools graph analyze|export`
+- [x] **Phase 16: Planning Graph Model + CLI** - Normalize phase `depends_on` and build a single `graph.cjs` node/edge model over all existing edge sources, inspectable via `gsd-tools graph analyze|export` (completed 2026-07-04)
 - [ ] **Phase 17: Graph Algorithms + Integrity Check** - Code-based `topoSort`/`detectCycles`/`blastRadius` + `gsd-tools graph validate` + a `/gsd2:health` integrity check — the trust gate before the graph drives any decision
 - [ ] **Phase 18: Consumer Repoint** - `parallel-gate.cjs` and `overnight.md` read the graph instead of hand-rolled traversal — still advisory, still non-authoritative
 - [ ] **Phase 19: Authoritative Promotion** - Computed/cross-checked wave numbers in `phase.cjs` and `requires`-closure context selection in plan-phase — the graph overrides planner/executor output
