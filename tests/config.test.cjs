@@ -382,3 +382,85 @@ describe('config-get command', () => {
     assert.strictEqual(result.success, false);
   });
 });
+
+describe('config-get defaults fallback', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+    // Mirror this repo's real config.json: present, but omitting parallelization
+    // and max_parallel_phases entirely.
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'config.json'),
+      JSON.stringify({
+        workflow: { nyquist_validation: true },
+        model_profile: 'balanced',
+      }, null, 2)
+    );
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('parallelization falls back to loadConfig default (true) when omitted on disk', () => {
+    const result = runGsdTools('config-get parallelization', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output, true);
+  });
+
+  test('max_parallel_phases falls back to loadConfig default (4) when omitted on disk', () => {
+    const result = runGsdTools('config-get max_parallel_phases', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output, 4);
+  });
+
+  test('on-disk parallelization value wins over the default', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'config.json'),
+      JSON.stringify({ parallelization: false }, null, 2)
+    );
+
+    const result = runGsdTools('config-get parallelization', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output, false);
+  });
+
+  test('regression: still errors for a key absent from both disk and defaults', () => {
+    const result = runGsdTools('config-get nonexistent_key', tmpDir);
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.error.includes('Key not found'),
+      `Expected "Key not found" in error: ${result.error}`
+    );
+  });
+
+  test('regression: still errors for a deeply nested key absent from both disk and defaults', () => {
+    const result = runGsdTools('config-get workflow.nonexistent', tmpDir);
+    assert.strictEqual(result.success, false);
+    assert.ok(
+      result.error.includes('Key not found'),
+      `Expected "Key not found" in error: ${result.error}`
+    );
+  });
+
+  test('regression: still errors when config.json does not exist', () => {
+    const emptyTmpDir = createTempProject();
+    try {
+      const result = runGsdTools('config-get parallelization', emptyTmpDir);
+      assert.strictEqual(result.success, false);
+      assert.ok(
+        result.error.includes('No config.json'),
+        `Expected "No config.json" in error: ${result.error}`
+      );
+    } finally {
+      cleanup(emptyTmpDir);
+    }
+  });
+});

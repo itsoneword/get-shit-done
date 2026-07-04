@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { escapeRegex, normalizePhaseName, planningPaths, output, error, findPhaseInternal, stripShippedMilestones, extractCurrentMilestone, replaceInCurrentMilestone } = require('./core.cjs');
+const { getPhaseFiles } = require('./parallel-gate.cjs');
 
 function cmdRoadmapGetPhase(cwd, phaseNum, raw) {
   const roadmapPath = planningPaths(cwd).roadmap;
@@ -98,13 +99,21 @@ function cmdRoadmapGetPhase(cwd, phaseNum, raw) {
   }
 }
 
-function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
+/**
+ * Non-exiting analyzer — builds the same result object as `cmdRoadmapAnalyze`
+ * without calling `output()` (which exits the process). Callers that need to
+ * consume `phases[]` in-process (e.g. `cmdRoadmapFrontier`) should use this.
+ *
+ * Returns `{ error, milestones, phases, current_phase, ... }` — see
+ * `cmdRoadmapAnalyze` for the full shape. On a missing ROADMAP.md, returns
+ * `{ error: 'ROADMAP.md not found', milestones: [], phases: [], current_phase: null }`.
+ */
+function analyzeRoadmapData(cwd, opts = {}) {
   const scoped = opts && opts.scoped === true;
   const roadmapPath = planningPaths(cwd).roadmap;
 
   if (!fs.existsSync(roadmapPath)) {
-    output({ error: 'ROADMAP.md not found', milestones: [], phases: [], current_phase: null }, raw);
-    return;
+    return { error: 'ROADMAP.md not found', milestones: [], phases: [], current_phase: null };
   }
 
   const rawContent = fs.readFileSync(roadmapPath, 'utf-8');
@@ -236,7 +245,7 @@ function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
     }
   }
 
-  const result = {
+  return {
     milestones,
     phases: scopedPhases,
     phase_count: phases.length,
@@ -248,8 +257,86 @@ function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
     next_phase: nextPhase ? nextPhase.number : null,
     missing_phase_details: missingDetails.length > 0 ? missingDetails : null,
   };
+}
 
-  output(result, raw);
+function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
+  output(analyzeRoadmapData(cwd, opts), raw);
+}
+
+/**
+ * `gsd-tools roadmap frontier` — the scheduling brain.
+ *
+ * Computes the runnable frontier: incomplete phases whose EVERY hard
+ * `depends_on` phase is complete. `sequence_after` (soft ordering) is never
+ * read here — that is the whole point of the hard/soft split (see
+ * `.planning/reference/2026-07-04-parallel-phase-execution.md`).
+ *
+ * The frontier is then split via the axis-A (file-overlap) co-schedule
+ * filter reused from `parallel-gate.cjs`: two frontier phases can never be
+ * axis-B coupled (if A hard-depends on B and A is in the frontier, B must
+ * already be complete — so B is not in the frontier), so only axis-A file
+ * overlap needs checking here.
+ *
+ * Emits `{ frontier: string[], coschedulable: string[], serialized: [{phase, conflicts_with, overlap_files}] }`.
+ */
+function extractDepPhaseNums(str) {
+  if (!str) return [];
+  const nums = [];
+  const pattern = /Phase\s+(\d+[A-Z]?(?:\.\d+)*)/gi;
+  let m;
+  while ((m = pattern.exec(str)) !== null) {
+    nums.push(m[1]);
+  }
+  return nums;
+}
+
+function cmdRoadmapFrontier(cwd, raw) {
+  const { phases } = analyzeRoadmapData(cwd, { scoped: false });
+
+  const isComplete = (p) => p.disk_status === 'complete';
+  const byNumber = new Map((phases || []).map(p => [String(p.number), p]));
+
+  const frontierPhases = (phases || []).filter(p => {
+    if (isComplete(p)) return false;
+    const depNums = extractDepPhaseNums(p.depends_on);
+    if (depNums.length === 0) return true;
+    return depNums.every(depNum => {
+      const depPhase = byNumber.get(String(depNum));
+      return depPhase ? isComplete(depPhase) : false;
+    });
+  });
+
+  const coschedulable = [];
+  const serialized = [];
+  const selectedFiles = []; // [{ number, files: Set }]
+
+  for (const candidate of frontierPhases) {
+    const candidateFiles = getPhaseFiles(cwd, candidate.number);
+    let conflictsWith = null;
+    let overlapFiles = [];
+
+    for (const selected of selectedFiles) {
+      const overlap = [...candidateFiles].filter(f => selected.files.has(f));
+      if (overlap.length > 0) {
+        conflictsWith = selected.number;
+        overlapFiles = overlap;
+        break;
+      }
+    }
+
+    if (conflictsWith) {
+      serialized.push({ phase: candidate.number, conflicts_with: conflictsWith, overlap_files: overlapFiles });
+    } else {
+      coschedulable.push(candidate.number);
+      selectedFiles.push({ number: candidate.number, files: candidateFiles });
+    }
+  }
+
+  output({
+    frontier: frontierPhases.map(p => p.number),
+    coschedulable,
+    serialized,
+  }, raw);
 }
 
 function cmdRoadmapUpdatePlanProgress(cwd, phaseNum, raw) {
@@ -353,4 +440,6 @@ module.exports = {
   cmdRoadmapGetPhase,
   cmdRoadmapAnalyze,
   cmdRoadmapUpdatePlanProgress,
+  cmdRoadmapFrontier,
+  analyzeRoadmapData,
 };

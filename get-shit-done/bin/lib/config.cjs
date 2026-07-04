@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { output, error } = require('./core.cjs');
+const { output, error, loadConfig } = require('./core.cjs');
 const {
   VALID_PROFILES,
   getAgentToModelMapForProfile,
@@ -12,7 +12,7 @@ const {
 } = require('./model-profiles.cjs');
 
 const VALID_CONFIG_KEYS = new Set([
-  'mode', 'granularity', 'parallelization', 'commit_docs', 'model_profile',
+  'mode', 'granularity', 'parallelization', 'max_parallel_phases', 'commit_docs', 'model_profile',
   'search_gitignored', 'brave_search',
   'workflow.research', 'workflow.plan_check', 'workflow.verifier',
   'workflow.nyquist_validation', 'workflow.ui_phase', 'workflow.ui_safety_gate',
@@ -219,14 +219,27 @@ function cmdConfigGet(cwd, keyPath, raw) {
     error('Failed to read config.json: ' + err.message);
   }
 
-  // Traverse dot-notation path (e.g., "workflow.auto_advance")
-  const keys = keyPath.split('.');
-  let current = config;
-  for (const key of keys) {
-    if (current === undefined || current === null || typeof current !== 'object') {
-      error(`Key not found: ${keyPath}`);
+  // Traverse dot-notation path (e.g., "workflow.auto_advance"). Returns undefined
+  // (rather than erroring) on a non-object mid-path so the defaults fallback below
+  // can still be attempted.
+  const resolvePath = (obj, dotPath) => {
+    const keys = dotPath.split('.');
+    let cur = obj;
+    for (const key of keys) {
+      if (cur === undefined || cur === null || typeof cur !== 'object') return undefined;
+      cur = cur[key];
     }
-    current = current[key];
+    return cur;
+  };
+
+  let current = resolvePath(config, keyPath);
+
+  if (current === undefined) {
+    // Key absent from the on-disk config.json — fall back to loadConfig's
+    // defaults-merged view (e.g. `parallelization`, `max_parallel_phases` read
+    // cleanly even on a config.json that omits them). On-disk values above
+    // always win; this only fires when the on-disk traversal found nothing.
+    current = resolvePath(loadConfig(cwd), keyPath);
   }
 
   if (current === undefined) {

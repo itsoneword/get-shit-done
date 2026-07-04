@@ -273,4 +273,4 @@ function cmdParallelSafe(cwd, unitA, unitB, raw) {
   }, raw);
 }
 
-module.exports = { cmdParallelSafe };
+module.exports = { cmdParallelSafe, getPhaseFiles };

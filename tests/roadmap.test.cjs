@@ -1005,3 +1005,156 @@ describe('roadmap phase-space separation', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// roadmap frontier: scheduling brain (hard-dep frontier + axis-A co-schedule split)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('roadmap frontier', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  /**
+   * Write a ROADMAP.md with the given phases.
+   * phases: [{ number, name, dependsOn, sequenceAfter }]
+   */
+  function writeFrontierRoadmap(phases) {
+    const lines = ['# Roadmap v1.0\n\n## Phases\n'];
+    for (const p of phases) {
+      lines.push(`### Phase ${p.number}: ${p.name || 'Phase ' + p.number}`);
+      if (p.dependsOn) lines.push(`**Depends on**: ${p.dependsOn}`);
+      if (p.sequenceAfter) lines.push(`**Sequence after**: ${p.sequenceAfter}`);
+      lines.push(`**Goal**: Test phase ${p.number}\n`);
+    }
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), lines.join('\n'));
+  }
+
+  /** Write a minimal PLAN.md for a phase, with given files_modified. */
+  function writeFrontierPlan(phaseNum, planNum, filesModified) {
+    const padded = String(phaseNum).padStart(2, '0');
+    const paddedPlan = String(planNum).padStart(2, '0');
+    const phaseDir = path.join(tmpDir, '.planning', 'phases', `${padded}-test-phase-${phaseNum}`);
+    fs.mkdirSync(phaseDir, { recursive: true });
+
+    const files = Array.isArray(filesModified) ? filesModified : [];
+    const filesYaml = files.length > 0
+      ? 'files_modified:\n' + files.map(f => `  - ${f}`).join('\n')
+      : 'files_modified: []';
+
+    const content = `---
+phase: ${padded}
+plan: ${paddedPlan}
+type: execute
+wave: 1
+autonomous: true
+depends_on: []
+${filesYaml}
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`;
+    fs.writeFileSync(path.join(phaseDir, `${padded}-${paddedPlan}-PLAN.md`), content);
+    return phaseDir;
+  }
+
+  /** Mark a phase complete: PLAN + matching SUMMARY. */
+  function markPhaseComplete(phaseNum, filesModified) {
+    const phaseDir = writeFrontierPlan(phaseNum, 1, filesModified);
+    const padded = String(phaseNum).padStart(2, '0');
+    fs.writeFileSync(path.join(phaseDir, `${padded}-01-SUMMARY.md`), '# Summary');
+  }
+
+  test('two incomplete phases with no deps -> both frontier and coschedulable', () => {
+    writeFrontierRoadmap([
+      { number: '1', dependsOn: null },
+      { number: '2', dependsOn: null },
+    ]);
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.deepStrictEqual(output.frontier.sort(), ['1', '2']);
+    assert.deepStrictEqual(output.coschedulable.sort(), ['1', '2']);
+    assert.deepStrictEqual(output.serialized, []);
+  });
+
+  test('phase depends on an incomplete phase -> excluded from frontier', () => {
+    writeFrontierRoadmap([
+      { number: '3', dependsOn: 'Phase 4' },
+      { number: '4', dependsOn: null },
+    ]);
+    // Phase 4 left incomplete (no plan/summary on disk).
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(!output.frontier.includes('3'), 'Phase 3 should be excluded (hard dep unsatisfied)');
+    assert.ok(output.frontier.includes('4'), 'Phase 4 should be in frontier (no deps)');
+  });
+
+  test('phase depends on a complete phase -> included in frontier', () => {
+    writeFrontierRoadmap([
+      { number: '3', dependsOn: 'Phase 4' },
+      { number: '4', dependsOn: null },
+    ]);
+    markPhaseComplete(4, ['src/four.js']);
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.frontier.includes('3'), 'Phase 3 should be in frontier (hard dep satisfied)');
+    assert.ok(!output.frontier.includes('4'), 'Phase 4 is complete, should not be in frontier');
+  });
+
+  test('sequence_after (soft) on an incomplete phase does NOT gate the frontier', () => {
+    writeFrontierRoadmap([
+      { number: '5', dependsOn: null, sequenceAfter: 'Phase 6' },
+      { number: '6', dependsOn: null },
+    ]);
+    // Phase 6 left incomplete on disk -- sequence_after must be ignored entirely.
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.frontier.includes('5'), 'Phase 5 should be in frontier -- sequence_after is soft, never gates');
+    assert.ok(output.frontier.includes('6'), 'Phase 6 should be in frontier (no hard deps)');
+  });
+
+  test('two frontier phases sharing files_modified -> one coschedulable, one serialized', () => {
+    writeFrontierRoadmap([
+      { number: '7', dependsOn: null },
+      { number: '8', dependsOn: null },
+    ]);
+    writeFrontierPlan(7, 1, ['src/shared.js', 'src/alpha.js']);
+    writeFrontierPlan(8, 1, ['src/shared.js', 'src/beta.js']);
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.deepStrictEqual(output.frontier.sort(), ['7', '8']);
+    assert.deepStrictEqual(output.coschedulable, ['7']);
+    assert.strictEqual(output.serialized.length, 1);
+    assert.strictEqual(output.serialized[0].phase, '8');
+    assert.strictEqual(output.serialized[0].conflicts_with, '7');
+    assert.ok(output.serialized[0].overlap_files.includes('src/shared.js'));
+  });
+});
+

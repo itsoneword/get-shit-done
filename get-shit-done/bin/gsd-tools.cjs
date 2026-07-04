@@ -44,6 +44,7 @@
  *   roadmap get-phase <phase>          Extract phase section from ROADMAP.md
  *   roadmap analyze                    Full roadmap parse with disk status
  *   roadmap update-plan-progress <N>   Update progress table row from disk (PLAN vs SUMMARY counts)
+ *   roadmap frontier                   Runnable frontier (hard-deps satisfied) + axis-A co-schedule split
  *
  * Requirements Operations:
  *   requirements mark-complete <ids>   Mark requirement IDs as complete in REQUIREMENTS.md
@@ -460,8 +461,10 @@ async function main() {
         roadmap.cmdRoadmapAnalyze(cwd, raw, { scoped });
       } else if (subcommand === 'update-plan-progress') {
         roadmap.cmdRoadmapUpdatePlanProgress(cwd, args[2], raw);
+      } else if (subcommand === 'frontier') {
+        roadmap.cmdRoadmapFrontier(cwd, raw);
       } else {
-        error('Unknown roadmap subcommand. Available: get-phase, analyze, update-plan-progress');
+        error('Unknown roadmap subcommand. Available: get-phase, analyze, update-plan-progress, frontier');
       }
       break;
     }

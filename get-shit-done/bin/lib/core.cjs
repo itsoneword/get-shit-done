@@ -64,6 +64,7 @@ function loadConfig(cwd) {
     verifier: true,
     nyquist_validation: true,
     parallelization: true,
+    max_parallel_phases: 4,
     brave_search: false,
     text_mode: false, // when true, use plain-text numbered lists instead of AskUserQuestion menus
     resolve_model_ids: false, // when true, resolve aliases (opus/sonnet/haiku) to full model IDs
@@ -111,6 +112,7 @@ function loadConfig(cwd) {
       verifier: get('verifier', { section: 'workflow', field: 'verifier' }) ?? defaults.verifier,
       nyquist_validation: get('nyquist_validation', { section: 'workflow', field: 'nyquist_validation' }) ?? defaults.nyquist_validation,
       parallelization,
+      max_parallel_phases: get('max_parallel_phases') ?? defaults.max_parallel_phases,
       brave_search: get('brave_search') ?? defaults.brave_search,
       text_mode: get('text_mode', { section: 'workflow', field: 'text_mode' }) ?? defaults.text_mode,
       resolve_model_ids: get('resolve_model_ids') ?? defaults.resolve_model_ids,
