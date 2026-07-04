@@ -4,7 +4,7 @@ milestone: v1.7
 milestone_name: Planning-Graph Layer
 status: unknown
 stopped_at: Completed 16-03-PLAN.md (gap closure)
-last_updated: "2026-07-04T17:40:15.039Z"
+last_updated: "2026-07-04T18:27:35.253Z"
 progress:
   total_phases: 22
   completed_phases: 1
