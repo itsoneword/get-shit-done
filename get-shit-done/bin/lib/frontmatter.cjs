@@ -10,11 +10,24 @@ const { safeReadFile, normalizeMd, output, error } = require('./core.cjs');
 
 function extractFrontmatter(content) {
   const frontmatter = {};
-  // Find ALL frontmatter blocks at the start of the file.
-  // If multiple blocks exist (corruption from CRLF mismatch), use the LAST one
-  // since it represents the most recent state sync.
-  const allBlocks = [...content.matchAll(/(?:^|\n)\s*---\r?\n([\s\S]+?)\r?\n---/g)];
-  const match = allBlocks.length > 0 ? allBlocks[allBlocks.length - 1] : null;
+  // Frontmatter block(s) must be anchored at the START of the file (a real
+  // YAML frontmatter block is always first). If multiple blocks are stacked
+  // back-to-back at the very start (corruption from a CRLF-related double
+  // write producing "---\nold\n---\n---\nnew\n---"), keep unwrapping and
+  // use the LAST stacked block, since it represents the most recent state
+  // sync. A '---' divider appearing later in the document BODY (e.g. a
+  // SUMMARY.md "Deviations" section divider or a footer line) is never part
+  // of this stacking and must never be mistaken for a frontmatter block —
+  // this anchoring is the Phase 16 gap-closure fix (16-VERIFICATION.md).
+  let rest = content;
+  let match = null;
+  for (;;) {
+    const m = rest.match(/^\s*---\r?\n([\s\S]*?)\r?\n---/);
+    if (!m) break;
+    match = m;
+    rest = rest.slice(m.index + m[0].length);
+    if (!/^\s*---\r?\n/.test(rest)) break;
+  }
   if (!match) return frontmatter;
 
   const yaml = match[1];

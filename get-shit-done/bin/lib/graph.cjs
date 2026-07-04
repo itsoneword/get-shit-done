@@ -220,6 +220,9 @@ function buildGraph(cwd) {
         // `provides:` continuation line) into a bare "phase: X" string
         // rather than a real {phase, provides} object — normalize that
         // shape here rather than special-casing it at every call site.
+        // NOTE: unrelated to the block-selection bug fixed in
+        // frontmatter.cjs by the 16-03 gap-closure plan — this is a
+        // separate, still-present per-item YAML-parsing limitation.
         if (typeof ref === 'string') {
           const m = ref.match(/^phase:\s*(.+)$/i);
           if (m) ref = m[1];
