@@ -100,6 +100,57 @@ function cmdRoadmapGetPhase(cwd, phaseNum, raw) {
 }
 
 /**
+ * Extract phase headings and their sections from ROADMAP.md content.
+ *
+ * Pure refactor of the phase-heading/section-slice/depends_on-prose scan that
+ * used to live inline in `analyzeRoadmapData`. Both `analyzeRoadmapData` and
+ * `graph.cjs` call this so there is exactly one copy of the phase-heading
+ * regex and the `**Depends on**:` regex (LOCKED reuse rule — see
+ * `16-CONTEXT.md`).
+ *
+ * @param {string} content - ROADMAP.md content (already milestone-scoped by the caller)
+ * @returns {Array<{number: string, name: string, section: string, depends_on: string|null}>}
+ */
+function parsePhaseSections(content) {
+  const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:\s*([^\n]+)/gi;
+  const sections = [];
+  let match;
+  while ((match = phasePattern.exec(content)) !== null) {
+    const phaseNum = match[1];
+    const phaseName = match[2].replace(/\(INSERTED\)/i, '').trim();
+    const sectionStart = match.index;
+    const restOfContent = content.slice(sectionStart);
+    const nextHeader = restOfContent.match(/\n#{2,4}\s+Phase\s+\d/i);
+    const sectionEnd = nextHeader ? sectionStart + nextHeader.index : content.length;
+    const section = content.slice(sectionStart, sectionEnd);
+    const dependsMatch = section.match(/\*\*Depends on(?::\*\*|\*\*:)\s*([^\n]+)/i);
+    const depends_on = dependsMatch ? dependsMatch[1].trim() : null;
+    sections.push({ number: phaseNum, name: phaseName, section, depends_on });
+  }
+  return sections;
+}
+
+/**
+ * Parse a phase's raw `**Depends on**:` prose string into a normalized array
+ * of node-id-form phase references (e.g. `["phase:11", "phase:12"]`).
+ *
+ * Reuses the exact `/Phase\s+(\d+(\.\d+)?)/g` extraction already used by
+ * `overnight.md` (workflows/overnight.md:143) — GRAPH-01 (additive; the raw
+ * `depends_on` string field is unchanged for every existing caller).
+ *
+ * "Nothing (first phase)", null, or any string with zero "Phase N" matches
+ * -> `[]`.
+ *
+ * @param {string|null} rawDependsOn
+ * @returns {string[]}
+ */
+function parseDependsOnPhaseRefs(rawDependsOn) {
+  if (!rawDependsOn) return [];
+  const matches = [...rawDependsOn.matchAll(/Phase\s+(\d+(\.\d+)?)/g)];
+  return matches.map(m => `phase:${m[1]}`);
+}
+
+/**
  * Non-exiting analyzer — builds the same result object as `cmdRoadmapAnalyze`
  * without calling `output()` (which exits the process). Callers that need to
  * consume `phases[]` in-process (e.g. `cmdRoadmapFrontier`) should use this.
@@ -121,26 +172,18 @@ function analyzeRoadmapData(cwd, opts = {}) {
   const phasesDir = planningPaths(cwd).phases;
 
   // Extract all phase headings: ## Phase N: Name or ### Phase N: Name
-  const phasePattern = /#{2,4}\s*Phase\s+(\d+[A-Z]?(?:\.\d+)*)\s*:\s*([^\n]+)/gi;
+  const phaseSections = parsePhaseSections(content);
   const phases = [];
-  let match;
 
-  while ((match = phasePattern.exec(content)) !== null) {
-    const phaseNum = match[1];
-    const phaseName = match[2].replace(/\(INSERTED\)/i, '').trim();
-
-    // Extract goal from the section
-    const sectionStart = match.index;
-    const restOfContent = content.slice(sectionStart);
-    const nextHeader = restOfContent.match(/\n#{2,4}\s+Phase\s+\d/i);
-    const sectionEnd = nextHeader ? sectionStart + nextHeader.index : content.length;
-    const section = content.slice(sectionStart, sectionEnd);
+  for (const sec of phaseSections) {
+    const phaseNum = sec.number;
+    const phaseName = sec.name;
+    const section = sec.section;
+    const depends_on = sec.depends_on;
+    const depends_on_parsed = parseDependsOnPhaseRefs(depends_on);
 
     const goalMatch = section.match(/\*\*Goal(?::\*\*|\*\*:)\s*([^\n]+)/i);
     const goal = goalMatch ? goalMatch[1].trim() : null;
-
-    const dependsMatch = section.match(/\*\*Depends on(?::\*\*|\*\*:)\s*([^\n]+)/i);
-    const depends_on = dependsMatch ? dependsMatch[1].trim() : null;
 
     const sequenceMatch = section.match(/\*\*Sequence after(?::\*\*|\*\*:)\s*([^\n]+)/i);
     const sequence_after = sequenceMatch ? sequenceMatch[1].trim() : null;
@@ -191,6 +234,7 @@ function analyzeRoadmapData(cwd, opts = {}) {
       name: phaseName,
       goal,
       depends_on,
+      depends_on_parsed,
       sequence_after,
       plan_count: planCount,
       summary_count: summaryCount,
@@ -442,4 +486,6 @@ module.exports = {
   cmdRoadmapUpdatePlanProgress,
   cmdRoadmapFrontier,
   analyzeRoadmapData,
+  parsePhaseSections,
+  parseDependsOnPhaseRefs,
 };
