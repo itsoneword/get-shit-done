@@ -454,6 +454,129 @@ describe('roadmap analyze command', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// roadmap analyze depends_on_parsed (GRAPH-01)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('roadmap analyze depends_on_parsed (GRAPH-01)', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  test('multi-phase prose depends_on yields both raw string and parsed node-id array', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 20: Evaluator
+**Goal:** Evaluate verdicts
+**Depends on:** Phase 11 (ledger.cjs and mailbox.cjs must exist before the evaluator can write verdicts); Phase 12 (mailbox must exist to receive unresolved positions)
+`
+    );
+
+    const result = runGsdTools('roadmap analyze --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    const phase = output.phases.find(p => p.number === '20');
+    assert.ok(phase, 'phase 20 should be present');
+    assert.strictEqual(
+      phase.depends_on,
+      'Phase 11 (ledger.cjs and mailbox.cjs must exist before the evaluator can write verdicts); Phase 12 (mailbox must exist to receive unresolved positions)',
+      'raw depends_on string unchanged'
+    );
+    assert.deepStrictEqual(phase.depends_on_parsed, ['phase:11', 'phase:12'], 'depends_on_parsed node-id array');
+  });
+
+  test('"Nothing (first phase)" depends_on yields empty depends_on_parsed', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Foundation
+**Goal:** Set up
+**Depends on:** Nothing (first phase)
+`
+    );
+
+    const result = runGsdTools('roadmap analyze --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.deepStrictEqual(output.phases[0].depends_on_parsed, [], 'depends_on_parsed empty for Nothing (first phase)');
+  });
+
+  test('no Depends on line at all -> depends_on null AND depends_on_parsed empty array', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Foundation
+**Goal:** Set up
+`
+    );
+
+    const result = runGsdTools('roadmap analyze --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.phases[0].depends_on, null, 'depends_on null when absent');
+    assert.deepStrictEqual(output.phases[0].depends_on_parsed, [], 'depends_on_parsed is [] not undefined/missing');
+  });
+
+  test('decimal phase reference in depends_on prose is included in depends_on_parsed', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 73: Followup
+**Goal:** Followup work
+**Depends on:** Phase 72.1
+`
+    );
+
+    const result = runGsdTools('roadmap analyze --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.phases[0].depends_on_parsed.includes('phase:72.1'), 'decimal phase ref parsed');
+  });
+
+  test('roadmap.cjs exports parsePhaseSections and parseDependsOnPhaseRefs as functions', () => {
+    const roadmapLib = require('../get-shit-done/bin/lib/roadmap.cjs');
+    assert.strictEqual(typeof roadmapLib.parsePhaseSections, 'function', 'parsePhaseSections exported as a function');
+    assert.strictEqual(typeof roadmapLib.parseDependsOnPhaseRefs, 'function', 'parseDependsOnPhaseRefs exported as a function');
+  });
+
+  test('parsePhaseSections returns one entry per phase heading with depends_on only where present', () => {
+    const { parsePhaseSections } = require('../get-shit-done/bin/lib/roadmap.cjs');
+    const content = `# Roadmap
+
+### Phase 1: Foo
+**Goal:** Foo goal
+
+### Phase 2: Bar
+**Goal:** Bar goal
+**Depends on:** Phase 1
+`;
+    const sections = parsePhaseSections(content);
+    assert.strictEqual(sections.length, 2, 'two phase sections');
+    assert.strictEqual(sections[0].number, '1');
+    assert.strictEqual(sections[0].name, 'Foo');
+    assert.strictEqual(sections[0].depends_on, null, 'phase 1 has no Depends on line');
+    assert.strictEqual(sections[1].number, '2');
+    assert.strictEqual(sections[1].name, 'Bar');
+    assert.strictEqual(sections[1].depends_on, 'Phase 1', 'phase 2 depends_on extracted');
+    assert.ok(sections[1].section.includes('Bar goal'), 'section field includes section content');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // roadmap analyze disk status variants
 // ─────────────────────────────────────────────────────────────────────────────
 
