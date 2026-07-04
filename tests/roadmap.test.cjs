@@ -210,6 +210,30 @@ This phase covers:
     assert.strictEqual(output.error, 'malformed_roadmap', 'should identify malformed roadmap');
     assert.ok(output.message.includes('missing'), 'should explain the issue');
   });
+
+  test('emits both depends_on and sequence_after fields', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Foundation
+**Goal:** Set up project infrastructure
+**Depends on:** Phase 0
+**Sequence after:** Phase 2
+
+### Phase 2: API
+**Goal:** Build REST API
+`
+    );
+
+    const result = runGsdTools('roadmap get-phase 1', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.found, true, 'phase should be found');
+    assert.strictEqual(output.depends_on, 'Phase 0', 'depends_on extracted');
+    assert.strictEqual(output.sequence_after, 'Phase 2', 'sequence_after extracted');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -350,6 +374,82 @@ describe('roadmap analyze command', () => {
     assert.strictEqual(output.phases[0].depends_on, 'Nothing', 'colon-inside depends_on works');
     assert.strictEqual(output.phases[1].goal, 'Colon outside bold', 'colon-outside goal works');
     assert.strictEqual(output.phases[1].depends_on, 'Phase 1', 'colon-outside depends_on works');
+  });
+
+  test('extracts sequence_after as a separate field from depends_on', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Alpha
+**Goal:** Alpha goal
+**Depends on:** Phase 1
+**Sequence after:** Phase 2
+`
+    );
+
+    const result = runGsdTools('roadmap analyze', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.phases[0].depends_on, 'Phase 1', 'depends_on unaffected by sequence_after presence');
+    assert.strictEqual(output.phases[0].sequence_after, 'Phase 2', 'sequence_after extracted separately');
+  });
+
+  test('depends_on-only roadmap yields sequence_after null (regression)', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Alpha
+**Goal:** Alpha goal
+**Depends on:** Phase 1
+`
+    );
+
+    const result = runGsdTools('roadmap analyze', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.phases[0].depends_on, 'Phase 1', 'depends_on unchanged from prior behavior');
+    assert.strictEqual(output.phases[0].sequence_after, null, 'sequence_after null when no Sequence after line present');
+  });
+
+  test('sequence_after-only phase (no Depends on) extracts sequence_after with depends_on null', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Alpha
+**Goal:** Alpha goal
+**Sequence after:** Phase 1
+`
+    );
+
+    const result = runGsdTools('roadmap analyze', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.phases[0].depends_on, null, 'depends_on null when no Depends on line present');
+    assert.strictEqual(output.phases[0].sequence_after, 'Phase 1', 'sequence_after extracted when only soft line present');
+  });
+
+  test('handles colon-outside-bold Sequence after format (**Sequence after**:)', () => {
+    fs.writeFileSync(
+      path.join(tmpDir, '.planning', 'ROADMAP.md'),
+      `# Roadmap
+
+### Phase 1: Alpha
+**Goal**: Alpha goal
+**Sequence after**: Phase 3
+`
+    );
+
+    const result = runGsdTools('roadmap analyze', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.phases[0].sequence_after, 'Phase 3', 'sequence_after extracted with colon outside bold');
   });
 });
 

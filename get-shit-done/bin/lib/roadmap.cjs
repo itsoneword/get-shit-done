@@ -73,12 +73,20 @@ function cmdRoadmapGetPhase(cwd, phaseNum, raw) {
       ? criteriaMatch[1].trim().split('\n').map(line => line.replace(/^\s*\d+\.\s*/, '').trim()).filter(Boolean)
       : [];
 
+    // Extract hard/soft dependency fields (additive, backward compatible)
+    const dependsMatch = section.match(/\*\*Depends on(?::\*\*|\*\*:)\s*([^\n]+)/i);
+    const depends_on = dependsMatch ? dependsMatch[1].trim() : null;
+    const sequenceMatch = section.match(/\*\*Sequence after(?::\*\*|\*\*:)\s*([^\n]+)/i);
+    const sequence_after = sequenceMatch ? sequenceMatch[1].trim() : null;
+
     output(
       {
         found: true,
         phase_number: phaseNum,
         phase_name: phaseName,
         goal,
+        depends_on,
+        sequence_after,
         success_criteria,
         section,
       },
@@ -124,6 +132,9 @@ function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
 
     const dependsMatch = section.match(/\*\*Depends on(?::\*\*|\*\*:)\s*([^\n]+)/i);
     const depends_on = dependsMatch ? dependsMatch[1].trim() : null;
+
+    const sequenceMatch = section.match(/\*\*Sequence after(?::\*\*|\*\*:)\s*([^\n]+)/i);
+    const sequence_after = sequenceMatch ? sequenceMatch[1].trim() : null;
 
     // Check completion on disk
     const normalized = normalizePhaseName(phaseNum);
@@ -171,6 +182,7 @@ function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
       name: phaseName,
       goal,
       depends_on,
+      sequence_after,
       plan_count: planCount,
       summary_count: summaryCount,
       has_context: hasContext,
