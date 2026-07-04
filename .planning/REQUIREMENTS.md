@@ -13,7 +13,7 @@ Requirements for the v1.7 milestone. Each maps to a roadmap phase.
 
 Advisory foundation (read-only, zero behavior change):
 
-- [ ] **GRAPH-01**: Phase `depends_on` is parsed from ROADMAP prose into a structured list (array of phase refs) exposed by the roadmap parser — consumers stop re-parsing the raw string
+- [x] **GRAPH-01**: Phase `depends_on` is parsed from ROADMAP prose into a structured list (array of phase refs) exposed by the roadmap parser — consumers stop re-parsing the raw string
 - [ ] **GRAPH-02**: A single `graph.cjs` module builds one normalized `{nodes, edges}` model from all existing edge sources (phase `depends_on`, plan `depends_on`/`wave`, `files_modified` overlap, SUMMARY `requires`/`provides`/`affects`, PLAN `key_links`, requirement→phase traceability, todo `depends_on`/`related_to`)
 - [ ] **GRAPH-03**: `gsd-tools graph analyze` prints the normalized node/edge model and `gsd-tools graph export` emits it as machine-readable JSON
 - [ ] **GRAPH-04**: `graph.cjs` computes a topological order and detects cycles in code; `gsd-tools graph validate` reports cycles, dangling edge references, and wave/dependency contradictions, exiting non-zero on failure
@@ -51,7 +51,7 @@ Deferred beyond this milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRAPH-01 | Phase 16 | Pending |
+| GRAPH-01 | Phase 16 | Complete |
 | GRAPH-02 | Phase 16 | Pending |
 | GRAPH-03 | Phase 16 | Pending |
 | GRAPH-04 | Phase 17 | Pending |

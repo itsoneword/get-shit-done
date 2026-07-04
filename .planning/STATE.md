@@ -2,29 +2,27 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Planning-Graph Layer
-status: planning
-stopped_at: "Roadmap created — 4 phases (16-19), 10/10 GRAPH requirements mapped. Next: /gsd2:plan-phase 16"
-last_updated: "2026-07-04T15:00:00.000Z"
+status: unknown
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-07-04T16:37:54.136Z"
 progress:
-  total_phases: 7
+  total_phases: 22
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 ## Current Position
 
-Phase: 16 - Planning Graph Model + CLI (planned, ready to execute)
-Plan: 2 plans in 2 waves (16-01, 16-02) — checker VERIFICATION PASSED (0 issues)
-Status: Ready for execution — /gsd2:execute-phase 16
-Last activity: 2026-07-04 — Phase 16 planned & verified (GRAPH-01/02/03); research skipped, context authored from approved design
+Phase: 16 (planning-graph-model-cli) — EXECUTING
+Plan: 2 of 2
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** v1.7 Planning-Graph Layer — Phase 16 (Planning Graph Model + CLI) is next
+**Current focus:** Phase 16 — planning-graph-model-cli
 
 ## Performance Metrics
 
@@ -89,6 +87,7 @@ Recent decisions affecting current work:
 - [Phase 15-03]: propose-never-dispose: inbox accept path calls mailbox answer then prints routing command verbatim; never executes it — human runs routing command as separate explicit step
 - [Phase 15-03]: unknown verdict tokens degrade to needs-input with warning; corrupt triage entry must not block inbox session
 - [Phase 15-03]: step 6.5 positioned after RUN_COMPLETE/RUN_STOP determination and before run report; triage failure logs PHASE_FAILURE phase=triage but does not abort morning report
+- [Phase 16-01-planning-graph-model-cli]: wave frontmatter stays descriptive-only in Phase 16 — no wave-derived graph edge or node property
 
 ### Pending Todos
 
@@ -116,9 +115,10 @@ Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check 
 | 260702-kl9 | Token-cut cleanup batch from 2026-07-01 self-audit | 2026-07-03 | 3aef10f | [260702-kl9-token-cut-cleanup-batch-from-2026-07-01-](./quick/260702-kl9-token-cut-cleanup-batch-from-2026-07-01-/) |
 | 260704-lbp | Hard/soft dependency distinction in roadmap (`sequence_after` field, parallel-gate proof, roadmapper guidance) | 2026-07-04 | ac7b20e | [260704-lbp-hard-soft-dependency-distinction-in-road](./quick/260704-lbp-hard-soft-dependency-distinction-in-road/) |
 | 260704-m9p | Parallel-phase frontier scheduler: `roadmap frontier` command, `max_parallel_phases` config + `config-get` defaults fallback, autonomous.md per-worktree headless runner | 2026-07-04 | ecb7afb | [260704-m9p-parallel-phase-frontier-scheduler-per-wo](./quick/260704-m9p-parallel-phase-frontier-scheduler-per-wo/) |
+| Phase 16 P01 | 15 | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-04
-Stopped at: Created ROADMAP.md for v1.7 Planning-Graph Layer — 4 phases (16-19), 10/10 GRAPH requirements mapped, REQUIREMENTS.md traceability filled. Next: `/gsd2:plan-phase 16`
+Last session: 2026-07-04T16:37:54.130Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None
