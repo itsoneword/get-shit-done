@@ -273,7 +273,7 @@
   4. Running `gsd-tools graph export` emits the identical model as machine-readable JSON
   5. No existing consumer (`roadmap.cjs` callers, `parallel-gate.cjs`, `phase.cjs`, `overnight.md`, `gsd-plan-checker.md`) changes behavior — this phase only adds a reader
 
-**Plans**: TBD
+**Plans**: 2 plans — 16-01 (roadmap.cjs depends_on_parsed + graph.cjs buildGraph Part A: phase/plan nodes, depends_on edges from roadmap/plan-frontmatter/files_modified, wave 1); 16-02 (buildGraph Part B: SUMMARY requires/affects, PLAN key_links, requirement traceability, todo edges + gsd-tools graph analyze/export CLI, wave 2)
 
 ### Phase 17: Graph Algorithms + Integrity Check
 
@@ -356,7 +356,7 @@
 | 13. Overnight Runner | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 3/3 | Complete    | 2026-06-18 |
-| 16. Planning Graph Model + CLI | v1.7 | 0/? | Not started | - |
+| 16. Planning Graph Model + CLI | v1.7 | 0/2 | Not started | - |
 | 17. Graph Algorithms + Integrity Check | v1.7 | 0/? | Not started | - |
 | 18. Consumer Repoint | v1.7 | 0/? | Not started | - |
 | 19. Authoritative Promotion | v1.7 | 0/? | Not started | - |
