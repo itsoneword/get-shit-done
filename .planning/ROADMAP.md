@@ -357,7 +357,7 @@ v1.7 verification loop: Phases 20 and 21 are independent of the graph chain and 
 | 13. Overnight Runner | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 3/3 | Complete    | 2026-06-18 |
-| 16. Planning Graph Model + CLI | v1.7 | 2/2 | Complete   | 2026-07-04 |
+| 16. Planning Graph Model + CLI | v1.7 | 3/3 | Complete   | 2026-07-04 |
 | 17. Graph Algorithms + Integrity Check | v1.7 | 0/? | Not started | - |
 | 18. Consumer Repoint | v1.7 | 0/? | Not started | - |
 | 19. Authoritative Promotion | v1.7 | 0/? | Not started | - |
@@ -371,7 +371,7 @@ v1.7 verification loop: Phases 20 and 21 are independent of the graph chain and 
 
 **Goal:** GSD command/agent output defaults to a minimal terse form (smallest possible sentence, no filler) with an opt-in detailed mode for the current verbose prose. Applies to workflow reports and agent-facing summaries. Surfaced 2026-06-05 — detailed output is valued but overwhelming as the default.
 **Requirements:** TBD
-**Plans:** 2/2 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)

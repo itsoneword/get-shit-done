@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Planning-Graph Layer
 status: unknown
-stopped_at: Completed 16-02-PLAN.md
-last_updated: "2026-07-04T16:49:42.682Z"
+stopped_at: Completed 16-03-PLAN.md (gap closure)
+last_updated: "2026-07-04T17:40:15.039Z"
 progress:
   total_phases: 22
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 3
+  completed_plans: 3
 ---
 
 ## Current Position
@@ -90,6 +90,7 @@ Recent decisions affecting current work:
 - [Phase 16-01-planning-graph-model-cli]: wave frontmatter stays descriptive-only in Phase 16 — no wave-derived graph edge or node property
 - [Phase 16]: [16-02] Normalized extractFrontmatter's dash-list continuation-line flattening for SUMMARY requires items inline in graph.cjs rather than patching the shared YAML parser
 - [Phase 16]: [16-02] Todo depends_on/related_to resolved directly ('todo:' + item), never via refToNodeId, to avoid misparsing date-prefixed todo slugs into fabricated plan: nodes
+- [Phase 16-03-gap-closure]: Fixed extractFrontmatter's shared block-selection bug at the root (not a graph.cjs workaround) — anchors to file-start, preserves CRLF-stacking recovery intent
 
 ### Pending Todos
 
@@ -119,9 +120,10 @@ Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check 
 | 260704-m9p | Parallel-phase frontier scheduler: `roadmap frontier` command, `max_parallel_phases` config + `config-get` defaults fallback, autonomous.md per-worktree headless runner | 2026-07-04 | ecb7afb | [260704-m9p-parallel-phase-frontier-scheduler-per-wo](./quick/260704-m9p-parallel-phase-frontier-scheduler-per-wo/) |
 | Phase 16 P01 | 15 | 2 tasks | 4 files |
 | Phase 16 P02 | 12min | 2 tasks | 3 files |
+| Phase 16 P03 | 15min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-04T16:49:42.674Z
-Stopped at: Completed 16-02-PLAN.md
+Last session: 2026-07-04T17:40:15.034Z
+Stopped at: Completed 16-03-PLAN.md (gap closure)
 Resume file: None
