@@ -112,6 +112,60 @@ describe('extractFrontmatter', () => {
     assert.strictEqual(result.second, 'two');
     assert.strictEqual(result.third, 'three');
   });
+
+  test('regression: real SUMMARY.md shape (body Deviations divider + closing footer divider) parses frontmatter correctly', () => {
+    // Mirrors this repo's real SUMMARY.md template: opening frontmatter, a
+    // Deviations section using a '---' divider, and a closing '---' footer
+    // before the trailing "*Phase: ...*" line. Regression for the Phase 16
+    // gap (16-VERIFICATION.md): extractFrontmatter used to select the LAST
+    // '---...---' pair in the WHOLE document (this footer pair), returning
+    // {} and losing 100% of the frontmatter fields — not just requires/affects.
+    const content = `---
+phase: 16-planning-graph-model-cli
+plan: 02
+duration: 12min
+---
+
+# Phase 16 Plan 02 Summary
+
+## Deviations from Plan
+
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Some fix**
+- Found during: Task 2
+- Issue: something
+
+---
+
+**Total deviations:** 1
+
+## Issues Encountered
+None.
+
+---
+*Phase: 16-planning-graph-model-cli*
+*Completed: 2026-07-04*
+`;
+    const result = extractFrontmatter(content);
+    assert.strictEqual(result.phase, '16-planning-graph-model-cli', 'must not return {} due to body dividers');
+    assert.strictEqual(result.plan, '02');
+    assert.strictEqual(result.duration, '12min');
+  });
+
+  test('preserves CRLF-corruption recovery: stacked frontmatter blocks at file start use the LAST block (LF)', () => {
+    const content = '---\nold: 1\n---\n---\nnew: 2\n---\nBody.';
+    const result = extractFrontmatter(content);
+    assert.strictEqual(result.new, '2');
+    assert.strictEqual(result.old, undefined);
+  });
+
+  test('preserves CRLF-corruption recovery: stacked frontmatter blocks at file start use the LAST block (CRLF)', () => {
+    const content = '---\r\nold: 1\r\n---\r\n---\r\nnew: 2\r\n---\r\nBody.';
+    const result = extractFrontmatter(content);
+    assert.strictEqual(result.new, '2');
+    assert.strictEqual(result.old, undefined);
+  });
 });
 
 // ─── reconstructFrontmatter ─────────────────────────────────────────────────
