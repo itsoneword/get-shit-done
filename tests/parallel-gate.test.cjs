@@ -16,8 +16,9 @@ const { runGsdTools, createTempProject, cleanup, withStateMilestone } = require(
 
 /**
  * Write a minimal ROADMAP.md with the given phases into a temp project.
- * phases: [{ number, name, dependsOn }]
+ * phases: [{ number, name, dependsOn, sequenceAfter }]
  *   dependsOn: string like "Phase 6" or null
+ *   sequenceAfter: string like "Phase 3" or null (soft ordering line, optional)
  */
 function writeRoadmap(tmpDir, phases) {
   const lines = ['# Roadmap v1.5\n\n## Phases\n'];
@@ -27,6 +28,9 @@ function writeRoadmap(tmpDir, phases) {
       lines.push(`**Depends on**: ${p.dependsOn}`);
     } else {
       lines.push(`**Depends on**: Nothing`);
+    }
+    if (p.sequenceAfter) {
+      lines.push(`**Sequence after**: ${p.sequenceAfter}`);
     }
     lines.push(`**Goal**: Test phase ${p.number}\n`);
   }
@@ -215,6 +219,43 @@ describe('parallel-safe gate', () => {
     const output = JSON.parse(result.output);
     assert.strictEqual(output.decision, 'refuse', 'todo with phase depends_on → refuse');
     assert.strictEqual(output.axis_b_coupled, true, 'should flag axis_b_coupled for todo edge');
+  });
+
+  test('greenlights phases coupled only by sequence_after (soft edge, no hard depends_on)', () => {
+    // Phase 4 sequence_after Phase 3 — soft ordering only, no depends_on edge, disjoint files
+    writeRoadmap(tmpDir, [
+      { number: '3', name: 'Foundation' },
+      { number: '4', name: 'Next', sequenceAfter: 'Phase 3' },
+    ]);
+    writePhasePlan(tmpDir, 3, 1, ['src/foo.js']);
+    writePhasePlan(tmpDir, 4, 1, ['src/bar.js']);
+
+    const result = runGsdTools(['parallel-safe', '3', '4'], tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}\nOutput: ${result.output}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.decision, 'greenlight', 'sequence_after-only coupling must not refuse');
+    assert.strictEqual(output.safe, true, 'should be safe');
+    assert.strictEqual(output.axis_b_coupled, false, 'sequence_after must not trigger axis_b_coupled');
+  });
+
+  test('refuses on hard depends_on even when an unrelated sequence_after is also present', () => {
+    // Phase 8 depends_on Phase 7 (hard) AND sequence_after Phase 9 (soft, unrelated) — hard edge must still refuse
+    writeRoadmap(tmpDir, [
+      { number: '7', name: 'Foundation' },
+      { number: '8', name: 'Next', dependsOn: 'Phase 7', sequenceAfter: 'Phase 9' },
+      { number: '9', name: 'Unrelated' },
+    ]);
+    writePhasePlan(tmpDir, 7, 1, ['src/foo.js']);
+    writePhasePlan(tmpDir, 8, 1, ['src/bar.js']);
+    writePhasePlan(tmpDir, 9, 1, ['src/baz.js']);
+
+    const result = runGsdTools(['parallel-safe', '7', '8'], tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}\nOutput: ${result.output}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.decision, 'refuse', 'hard depends_on must still refuse regardless of unrelated sequence_after');
+    assert.strictEqual(output.axis_b_coupled, true, 'hard edge should flag axis_b_coupled');
   });
 
   test('output always contains required JSON fields', () => {

@@ -128,6 +128,12 @@ function getRoadmapPhases(cwd) {
  *
  * Limitation: uses string .includes() so "Phase 1" would match "Phase 10".
  * Acceptable for current phase numbering (single/double digit); document here.
+ *
+ * Intentionally reads ONLY `depends_on` — soft `sequence_after` edges are never
+ * consulted here. Axis-B refuse is driven exclusively by hard depends_on; soft
+ * risk/preference ordering is a tiebreak signal for planning, never a scheduling
+ * gate. Reading sequence_after here would resurrect the false-serial-edge bug
+ * this field was introduced to fix.
  */
 function hasPhaseDecisionCoupling(allPhases, phaseNumA, phaseNumB) {
   const normA = String(phaseNumA);
