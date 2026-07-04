@@ -585,26 +585,92 @@ Display: `Created: {path}` and `Decisions captured: {count} across {area_count} 
 
 <step name="iterate">
 
-## 4. Iterate
+## 4. Iterate — Frontier Scheduler
 
 **Single-phase mode (`SINGLE_PHASE` set):** never enter this step. After execute_phase completes, the PHASE RESULT line has already been emitted and the response ends. Do not loop.
 
-Re-read ROADMAP.md after each phase (WHY: catches phases inserted mid-execution, e.g., decimal phases like 5.1):
+After each phase completion, compute the runnable frontier instead of picking the next roadmap-ordered phase. This step decides HOW MANY phases run next and their isolation; the per-phase lifecycle (discuss -> plan -> execute -> 3d verify/gap-closure/human_needed routing, ledger, mailbox, PHASE RESULT contract) is unchanged and is entered once per phase exactly as in `execute_phase` above -- for parallel phases it is entered inside a per-worktree headless process instead of inline.
+
+**4a. Compute frontier + read config**
 
 ```bash
-ROADMAP=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+FRONTIER=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap frontier)
+MAX_PAR=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get max_parallel_phases)
+PAR=$(node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-get parallelization)
 ```
 
-Re-filter incomplete phases using same logic as discover_phases. Read STATE.md fresh:
+`config-get` returns the loadConfig defaults (`parallelization=true`, `max_parallel_phases=4`) even when `.planning/config.json` omits the keys, so these reads never emit error strings on a default project. Parse `frontier` (all runnable phases), `coschedulable[]` (the phases to run this round, after the axis-A file-overlap split), and `serialized[]` (phases deferred to a later round because they overlap a co-scheduled one) from the `FRONTIER` JSON. Surface `serialized` phases in the round's progress output -- do not silently drop them, they run in a later round once their conflicting sibling completes.
+
+If `frontier` is empty: proceed to `lifecycle` (same as "all complete" today).
+
+**4b. Establish a run-scoped log dir (unconditional, not harness-gated)**
+
+Synthesize a run id when `$GSD_RUN_ID` is unset and always create the log dir -- this capture is NOT gated on harness mode, because the parallel path's merge decision (4d) reads these logs whether or not a human is watching:
+
+```bash
+RUN_ID="${GSD_RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
+LOG_DIR=".planning/run/$RUN_ID"
+mkdir -p "$LOG_DIR"
+```
+
+**4c. Serial fallback (default path, unchanged behavior)**
+
+If `PAR` is `false` OR `coschedulable` has 1 or fewer phases: run the single next phase via today's INLINE path -- loop back to `execute_phase` in-process, no worktree, no headless launch. This is the common case and preserves current behavior exactly. Read STATE.md fresh and check Blockers/Concerns (unchanged from before):
 
 ```bash
 cat .planning/STATE.md
 ```
 
-Check Blockers/Concerns section. If blockers found: handle_blocker.
+If blockers found: handle_blocker. Otherwise loop back to `execute_phase` for the one coschedulable phase (or the sole frontier phase). After it resolves, return to 4a.
 
-If incomplete phases remain: loop back to execute_phase.
-If all complete: proceed to lifecycle.
+**4d. Parallel path (2+ co-schedulable phases, parallelization on)**
+
+Launch up to `MAX_PAR` phases concurrently, each isolated in its own worktree. Parallel phases run headless with `--dangerously-skip-permissions` BY CONSTRUCTION (isolation via worktree, unattended autonomous run) -- this is acceptable per the P3 spike (verified: cwd=worktree keeps all writes in-worktree, merge returns clean) and every launch/merge is logged to the ledger for auditability.
+
+For each phase `N` in `coschedulable` (respecting the `MAX_PAR` cap -- launch a new one only as a slot frees up):
+
+1. **Add the worktree:**
+
+   ```bash
+   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree add .worktrees/phase-N gsd/parallel-phase-N
+   ```
+
+2. **Launch a background headless process from the orchestrator shell** (NOT a Task/Skill subagent -- per the CLAUDE.md orchestrator-level constraint, the runner must execute at orchestrator level). Set cwd to the worktree and invoke single-phase autonomous mode, which already emits the machine-greppable `PHASE RESULT:` contract line. Redirect stdout+stderr UNCONDITIONALLY to a per-phase log in the run-scoped dir -- this is the ONLY stdout source the merge decision (step 3 below) reads, so it must exist whether or not a human is watching:
+
+   ```bash
+   (cd .worktrees/phase-N && claude -p "run gsd autonomous single phase N" --dangerously-skip-permissions) > "$LOG_DIR/phase-N.log" 2>&1 &
+   ```
+
+   (The prompt tells the headless process to invoke `/gsd2:autonomous --phase N`.)
+
+3. **Ledger the launch:**
+
+   ```bash
+   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" ledger append --data '{"decision":"launched parallel phase N in worktree","evidence":"headless claude -p --dangerously-skip-permissions cwd=.worktrees/phase-N log='"$LOG_DIR"'/phase-N.log","confidence":"HIGH","phase":"N"}'
+   ```
+
+4. **On process exit:** grep `$LOG_DIR/phase-N.log` for the final `PHASE RESULT:` line to determine the outcome -- the log always exists (step 4b/4d.2 capture is unconditional), so this decision is never harness-gated.
+   - `completed` -> merge the branch:
+
+     ```bash
+     node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree merge gsd/parallel-phase-N
+     ```
+
+     Inspect `{clean}`. If `clean:true`: remove the worktree:
+
+     ```bash
+     node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree remove .worktrees/phase-N --branch gsd/parallel-phase-N
+     ```
+
+     If `clean:false`: surface the `conflict_files` (append a mailbox question in harness mode) and do NOT remove the worktree -- worktree.cjs already leaves the conflict in a reviewable state; do NOT abort the merge.
+   - `failed` / `parked` (or no `PHASE RESULT:` line found in the log): leave the worktree for review, do NOT merge.
+   - Ledger every merge and removal (or the decision to leave a worktree unmerged for review).
+
+5. **Failure isolation:** one phase failing or parking must not abort its siblings -- continue draining the other launched processes to completion before starting the next round.
+
+**4e. Loop**
+
+After all launched processes of this round drain (and merges/reviews resolve), return to 4a: re-run `roadmap frontier` and repeat until the frontier is empty, then proceed to `lifecycle`.
 
 </step>
 
