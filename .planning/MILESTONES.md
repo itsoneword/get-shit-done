@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.6 Autonomous Supervision Harness (Shipped: 2026-07-04)
+
+**Phases completed:** 6 phases, 16 plans, 31 tasks
+
+**Key accomplishments:**
+
+- **Phase 10 — Decision ledger + CLI foundation:** append-only `DECISIONS.jsonl` and `MAILBOX.jsonl` with `dec-NNN`/`q-NNN` ids, write-time field validation, and a `GSD_RUN_ID` run-context gate (interactive sessions unchanged), surfaced as `gsd-tools ledger`/`run`/`mailbox` subcommands
+- **Phase 11 — Escalation contract + discuss-phase wiring:** deterministic contract (24 conditions across 4 criteria → proceed / proceed-and-log / park-and-ask) with an inline evaluator spliced into `discuss-phase` that writes a write-once ledger verdict, plus a 14-scenario calibration golden set
+- **Phase 12 — Park-don't-block mailbox:** SHA-256 content-hash park/staleness/stuck primitives (`lib/park.cjs`) and a stdin-driven inbox CLI with targeted-answer and interactive-review commands, park↔mailbox boundary strictly enforced
+- **Phase 13 — Overnight runner:** `autonomous.md` made unattended-capable (`--phase N`, harness mode, all human pauses routed to mailbox or `PHASE RESULT failed`); sandbox-first posture, 16-token `run.log` observability grep-contract, ESC-03 gate fails closed until human calibration
+- **Phase 14 — Multi-lens discussion loop:** `/gsd2:discuss-loop` with 3-round parallel lens judgment (`lib/discuss-loop.cjs` + three versioned lens agents), deterministic convergence check, and mailbox/in-session bifurcation — live smoke run confirmed end-to-end
+- **Phase 15 — Resume logic + triage worker:** autonomous resume branch (replay parked snapshot after staleness gate, idempotency-safe) and a propose-never-dispose `/gsd2:triage` writing six-verdict proposals to the mailbox for human-only routing
+
+**Known tech debt (from v1.6 audit):** deferred human-UAT on phases 11 & 14; ESC-03 live-run calibration gate must be completed before the first real overnight run (tracked as a pending todo).
+
+---
+
 ## v1.4 Domain-Aware Planning (Shipped: 2026-05-13)
 
 **Phases completed:** 5 phases, 15 plans, 31 tasks
