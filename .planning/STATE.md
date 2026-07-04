@@ -6,7 +6,7 @@ status: planning
 stopped_at: "Roadmap created — 4 phases (16-19), 10/10 GRAPH requirements mapped. Next: /gsd2:plan-phase 16"
 last_updated: "2026-07-04T15:00:00.000Z"
 progress:
-  total_phases: 4
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -35,6 +35,10 @@ See: .planning/PROJECT.md (updated 2026-07-04)
 - Total execution time: 0 hours
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phases 20–22 added (2026-07-04): closed-loop verification thread from the Anthropic agent-harness lecture — 20 Execution-Grounded Verification, 21 Contract Negotiation, 22 Verdict-Only Feedback + Restart Valve. Independent of the graph chain (16–19); 20 and 21 have no deps, 22 depends on 20. Bundled into v1.7 per user decision (thematic-orphan tradeoff accepted).
 
 ### Decisions
 

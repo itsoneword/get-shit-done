@@ -4,7 +4,7 @@
 
 - ✅ **v1.5 Capability Port** - Phases 1-9 (shipped 2026-06-08)
 - ✅ **v1.6 Autonomous Supervision Harness** - Phases 10-15 (shipped 2026-07-04)
-- 🚧 **v1.7 Planning-Graph Layer** - Phases 16-19 (in progress)
+- 🚧 **v1.7 Planning-Graph Layer** - Phases 16-22 (in progress) — graph chain (16-19) + closed-loop verification (20-22, from the Anthropic agent-harness lecture)
 
 ## Phases
 
@@ -336,8 +336,9 @@
 
 ## Progress
 
-**Execution Order:** 10 → 11 → 12 → 13 → 14 → 15 (v1.6, shipped) → 16 → 17 → 18 → 19 (v1.7)
-(v1.7: strict linear order — advisory foundation (16, 17) must ship and pass integrity checks before consumer repoint (18); consumer repoint must be stable before authoritative promotion (19))
+**Execution Order:** 10 → 11 → 12 → 13 → 14 → 15 (v1.6, shipped) → 16 → 17 → 18 → 19 (v1.7 graph chain) → 20/21 (independent) → 22 (v1.7 verification loop)
+(v1.7 graph chain: strict linear order — advisory foundation (16, 17) must ship and pass integrity checks before consumer repoint (18); consumer repoint must be stable before authoritative promotion (19).
+v1.7 verification loop: Phases 20 and 21 are independent of the graph chain and of each other — either can run anytime; Phase 22 depends only on Phase 20.)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -360,6 +361,9 @@
 | 17. Graph Algorithms + Integrity Check | v1.7 | 0/? | Not started | - |
 | 18. Consumer Repoint | v1.7 | 0/? | Not started | - |
 | 19. Authoritative Promotion | v1.7 | 0/? | Not started | - |
+| 20. Execution-Grounded Verification | v1.7 | 0/? | Not started | - |
+| 21. Contract Negotiation | v1.7 | 0/? | Not started | - |
+| 22. Verdict-Only Feedback + Restart Valve | v1.7 | 0/? | Not started | - |
 
 ## Backlog
 
@@ -389,3 +393,36 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with /gsd2:review-backlog when ready)
+
+### Phase 20: Execution-Grounded Verification
+
+**Goal:** `gsd-verifier` and `verify-work` stop confirming a feature by *reading* code plus goal-backward reasoning, and instead *drive the built artifact* — run the CLI/server/browser flow, observe real behavior, and score against the phase's success criteria before a PASS is allowed. The antidote to self-sycophancy (calling a half-built feature done). Reuses the `/verify` and `/run` skills. Constraint: the executing verifier must run at orchestrator level — subagents lack the tool grants to drive arbitrary project types.
+**Requirements**: TBD (derived at plan time)
+**Depends on:** None — independent of the v1.7 graph chain (16–19); upgrades the existing verifier
+**Source:** Anthropic agent-harness lecture — the Evaluator must actually run the app, not read diffs
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd2:plan-phase 20 to break down)
+
+### Phase 21: Contract Negotiation
+
+**Goal:** Point `discuss-loop`'s fresh-context judgment machinery at the TEST-SPEC / AGENT-SPEC contract so the builder and tester adversarially converge on concrete, testable success criteria *before* build — surfacing spec ambiguity that a single authored, human-approved contract hides. Near-pure reuse of existing discuss-loop convergence + delta brake.
+**Requirements**: TBD (derived at plan time)
+**Depends on:** None — reuses discuss-loop; independent of Phase 20 and the graph chain
+**Source:** Anthropic agent-harness lecture — Generator and Evaluator negotiate testable criteria on disk before building
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd2:plan-phase 21 to break down)
+
+### Phase 22: Verdict-Only Feedback + Restart Valve
+
+**Goal:** `gsd-fixer` receives the *verdict*, not the evaluator's full reasoning (anti-muddying between the build and judge roles), and a patch-debt counter triggers "reject and rebuild from the contract" instead of patching endlessly. Loop-control tweaks, not a new subsystem.
+**Requirements**: TBD (derived at plan time)
+**Depends on:** Phase 20 — needs a real execution-grounded verdict to isolate feedback from and to react to
+**Source:** Anthropic agent-harness lecture — Generator sees only the verdict; the pair throws out the whole build and restarts when stuck
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd2:plan-phase 22 to break down)
