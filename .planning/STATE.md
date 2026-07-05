@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Planning-Graph Layer
 status: unknown
-stopped_at: Completed 16-03-PLAN.md (gap closure)
-last_updated: "2026-07-04T18:27:35.253Z"
+stopped_at: Phase 17 context gathered
+last_updated: "2026-07-05T19:25:51.471Z"
 progress:
   total_phases: 22
   completed_phases: 1
@@ -124,6 +124,6 @@ Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check 
 
 ## Session Continuity
 
-Last session: 2026-07-04T17:40:15.034Z
-Stopped at: Completed 16-03-PLAN.md (gap closure)
-Resume file: None
+Last session: 2026-07-05T19:25:51.465Z
+Stopped at: Phase 17 context gathered
+Resume file: .planning/v1.7/phases/17-graph-algorithms-integrity-check/17-CONTEXT.md
