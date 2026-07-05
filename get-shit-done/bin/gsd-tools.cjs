@@ -1138,8 +1138,19 @@ async function main() {
         graph.cmdGraphAnalyze(cwd, raw);
       } else if (sub === 'export') {
         graph.cmdGraphExport(cwd, raw);
+      } else if (sub === 'validate') {
+        const strict = args.includes('--strict');
+        graph.cmdGraphValidate(cwd, { strict }, raw);
+      } else if (sub === 'blast-radius') {
+        const nodeId = args[2];
+        if (!nodeId) {
+          error('graph blast-radius requires a <node> argument, e.g. gsd-tools graph blast-radius phase:17');
+        }
+        const depthIdx = args.indexOf('--depth');
+        const depth = depthIdx !== -1 ? parseInt(args[depthIdx + 1], 10) : null;
+        graph.cmdGraphBlastRadius(cwd, nodeId, { depth }, raw);
       } else {
-        error('Unknown graph subcommand. Available: analyze, export');
+        error('Unknown graph subcommand. Available: analyze, export, validate, blast-radius');
       }
       break;
     }
