@@ -34,19 +34,19 @@ Phase 17 adds **algorithms and an integrity check** on top of Phase 16's read-on
 ## Implementation Decisions
 
 ### Validate severity model — two-tier + `--strict` [STRONG, specialist-backed]
-`gsd-tools graph validate` classifies problems into two tiers:
-- **Structural (fatal — exit non-zero):** dependency cycles; dangling `depends_on` / `satisfies` edge references (endpoint resolves to no real node).
-- **Advisory (warn — exit zero):** `affects`-vs-`files_modified` contradictions; unresolved `artifact` / `key_link` / `wires` endpoints (prose, not a real file).
-- `--strict` promotes ALL problems to fatal (for CI / pre-promotion gating). Near-zero implementation cost.
-- `confidence: HIGH` · `source: PROJECT.md "advisory before authoritative" rollout + live graph analyze evidence` · <!-- resolved inline by resolution loop -->
-- **Why:** the integrity check exists to *quantify* sloppy advisory data, not reject it. Exiting non-zero on advisory noise would make the trust gate un-passable on the exact data it measures — contradicting the locked milestone rollout.
+`gsd-tools graph validate` classifies problems into two tiers. **Dangling-ref severity is determined by the tier of the edge that dangles** (not by a hardcoded edge-type list) — every edge type is checked for dangling endpoints, and the finding inherits its edge's tier:
+- **Structural (fatal — exit non-zero):** dependency cycles; dangling references on **structural** edges (`depends_on`, `satisfies`) where the endpoint resolves to no real node.
+- **Advisory (warn — exit zero):** dangling references on **advisory** edges (`affects`, `provides`, `wires`) — these traverse author-supplied/prose data (incl. `blast-radius`'s `provides` edges, which MUST be dangling-checked even though they never gate); plus `affects`-vs-`files_modified` contradictions.
+- `--strict` promotes ALL problems to fatal. **`--strict` is a developer/CI convenience for surfacing the full advisory list as failures — it is NOT the Phase-19 promotion gate** (see Trust-gate definition below; the gate runs plain `validate`). Near-zero implementation cost.
+- `confidence: HIGH` · `source: PROJECT.md "advisory before authoritative" rollout + live graph analyze evidence + discuss-loop consilium (architect: provides-edge coverage gap)` · <!-- resolved inline by resolution loop -->
+- **Why:** the integrity check exists to *quantify* sloppy advisory data, not reject it. Exiting non-zero on advisory noise would make the trust gate un-passable on the exact data it measures — contradicting the locked milestone rollout. Tiering dangling-refs by their edge's own tier closes the `provides`/`affects` coverage hole without promoting advisory noise to fatal.
 
 ### Trust-gate definition (what "clean numbers" means for Phase 19) [STRONG, specialist-backed]
-Phase 19 promotion is unblocked when `validate` on the live repo reports:
-- **Zero cycles** (hard) and **zero dangling structural refs** (`depends_on`/`satisfies`) (hard).
-- **`affects`-contradiction count is surfaced as a reviewable number**, NOT required to be zero — advisory edges stay advisory; a human eyeballs the count.
-- `confidence: HIGH` · `source: STATE.md Phase-19 gate note + advisory-quality risk in PROJECT.md` · <!-- resolved inline by resolution loop -->
-- **Why:** "zero everything" would import out-of-scope SUMMARY/key_link data-cleanup into the gate; "acyclic only" earns too little trust for an override-the-planner decision.
+Phase 19 promotion is unblocked by **plain `validate`** (NOT `--strict`) on the live repo reporting BOTH of:
+- **(a) Machine gate — hard, scripted:** zero cycles AND zero dangling **structural** refs (`depends_on`/`satisfies`). `validate` exit code enforces this; it is re-runnable as a regression tripwire (guards against post-promotion data-quality decay).
+- **(b) Human gate — recorded, not eyeballed:** the advisory-contradiction count is surfaced, and the human's review is captured as a **durable decision record** (the count seen + a baseline + a `proceed`/`withhold` verdict) — e.g. a `ledger append` / decision entry, NOT an in-session judgment. Advisory contradictions are NOT required to be zero; advisory edges stay advisory. But the *fact that a review happened and what was decided* MUST be reconstructible from the record alone.
+- `confidence: HIGH` · `source: STATE.md Phase-19 gate note + advisory-quality risk in PROJECT.md + discuss-loop consilium (all three lenses: --strict/gate contradiction; skeptic+user-advocate: unrecorded-judgment violates the "auditable from ledger alone" trust constraint)` · <!-- resolved inline by resolution loop -->
+- **Why:** "zero everything" would import out-of-scope SUMMARY/key_link data-cleanup into the gate; "acyclic only" earns too little trust for an override-the-planner decision. Requiring the human sign-off to be *recorded* satisfies PROJECT.md's locked "every autonomous decision auditable from the ledger alone, no transcript replay" constraint — an un-recorded eyeball vote would violate it.
 
 ### `/gsd2:health` integration mirrors the severity split [STRONG, specialist-backed]
 - Add the graph-integrity check as the next numbered check in `cmdValidateHealth`, reusing `addIssue`.
@@ -54,13 +54,13 @@ Phase 19 promotion is unblocked when `validate` on the live repo reports:
 - No execution-behavior change (GRAPH-06 constraint) — the check is read-only diagnostic; not `--repair`-able (advisory data is authored, not auto-fixable). Suggested codes: `E-GRAPH-*` (structural), `I-GRAPH-*` (advisory).
 
 ### topoSort / detectCycles [STRONG, specialist-backed — Claude's Discretion on internals]
-- Kahn's algorithm over `depends_on` edges for `topoSort`; `detectCycles` reports the **actual cycle members** (the residual set when Kahn's stalls), not merely "a cycle exists".
+- Kahn's algorithm over `depends_on` edges for `topoSort`. For `detectCycles`, report the **precise cycle members via strongly-connected-component extraction (Tarjan) or back-edge trace** — NOT the raw Kahn's-stall residual. The residual set of unsortable nodes over-reports: it includes nodes merely *downstream of* a cycle (they depend on cycle members but are not themselves in any cycle). GRAPH-04's structural-fatal output must name only the actual cycle participants.
 - Scope of the sort/cycle check: `depends_on` edges (phase→phase and plan→plan). `satisfies` dangling is a validate concern, not a cycle concern.
-- `confidence: HIGH` · `source: standard graph-algorithm practice` · <!-- resolved inline by resolution loop -->
+- `confidence: HIGH` · `source: standard graph-algorithm practice + discuss-loop consilium (skeptic: Kahn-residual ≠ cycle membership)` · <!-- resolved inline by resolution loop -->
 
 ### blast-radius query semantics [WEAK, specialist-backed — override if planner finds better]
 - Forward BFS over `affects` + `provides` edges (matches GRAPH-05 wording "transitive affects/provides closure").
-- Depth: level 1 = direct, level 2 = one-hop, level 3 = full closure; default = full closure, `--depth N` bounds it.
+- Depth = hop count: **level N = nodes reachable within N hops** (level 1 = direct neighbors / 1 hop, level 2 = within 2 hops, level 3 = full transitive closure). Default = full closure; `--depth N` bounds it.
 - Unknown / unresolvable `<node>` argument → clear error + exit non-zero.
 - Output groups affected nodes by level; JSON form available for machine use (mirror `graph export` conventions).
 
@@ -75,8 +75,8 @@ Phase 19 promotion is unblocked when `validate` on the live repo reports:
 ## Expected Outcome
 
 - **End state:** `gsd-tools graph validate` and `gsd-tools graph blast-radius <node>` exist and run on the live repo; `/gsd2:health` includes a graph-integrity check. The graph can now be *interrogated* (order, cycles, blast radius) and *audited* (integrity), still without changing any execution behavior.
-- **Success signal:** on the live repo, `validate` exits zero (no structural problems) while printing a reviewable count of advisory `affects`-contradictions; `--strict` surfaces the full advisory list; `blast-radius phase:17` returns a sensible transitive set. These are the "clean numbers" that later gate Phase 19.
-- **Flow:** author runs `graph validate` → sees structural=clean, advisory=N → reviews the N → gains (or withholds) trust → that judgment is what unblocks Phase 18/19.
+- **Success signal:** on the live repo, plain `validate` exits zero (no structural problems: zero cycles, zero dangling structural refs) while printing a reviewable count of advisory findings (`affects`-contradictions + dangling advisory refs); `--strict` (dev-only) surfaces the full advisory list as failures; `blast-radius phase:17` returns a sensible transitive set. These are the "clean numbers" that later gate Phase 19.
+- **Flow:** author runs plain `graph validate` → machine confirms structural=clean → reviews advisory=N → **records** a proceed/withhold decision (durable entry, not an eyeball) → that recorded judgment is what unblocks Phase 18/19, and re-running `validate` remains a regression tripwire afterward.
 </expected_outcome>
 
 <canonical_refs>
