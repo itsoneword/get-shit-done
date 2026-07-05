@@ -569,6 +569,203 @@ describe('validate health command', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// validate health — graph integrity (Check 10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('validate health — graph integrity (Check 10)', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    tmpDir = createTempProject();
+  });
+
+  afterEach(() => {
+    cleanup(tmpDir);
+  });
+
+  function writePlan(phaseDirName, phaseNum, planNum, { dependsOn = [], filesModified = [] } = {}) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDirName);
+    fs.mkdirSync(dir, { recursive: true });
+    const depsYaml = dependsOn.length > 0
+      ? 'depends_on:\n' + dependsOn.map(d => `  - "${d}"`).join('\n')
+      : 'depends_on: []';
+    const filesYaml = filesModified.length > 0
+      ? 'files_modified:\n' + filesModified.map(f => `  - ${f}`).join('\n')
+      : 'files_modified: []';
+    fs.writeFileSync(path.join(dir, `${phaseNum}-${planNum}-PLAN.md`), `---
+phase: ${phaseDirName}
+plan: "${planNum}"
+type: auto
+wave: 1
+${depsYaml}
+${filesYaml}
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+  }
+
+  function writeSummary(phaseDirName, phaseNum, planNum, { affects = null } = {}) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDirName);
+    fs.mkdirSync(dir, { recursive: true });
+    const affectsYaml = affects
+      ? `affects:\n${affects.map(a => `  - "${a}"`).join('\n')}\n`
+      : '';
+    fs.writeFileSync(path.join(dir, `${phaseNum}-${planNum}-SUMMARY.md`), `---
+phase: ${phaseDirName}
+plan: "${planNum}"
+subsystem: infra
+tags: []
+${affectsYaml}duration: 5min
+completed: 2026-07-05
+---
+
+# Summary
+`);
+  }
+
+  test('dependency cycle registers as E-GRAPH-CYCLE error, status broken', () => {
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalStateMd(tmpDir);
+    writeValidConfigJson(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 3: Foo
+**Goal:** g
+**Depends on:** Phase 4
+
+### Phase 4: Bar
+**Goal:** g
+**Depends on:** Phase 3
+`);
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '03-foo'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '04-bar'), { recursive: true });
+
+    const result = runGsdTools('validate health --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.status, 'broken', `Expected broken, got ${output.status}. Errors: ${JSON.stringify(output.errors)}`);
+    const cycleError = output.errors.find(e => e.code === 'E-GRAPH-CYCLE');
+    assert.ok(cycleError, `Expected E-GRAPH-CYCLE in errors: ${JSON.stringify(output.errors)}`);
+    assert.ok(cycleError.message.includes('phase:3'), `Expected message to include phase:3: ${cycleError.message}`);
+    assert.ok(cycleError.message.includes('phase:4'), `Expected message to include phase:4: ${cycleError.message}`);
+  });
+
+  test('dangling structural depends_on registers as E-GRAPH-DANGLING error, status broken', () => {
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalRoadmap(tmpDir, ['1']);
+    writeMinimalStateMd(tmpDir);
+    writeValidConfigJson(tmpDir);
+    writePlan('01-a', '01', '01', { dependsOn: ['99-01'] });
+
+    const result = runGsdTools('validate health --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.status, 'broken', `Expected broken, got ${output.status}. Errors: ${JSON.stringify(output.errors)}`);
+    const danglingError = output.errors.find(e => e.code === 'E-GRAPH-DANGLING');
+    assert.ok(danglingError, `Expected E-GRAPH-DANGLING in errors: ${JSON.stringify(output.errors)}`);
+  });
+
+  test('dangling advisory affects ref registers as I-GRAPH-DANGLING info, status stays healthy', () => {
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalRoadmap(tmpDir, ['1']);
+    writeMinimalStateMd(tmpDir, '# Session State\n\nPhase 1 in progress.\n');
+    writeValidConfigJson(tmpDir);
+    writePlan('01-a', '01', '01', {});
+    writeSummary('01-a', '01', '01', { affects: ['Phase 42'] });
+
+    const result = runGsdTools('validate health --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    const danglingInfo = output.info.find(i => i.code === 'I-GRAPH-DANGLING');
+    assert.ok(danglingInfo, `Expected I-GRAPH-DANGLING in info: ${JSON.stringify(output.info)}`);
+    assert.strictEqual(output.status, 'healthy', `Expected healthy (info must not flip status), got ${output.status}. Errors: ${JSON.stringify(output.errors)}, Warnings: ${JSON.stringify(output.warnings)}`);
+  });
+
+  test('files_modified overlap with no affects edge registers as I-GRAPH-CONTRADICTION info, status stays healthy', () => {
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalRoadmap(tmpDir, ['1']);
+    writeMinimalStateMd(tmpDir, '# Session State\n\nPhase 1 in progress.\n');
+    writeValidConfigJson(tmpDir);
+    writePlan('01-a', '01', '01', { filesModified: ['shared.cjs'] });
+    writePlan('01-a', '01', '02', { filesModified: ['shared.cjs'] });
+
+    const result = runGsdTools('validate health --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    const contradictionInfo = output.info.find(i => i.code === 'I-GRAPH-CONTRADICTION');
+    assert.ok(contradictionInfo, `Expected I-GRAPH-CONTRADICTION in info: ${JSON.stringify(output.info)}`);
+    assert.strictEqual(output.status, 'healthy', `Expected healthy (info must not flip status), got ${output.status}. Errors: ${JSON.stringify(output.errors)}, Warnings: ${JSON.stringify(output.warnings)}`);
+  });
+
+  test('graph findings are never repaired by --repair', () => {
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalStateMd(tmpDir);
+    writeValidConfigJson(tmpDir);
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 3: Foo
+**Goal:** g
+**Depends on:** Phase 4
+
+### Phase 4: Bar
+**Goal:** g
+**Depends on:** Phase 3
+`);
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '03-foo'), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, '.planning', 'phases', '04-bar'), { recursive: true });
+
+    const result = runGsdTools('validate health --repair --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    const cycleError = output.errors.find(e => e.code === 'E-GRAPH-CYCLE');
+    assert.ok(cycleError, `Expected E-GRAPH-CYCLE in errors: ${JSON.stringify(output.errors)}`);
+    assert.strictEqual(cycleError.repairable, false, 'E-GRAPH-CYCLE must not be repairable');
+    if (Array.isArray(output.repairs_performed)) {
+      assert.ok(
+        !output.repairs_performed.some(r => /graph|cycle|dangling/i.test(r.action || '')),
+        `--repair must not attempt any graph-related action: ${JSON.stringify(output.repairs_performed)}`
+      );
+    }
+  });
+
+  test('clean acyclic fixture with no dangling refs or contradictions stays healthy with zero graph findings', () => {
+    writeMinimalProjectMd(tmpDir);
+    writeMinimalRoadmap(tmpDir, ['1']);
+    writeMinimalStateMd(tmpDir, '# Session State\n\nPhase 1 in progress.\n');
+    writeValidConfigJson(tmpDir);
+    const phaseDir = path.join(tmpDir, '.planning', 'phases', '01-a');
+    fs.mkdirSync(phaseDir, { recursive: true });
+    fs.writeFileSync(path.join(phaseDir, '01-01-PLAN.md'), '# Plan\n');
+    fs.writeFileSync(path.join(phaseDir, '01-01-SUMMARY.md'), '# Summary\n');
+
+    const result = runGsdTools('validate health --raw', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.strictEqual(output.status, 'healthy', `Expected healthy, got ${output.status}. Errors: ${JSON.stringify(output.errors)}, Warnings: ${JSON.stringify(output.warnings)}`);
+    const allIssues = [...output.errors, ...output.warnings, ...output.info];
+    assert.ok(
+      !allIssues.some(i => i.code && (i.code.startsWith('E-GRAPH') || i.code.startsWith('I-GRAPH'))),
+      `Expected zero graph findings on clean fixture: ${JSON.stringify(allIssues.filter(i => i.code && i.code.includes('GRAPH')))}`
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // validate health --repair command
 // ─────────────────────────────────────────────────────────────────────────────
 
