@@ -325,10 +325,16 @@ function cmdRoadmapAnalyze(cwd, raw, opts = {}) {
  */
 function extractDepPhaseNums(str) {
   if (!str) return [];
+  // Parenthetical asides are prose commentary, not dependency declarations
+  // (e.g. "Nothing (independent of Phase 01)", "Phase 04 (bridge patterns proven)").
+  // Strip them before extracting so a phase mentioned in passing isn't read as a hard dep.
+  const stripped = str.replace(/\([^)]*\)/g, ' ');
+  // "Nothing" / "None" / "N/A" / "-" (once asides are removed) means no hard dependency.
+  if (/^\s*(nothing|none|n\/a|-)?\s*$/i.test(stripped)) return [];
   const nums = [];
   const pattern = /Phase\s+(\d+[A-Z]?(?:\.\d+)*)/gi;
   let m;
-  while ((m = pattern.exec(str)) !== null) {
+  while ((m = pattern.exec(stripped)) !== null) {
     nums.push(m[1]);
   }
   return nums;

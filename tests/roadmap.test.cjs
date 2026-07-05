@@ -1260,6 +1260,39 @@ ${filesYaml}
     assert.ok(output.frontier.includes('6'), 'Phase 6 should be in frontier (no hard deps)');
   });
 
+  test('phase number mentioned in a parenthetical aside is NOT a hard dep', () => {
+    // Regression: "Nothing (independent of Phase 1)" must not read Phase 1 as a dependency.
+    writeFrontierRoadmap([
+      { number: '1', dependsOn: null },
+      { number: '2', dependsOn: 'Nothing (independent of Phase 1)' },
+    ]);
+    // Phase 1 left incomplete on disk. If the aside were treated as a hard dep,
+    // Phase 2 would be excluded from the frontier.
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(output.frontier.includes('2'), 'Phase 2 must be in frontier -- parenthetical aside is not a dependency');
+    assert.deepStrictEqual(output.coschedulable.sort(), ['1', '2'], 'both independent phases co-schedulable');
+  });
+
+  test('real hard dep stated plainly still gates, even with a parenthetical aside', () => {
+    // Guard against over-stripping: "Phase 4 (bridge proven)" still depends on Phase 4.
+    writeFrontierRoadmap([
+      { number: '3', dependsOn: 'Phase 4 (bridge patterns proven)' },
+      { number: '4', dependsOn: null },
+    ]);
+    // Phase 4 incomplete -> Phase 3 must be excluded.
+
+    const result = runGsdTools('roadmap frontier', tmpDir);
+    assert.ok(result.success, `Command failed: ${result.error}`);
+
+    const output = JSON.parse(result.output);
+    assert.ok(!output.frontier.includes('3'), 'Phase 3 excluded -- Phase 4 is a real hard dep despite the aside');
+    assert.ok(output.frontier.includes('4'), 'Phase 4 in frontier');
+  });
+
   test('two frontier phases sharing files_modified -> one coschedulable, one serialized', () => {
     writeFrontierRoadmap([
       { number: '7', dependsOn: null },
