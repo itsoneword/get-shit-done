@@ -627,52 +627,58 @@ If blockers found: handle_blocker. Otherwise loop back to `execute_phase` for th
 
 **4d. Parallel path (2+ co-schedulable phases, parallelization on)**
 
-Launch up to `MAX_PAR` phases concurrently, each isolated in its own worktree. Parallel phases run headless with `--dangerously-skip-permissions` BY CONSTRUCTION (isolation via worktree, unattended autonomous run) -- this is acceptable per the P3 spike (verified: cwd=worktree keeps all writes in-worktree, merge returns clean) and every launch/merge is logged to the ledger for auditability.
+Launch up to `MAX_PAR` phases concurrently, each isolated in its own worktree. Parallel phases run headless with `--dangerously-skip-permissions` BY CONSTRUCTION (isolation via worktree, unattended autonomous run) -- acceptable per the P3 spike (cwd=worktree keeps all writes in-worktree) and every launch/merge is logged to the ledger for auditability.
 
-For each phase `N` in `coschedulable` (respecting the `MAX_PAR` cap -- launch a new one only as a slot frees up):
+**CRITICAL — one blocking shell, not model-driven steps.** The launch, the `wait`, and the merges MUST run inside a SINGLE Bash invocation. A model turn cannot block across a backgrounded process: if you background the phases (`&`) and then end the turn intending to "wait then merge" in a later step, the session exits and the merges never run (parallel-executor BUG #3, observed 2026-07-05). Run the whole block below as ONE Bash call and let it block until every phase has finished and merged.
 
-1. **Add the worktree:**
+This round launches at most `MAX_PAR` phases (the first `MAX_PAR` of `coschedulable`); any remainder stays in the frontier and is picked up by the next 4a round once a slot frees. Copy this block verbatim, substituting `$COSCHED` = the space-separated coschedulable phase numbers (capped to `MAX_PAR`), `$LOG_DIR`, and the gsd-tools path:
 
-   ```bash
-   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree add .worktrees/phase-N gsd/parallel-phase-N
-   ```
+```bash
+GT="$HOME/.claude/get-shit-done/bin/gsd-tools.cjs"
+COSCHED="01 02"   # <- first MAX_PAR coschedulable phase numbers, space-separated
+declare -A PID
 
-2. **Launch a background headless process from the orchestrator shell** (NOT a Task/Skill subagent -- per the CLAUDE.md orchestrator-level constraint, the runner must execute at orchestrator level). Set cwd to the worktree and invoke single-phase autonomous mode, which already emits the machine-greppable `PHASE RESULT:` contract line. Redirect stdout+stderr UNCONDITIONALLY to a per-phase log in the run-scoped dir -- this is the ONLY stdout source the merge decision (step 3 below) reads, so it must exist whether or not a human is watching:
+# --- launch: worktree (with GSD provisioned) + background headless runner ---
+for N in $COSCHED; do
+  node "$GT" worktree add ".worktrees/phase-$N" "gsd/parallel-phase-$N" --provision-gsd
+  node "$GT" ledger append --data '{"decision":"launched parallel phase '"$N"'","evidence":"headless claude -p cwd=.worktrees/phase-'"$N"' log='"$LOG_DIR"'/phase-'"$N"'.log","confidence":"HIGH","phase":"'"$N"'"}'
+  ( cd ".worktrees/phase-$N" && claude -p "/gsd2:autonomous --phase $N" --dangerously-skip-permissions ) > "$LOG_DIR/phase-$N.log" 2>&1 &
+  PID[$N]=$!
+done
 
-   ```bash
-   (cd .worktrees/phase-N && claude -p "run gsd autonomous single phase N" --dangerously-skip-permissions) > "$LOG_DIR/phase-N.log" 2>&1 &
-   ```
+# --- BUG #3 fix: block here until ALL phase processes exit (do NOT split this out) ---
+for N in $COSCHED; do wait "${PID[$N]}" || true; done
 
-   (The prompt tells the headless process to invoke `/gsd2:autonomous --phase N`.)
+# --- merge each completed phase (serial, so shared-state resolves in phase order) ---
+for N in $COSCHED; do
+  RESULT=$(grep -oE 'PHASE RESULT: [a-z_]+' "$LOG_DIR/phase-$N.log" | tail -1)
+  if echo "$RESULT" | grep -q completed; then
+    MERGE=$(node "$GT" worktree merge "gsd/parallel-phase-$N" --shared-state)
+    if echo "$MERGE" | grep -q '"clean":true'; then
+      node "$GT" roadmap update-plan-progress "$N"   # BUG #4: refresh ROADMAP centrally from merged SUMMARYs
+      node "$GT" worktree remove ".worktrees/phase-$N" --branch "gsd/parallel-phase-$N"
+      node "$GT" ledger append --data '{"decision":"merged parallel phase '"$N"'","evidence":"'"$MERGE"'","confidence":"HIGH","phase":"'"$N"'"}'
+    else
+      node "$GT" ledger append --data '{"decision":"parallel phase '"$N"' left unmerged (conflict)","evidence":"'"$MERGE"'","confidence":"HIGH","phase":"'"$N"'"}'
+      echo "CONFLICT phase $N: $MERGE"
+    fi
+  else
+    node "$GT" ledger append --data '{"decision":"parallel phase '"$N"' not merged (result='"$RESULT"')","evidence":"log='"$LOG_DIR"'/phase-'"$N"'.log","confidence":"HIGH","phase":"'"$N"'"}'
+    echo "NOT-COMPLETED phase $N: $RESULT — worktree left for review"
+  fi
+done
+```
 
-3. **Ledger the launch:**
+Notes on the block:
 
-   ```bash
-   node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" ledger append --data '{"decision":"launched parallel phase N in worktree","evidence":"headless claude -p --dangerously-skip-permissions cwd=.worktrees/phase-N log='"$LOG_DIR"'/phase-N.log","confidence":"HIGH","phase":"N"}'
-   ```
-
-4. **On process exit:** grep `$LOG_DIR/phase-N.log` for the final `PHASE RESULT:` line to determine the outcome -- the log always exists (step 4b/4d.2 capture is unconditional), so this decision is never harness-gated.
-   - `completed` -> merge the branch:
-
-     ```bash
-     node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree merge gsd/parallel-phase-N
-     ```
-
-     Inspect `{clean}`. If `clean:true`: remove the worktree:
-
-     ```bash
-     node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" worktree remove .worktrees/phase-N --branch gsd/parallel-phase-N
-     ```
-
-     If `clean:false`: surface the `conflict_files` (append a mailbox question in harness mode) and do NOT remove the worktree -- worktree.cjs already leaves the conflict in a reviewable state; do NOT abort the merge.
-   - `failed` / `parked` (or no `PHASE RESULT:` line found in the log): leave the worktree for review, do NOT merge.
-   - Ledger every merge and removal (or the decision to leave a worktree unmerged for review).
-
-5. **Failure isolation:** one phase failing or parking must not abort its siblings -- continue draining the other launched processes to completion before starting the next round.
+- **BUG #2 (worktree GSD):** `worktree add --provision-gsd` symlinks the main tree's `.claude/` into each worktree, so the headless child rooted there has the `/gsd2` commands and `gsd-tools`. Without it a worktree forked off HEAD has no GSD (`.claude/` is untracked).
+- **BUG #3 (async wait):** the `wait "${PID[$N]}"` loop is the whole point — it blocks the single Bash call until every backgrounded phase exits. Merges run only after. Never move the merge loop into a separate Bash call or later model step.
+- **BUG #4 (shared state):** `worktree merge --shared-state` auto-resolves STATE.md/ROADMAP.md-only conflicts as "ours" (main), then `roadmap update-plan-progress <N>` refreshes ROADMAP centrally from the merged per-phase SUMMARY files (which never conflict — distinct phase dirs). A conflict OUTSIDE the shared set is a REAL conflict: left reviewable, worktree kept, `CONFLICT phase N` printed — surface it as a mailbox question in harness mode.
+- **Failure isolation:** `wait ... || true` and per-phase merge handling mean one phase failing/parking never aborts its siblings; non-completed phases leave their worktree for review.
 
 **4e. Loop**
 
-After all launched processes of this round drain (and merges/reviews resolve), return to 4a: re-run `roadmap frontier` and repeat until the frontier is empty, then proceed to `lifecycle`.
+After the block above returns (all phases drained, merges/reviews resolved), return to 4a: re-run `roadmap frontier` and repeat until the frontier is empty, then proceed to `lifecycle`. Serialized phases and any coschedulable phases beyond this round's `MAX_PAR` cap reappear in the next frontier automatically.
 
 </step>
 

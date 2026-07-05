@@ -10,7 +10,17 @@ depends_on: []
 related_to: []
 ---
 
-## Problem
+## STATUS 2026-07-05 — code fixes landed, only e2e green-light remains
+
+All three bugs FIXED (see reference doc section "FIXES for #2/#3/#4 — IMPLEMENTED"):
+- #2 `worktree add --provision-gsd` symlinks `.claude/` into worktree (unit-tested).
+- #4 `worktree merge --shared-state` auto-resolves STATE.md/ROADMAP.md-only conflicts as ours + central `roadmap update-plan-progress` refresh (unit-tested).
+- #3 `autonomous.md` 4d rewritten as one blocking bash (launch+wait+merge) — not unit-testable.
+- Runtime synced (`node bin/install.js --local`). worktree/parallel-gate/roadmap tests: 70/70 green.
+
+**Remaining:** the green-light e2e below (needs spawning real headless `claude`; run deliberately with fresh context to monitor). Close this todo once it's green.
+
+## Problem (original)
 
 The parallel-phase executor (P2+P4, quick 260704-m9p) is built and unit-verified, but a full end-to-end `/gsd2:autonomous` run on a 2-phase smoke project (2026-07-05) showed it is NOT usable yet. Three open bugs — full detail, root causes, and fix options in `.planning/reference/2026-07-04-parallel-phase-execution.md` (sections "BUG #2", "E2E smoke run").
 

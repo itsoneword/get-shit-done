@@ -94,11 +94,40 @@ function ensureWorktreeDirIgnored(cwd, wtDir) {
 // ─── Commands ─────────────────────────────────────────────────────────────────
 
 /**
- * gsd-tools worktree add <dir> <branch> [--base <branch>]
+ * Provision the main tree's GSD install (`.claude/`) into a freshly-created
+ * worktree so a headless `claude -p` rooted there has the `/gsd2` commands and
+ * `gsd-tools`. `.claude/` is typically untracked/gitignored, so a worktree
+ * forked off HEAD does NOT contain it (parallel-executor BUG #2).
+ *
+ * Symlinks `<dir>/.claude` -> the main tree's absolute `.claude/`. The symlink
+ * is untracked working-tree state (never committed), and always reflects the
+ * live GSD install. No-ops when the main tree has no `.claude/` (global install)
+ * or the worktree already carries a tracked `.claude/`.
+ *
+ * @returns {'symlinked'|'already-present'|'no-source'} what happened
+ */
+function provisionGsdIntoWorktree(cwd, dir) {
+  const source = path.join(cwd, '.claude');
+  const target = path.join(dir, '.claude');
+  if (!fs.existsSync(source)) return 'no-source';
+  if (fs.existsSync(target)) return 'already-present';
+  try {
+    fs.symlinkSync(source, target, 'dir');
+    return 'symlinked';
+  } catch {
+    return 'no-source';
+  }
+}
+
+/**
+ * gsd-tools worktree add <dir> <branch> [--base <branch>] [--provision-gsd]
  *
  * Creates a linked worktree at <dir> on a new branch <branch> forked from <base>
  * (defaults to HEAD). Runs Step 0 detect-existing and the ignore-check.
  * On sandbox failure, returns {ok:false, fallback:"in-place"} without throwing.
+ *
+ * With --provision-gsd, symlinks the main tree's `.claude/` into the worktree
+ * (BUG #2 fix) so a headless runner rooted there has GSD available.
  */
 function cmdWorktreeAdd(cwd, dir, branch, opts, raw) {
   if (!dir) { error('worktree add: <dir> is required'); return; }
@@ -134,18 +163,35 @@ function cmdWorktreeAdd(cwd, dir, branch, opts, raw) {
     return;
   }
 
-  output({ ok: true, dir, branch, base }, raw);
+  let gsd;
+  if (opts.provisionGsd) {
+    gsd = provisionGsdIntoWorktree(cwd, dir);
+  }
+
+  output({ ok: true, dir, branch, base, ...(gsd ? { gsd } : {}) }, raw);
 }
 
+// Bookkeeping files every phase rewrites but which are NOT in files_modified,
+// so the axis-A guard co-schedules phases that both touch them → merge conflict
+// on phase N>1 (parallel-executor BUG #4). Resolved as "ours" (the accumulating
+// main tree) when --shared-state is set; the orchestrator refreshes them
+// centrally post-merge from the merged, non-conflicting per-phase artifacts.
+const DEFAULT_SHARED_STATE = ['.planning/STATE.md', '.planning/ROADMAP.md'];
+
 /**
- * gsd-tools worktree merge <branch>
+ * gsd-tools worktree merge <branch> [--shared-state]
  *
  * Merges <branch> into the current branch using --no-ff.
  * Checks exit code PER-CALL (Pitfall 2 guard).
  * Returns {clean:bool, conflict_files:[]}.
  * NEVER aborts a conflicting merge — leaves conflict state for human review.
+ *
+ * With --shared-state: if the ONLY conflicts are the known shared bookkeeping
+ * files (STATE.md/ROADMAP.md), auto-resolve them as "ours" and finalize the
+ * merge — the branch's code + per-phase artifacts still land. Any conflict
+ * OUTSIDE that set is a real conflict → left reviewable, nothing auto-resolved.
  */
-function cmdWorktreeMerge(cwd, branch, _opts, raw) {
+function cmdWorktreeMerge(cwd, branch, opts, raw) {
   if (!branch) { error('worktree merge: <branch> is required'); return; }
 
   const mergeResult = git(['merge', branch, '--no-ff'], cwd);
@@ -161,6 +207,29 @@ function cmdWorktreeMerge(cwd, branch, _opts, raw) {
   const conflictFiles = unmergedResult.ok && unmergedResult.stdout
     ? unmergedResult.stdout.split('\n').filter(Boolean)
     : [];
+
+  // Shared-state auto-resolution: only when EVERY conflict is a known shared file.
+  if (opts.sharedState && conflictFiles.length > 0) {
+    const shared = Array.isArray(opts.sharedState) ? opts.sharedState : DEFAULT_SHARED_STATE;
+    const beyond = conflictFiles.filter(f => !shared.includes(f));
+    if (beyond.length === 0) {
+      let resolvedOk = true;
+      for (const f of conflictFiles) {
+        const co = git(['checkout', '--ours', '--', f], cwd);
+        const add = git(['add', '--', f], cwd);
+        if (!co.ok || !add.ok) { resolvedOk = false; break; }
+      }
+      if (resolvedOk) {
+        const commitR = git(['commit', '--no-edit'], cwd);
+        if (commitR.ok) {
+          output({ clean: true, branch, conflict_files: [], autoresolved: conflictFiles }, raw);
+          return;
+        }
+      }
+      // Auto-resolution failed partway — abort back to a clean reviewable state.
+      git(['merge', '--abort'], cwd);
+    }
+  }
 
   // Leave conflict state reviewable — do NOT abort
   output({ clean: false, branch, conflict_files: conflictFiles }, raw);
@@ -218,13 +287,16 @@ function cmdWorktree(cwd, args, raw) {
       const dir = args[2];
       const branch = args[3];
       const baseIdx = args.indexOf('--base');
-      const opts = { base: baseIdx !== -1 ? args[baseIdx + 1] : undefined };
+      const opts = {
+        base: baseIdx !== -1 ? args[baseIdx + 1] : undefined,
+        provisionGsd: args.includes('--provision-gsd'),
+      };
       cmdWorktreeAdd(cwd, dir, branch, opts, raw);
       break;
     }
     case 'merge': {
       const branch = args[2];
-      cmdWorktreeMerge(cwd, branch, {}, raw);
+      cmdWorktreeMerge(cwd, branch, { sharedState: args.includes('--shared-state') }, raw);
       break;
     }
     case 'remove': {

@@ -197,6 +197,134 @@ test('worktree merge: conflicting same-line edit → returns {clean:false}, base
   }
 });
 
+// ─── BUG #2: --provision-gsd symlinks the main tree's .claude into worktree ────
+
+test('worktree add --provision-gsd symlinks main .claude into the worktree', () => {
+  const repo = createTempGitRepo();
+  const wtDir = path.join(repo.dir, '.worktrees', 'prov');
+  try {
+    // Main tree has an (untracked) .claude/ GSD install
+    fs.mkdirSync(path.join(repo.dir, '.claude'), { recursive: true });
+    fs.writeFileSync(path.join(repo.dir, '.claude', 'marker'), 'gsd\n');
+
+    const result = runGsdTools(['worktree', 'add', wtDir, 'prov', '--provision-gsd'], repo.dir);
+    assert.ok(result.success, `worktree add failed: ${result.error}`);
+    const parsed = JSON.parse(result.output);
+    assert.equal(parsed.gsd, 'symlinked', 'should report gsd:symlinked');
+
+    const linkPath = path.join(wtDir, '.claude');
+    assert.ok(fs.lstatSync(linkPath).isSymbolicLink(), '.claude in worktree should be a symlink');
+    // Symlink must resolve to the main tree's install (marker readable through it)
+    assert.equal(
+      fs.readFileSync(path.join(linkPath, 'marker'), 'utf-8'),
+      'gsd\n',
+      'symlink should resolve to main .claude contents'
+    );
+  } finally {
+    try { execSync(`git worktree remove "${wtDir}" --force`, { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    try { execSync('git branch -D prov', { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    repo.cleanup();
+  }
+});
+
+test('worktree add without --provision-gsd does not create a .claude symlink', () => {
+  const repo = createTempGitRepo();
+  const wtDir = path.join(repo.dir, '.worktrees', 'noprov');
+  try {
+    fs.mkdirSync(path.join(repo.dir, '.claude'), { recursive: true });
+    const result = runGsdTools(['worktree', 'add', wtDir, 'noprov'], repo.dir);
+    assert.ok(result.success, `worktree add failed: ${result.error}`);
+    assert.ok(!fs.existsSync(path.join(wtDir, '.claude')), 'no .claude should be provisioned by default');
+  } finally {
+    try { execSync(`git worktree remove "${wtDir}" --force`, { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    try { execSync('git branch -D noprov', { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    repo.cleanup();
+  }
+});
+
+// ─── BUG #4: --shared-state auto-resolves STATE.md/ROADMAP.md-only conflicts ────
+
+// Seed a tracked .planning/STATE.md, then diverge it on both main and a branch
+// while the branch ALSO adds a disjoint code file. Helper returns the branch name.
+function seedSharedStateDivergence(repo, wtDir, branch, extraConflictFile) {
+  const planningDir = path.join(repo.dir, '.planning');
+  fs.mkdirSync(planningDir, { recursive: true });
+  fs.writeFileSync(path.join(planningDir, 'STATE.md'), 'base state\n');
+  if (extraConflictFile) fs.writeFileSync(path.join(repo.dir, extraConflictFile), 'base\n');
+  execSync('git add -A', { cwd: repo.dir, stdio: 'pipe' });
+  execSync('git commit -q -m "seed shared state"', { cwd: repo.dir, stdio: 'pipe' });
+
+  const addResult = runGsdTools(['worktree', 'add', wtDir, branch], repo.dir);
+  assert.ok(addResult.success, `worktree add failed: ${addResult.error}`);
+
+  // Branch: rewrite STATE.md + add disjoint code file (+ optional extra conflict)
+  fs.writeFileSync(path.join(wtDir, '.planning', 'STATE.md'), 'branch state\n');
+  fs.writeFileSync(path.join(wtDir, 'code-a.txt'), 'branch code\n');
+  if (extraConflictFile) fs.writeFileSync(path.join(wtDir, extraConflictFile), 'branch version\n');
+  execSync('git add -A', { cwd: wtDir, stdio: 'pipe' });
+  execSync('git commit -q -m "branch work"', { cwd: wtDir, stdio: 'pipe' });
+
+  // Main diverges STATE.md too (+ optional extra conflict)
+  fs.writeFileSync(path.join(planningDir, 'STATE.md'), 'main state\n');
+  if (extraConflictFile) fs.writeFileSync(path.join(repo.dir, extraConflictFile), 'main version\n');
+  execSync('git add -A', { cwd: repo.dir, stdio: 'pipe' });
+  execSync('git commit -q -m "main diverge state"', { cwd: repo.dir, stdio: 'pipe' });
+}
+
+test('worktree merge --shared-state: STATE.md-only conflict auto-resolves as ours, code lands', () => {
+  const repo = createTempGitRepo();
+  const wtDir = path.join(repo.dir, '.worktrees', 'ss-clean');
+  try {
+    seedSharedStateDivergence(repo, wtDir, 'ss-clean', null);
+
+    const mergeResult = runGsdTools(['worktree', 'merge', 'ss-clean', '--shared-state'], repo.dir);
+    assert.ok(mergeResult.success, `merge failed: ${mergeResult.error}`);
+    const parsed = JSON.parse(mergeResult.output);
+    assert.equal(parsed.clean, true, 'shared-state-only conflict should auto-resolve to clean');
+    assert.deepEqual(parsed.autoresolved, ['.planning/STATE.md'], 'STATE.md should be listed as autoresolved');
+
+    // "ours" kept for STATE.md
+    assert.equal(
+      fs.readFileSync(path.join(repo.dir, '.planning', 'STATE.md'), 'utf-8'),
+      'main state\n',
+      'STATE.md should keep the main (ours) version'
+    );
+    // Branch code still landed
+    assert.ok(fs.existsSync(path.join(repo.dir, 'code-a.txt')), 'branch code file should be merged in');
+    // No merge in progress
+    const status = execSync('git status --porcelain', { cwd: repo.dir, encoding: 'utf-8' });
+    assert.ok(!status.includes('UU'), 'no unmerged paths should remain');
+  } finally {
+    try { execSync('git merge --abort', { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    try { execSync(`git worktree remove "${wtDir}" --force`, { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    try { execSync('git branch -D ss-clean', { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    repo.cleanup();
+  }
+});
+
+test('worktree merge --shared-state: real code conflict is NOT auto-resolved', () => {
+  const repo = createTempGitRepo();
+  const wtDir = path.join(repo.dir, '.worktrees', 'ss-real');
+  try {
+    seedSharedStateDivergence(repo, wtDir, 'ss-real', 'app.txt');
+
+    const mergeResult = runGsdTools(['worktree', 'merge', 'ss-real', '--shared-state'], repo.dir);
+    assert.ok(mergeResult.success, `merge command itself failed: ${mergeResult.error}`);
+    const parsed = JSON.parse(mergeResult.output);
+    assert.equal(parsed.clean, false, 'conflict beyond shared-state must stay reviewable');
+    assert.ok(parsed.conflict_files.includes('app.txt'), 'app.txt should be reported as a conflict');
+    // STATE.md must NOT have been silently resolved to ours — merge left reviewable
+    const status = execSync('git status --porcelain', { cwd: repo.dir, encoding: 'utf-8' });
+    assert.ok(status.includes('UU'), 'unmerged paths should remain for human review');
+    execSync('git merge --abort', { cwd: repo.dir, stdio: 'pipe' });
+  } finally {
+    try { execSync('git merge --abort', { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    try { execSync(`git worktree remove "${wtDir}" --force`, { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    try { execSync('git branch -D ss-real', { cwd: repo.dir, stdio: 'pipe' }); } catch {}
+    repo.cleanup();
+  }
+});
+
 test('worktree remove deletes the dir and branch', () => {
   const repo = createTempGitRepo();
   const wtDir = path.join(repo.dir, '.worktrees', 'remove-me');

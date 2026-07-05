@@ -97,6 +97,16 @@ BUG #4 (most important) — parallel phases always conflict on shared GSD state.
 
 Net: scheduling + isolation + per-worktree execution + code-file merge are PROVEN. Parallel autonomous is NOT usable until #3 (blocking wait/merge) and #4 (shared-state merge) are fixed. #2 (worktree GSD provisioning) also still open.
 
+## FIXES for #2/#3/#4 — IMPLEMENTED (2026-07-05)
+
+All three bugs addressed. Hard, bug-prone logic lives in tested tooling; orchestration is one blocking bash block.
+
+- **#2 (worktree GSD)** — `worktree add --provision-gsd` (`worktree.cjs` `provisionGsdIntoWorktree`) symlinks the main tree's absolute `.claude/` into the new worktree (untracked, always-live, no-ops if the worktree already carries a tracked `.claude/` or the main tree has none). Headless child rooted in the worktree now sees `/gsd2` + `gsd-tools`. Unit-tested (symlink present/resolves; absent without the flag).
+- **#4 (shared state)** — `worktree merge --shared-state` (`cmdWorktreeMerge`): if EVERY conflict is in `DEFAULT_SHARED_STATE` (`.planning/STATE.md`, `.planning/ROADMAP.md`) it resolves them `--ours` (keep accumulating main), finalizes the merge, returns `{clean:true, autoresolved:[...]}`. Any conflict OUTSIDE that set → real conflict, left reviewable, nothing auto-resolved (partial-resolution failures `merge --abort` back to reviewable). Key realization: frontier reads completion from merged per-phase SUMMARY files (distinct phase dirs → never conflict), so central ROADMAP refresh is cosmetic — orchestrator runs `roadmap update-plan-progress <N>` post-merge to keep checkboxes truthful. Chose option (a)+(c) hybrid over the todo's pure-(a). Unit-tested (STATE-only → clean+ours+code lands; STATE+code → stays reviewable).
+- **#3 (async wait)** — `autonomous.md` step 4d rewritten: launch + `wait` on all PIDs + merge loop are now ONE Bash invocation (background all N, `for N; do wait "${PID[$N]}"; done`, then merge). Prose is emphatic that this must not be split across model turns. Per-round cap = first `MAX_PAR` of coschedulable; remainder reappears in the next `roadmap frontier` round. Not unit-testable (needs real headless `claude`); verified only by the e2e green-light run below.
+
+Runtime synced via `node bin/install.js --local` (hooks build skipped — unchanged). **Green-light e2e still PENDING** — re-run `~/gsd-smoke-test` per the todo to confirm both files merge clean with zero conflicts and worktrees auto-remove.
+
 ## int_prep application (after P1)
 - v0.1.3 migration wave 01–11 is a genuine chain (each island builds on the prior proven bridge pattern); real parallelism is limited.
 - True parallel opportunities: **Phase 14** (roadmap says independent of 01–13), **Phase 12** (hard-depends only on 04; "after 11" is soft), **02∥03** (03's dep on 02 is soft).
