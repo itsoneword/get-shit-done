@@ -18,7 +18,11 @@ All three bugs FIXED (see reference doc section "FIXES for #2/#3/#4 — IMPLEMEN
 - #3 `autonomous.md` 4d rewritten as one blocking bash (launch+wait+merge) — not unit-testable.
 - Runtime synced (`node bin/install.js --local`). worktree/parallel-gate/roadmap tests: 70/70 green.
 
-**Remaining:** the green-light e2e below (needs spawning real headless `claude`; run deliberately with fresh context to monitor). Close this todo once it's green.
+**E2E RAN 2026-07-05 (run smoke-e2e2) — PASSED.** All three fixes proven end-to-end: worktrees provisioned with `.claude` symlinks (#2), orchestrator blocked in one bash `wait` loop then merged (#3), phase-02's STATE/ROADMAP conflict auto-resolved via `--shared-state` (#4). Final: alpha.txt+beta.txt on master, zero conflict markers, worktrees+branches removed, milestone archived.
+
+The run also shook out **two follow-up bugs in the 4d bash block** (both FIXED + locally verified, commit a01cba0): (A) clean merges misgrepped because `output()` pretty-prints `"clean": true` with a space → cleanup skipped; (B) ledger appends rejected (missing `alternatives`/`escalated`, embedded multiline JSON). See reference doc "E2E green-light run #2".
+
+**Only remaining (optional):** one fully-unattended re-run of the *fixed* 4d block to confirm auto-cleanup needs no hand-holding. Both fixes verified in isolation, so this is confirmation not discovery. Close this todo after it (or now, at the owner's call).
 
 ## Problem (original)
 
