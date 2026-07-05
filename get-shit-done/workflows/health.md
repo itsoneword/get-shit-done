@@ -143,6 +143,10 @@ Report final status.
 | I001 | info | Plan without SUMMARY (may be in progress) | No |
 | I003 | info | .claude/get-shit-done/ not found — symmetry check skipped (not installed?) | No |
 | I004 | info | .claude/settings.json not found — settings parity check skipped | No |
+| E-GRAPH-CYCLE | error | Dependency cycle in depends_on edges (phase or plan) | No |
+| E-GRAPH-DANGLING | error | Dangling structural edge (depends_on/satisfies) pointing to a nonexistent node | No |
+| I-GRAPH-DANGLING | info | Dangling advisory edge (affects/provides/wires) pointing to a nonexistent node | No |
+| I-GRAPH-CONTRADICTION | info | affects declaration contradicts (or is unsupported by) files_modified overlap | No |
 
 </error_codes>
 
@@ -170,6 +174,16 @@ Both parts run in the same `validate health` invocation. The check skips cleanly
 
 </symmetry_check>
 
+<graph_integrity_check>
+
+## Check 10: Graph Integrity
+
+`/gsd2:health` runs the same structural/advisory split `gsd-tools graph validate` uses, via `graph.cjs`'s shared `computeGraphIntegrity`. **Structural** findings (dependency cycles; dangling references on `depends_on`/`satisfies` edges) are `error` severity and flip overall health to `broken`. **Advisory** findings (dangling references on `affects`/`provides`/`wires` edges; `affects`-vs-`files_modified` contradictions) are `info` severity — visible in the report, never fail health, because this data is author-supplied and expected to carry some sloppiness (see `.planning/v1.7/phases/17-graph-algorithms-integrity-check/17-CONTEXT.md`).
+
+**Not repairable:** graph findings are diagnostic only — `--repair` never touches them. Fixing a cycle or a dangling/contradictory reference means editing the source (ROADMAP.md, PLAN/SUMMARY frontmatter) by hand, or reviewing with `gsd-tools graph validate` for the full advisory list.
+
+</graph_integrity_check>
+
 <repair_actions>
 
 | Action | Effect | Risk |
@@ -183,6 +197,7 @@ Both parts run in the same `validate health` invocation. The check skips cleanly
 - PROJECT.md, ROADMAP.md content
 - Phase directory renaming
 - Orphaned plan cleanup
+- Graph-integrity findings (cycles, dangling refs, affects contradictions) — author-supplied data, review with gsd-tools graph validate
 
 </repair_actions>
 

@@ -10,6 +10,7 @@ const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal
 const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
 const { applyClaudeLocalTransform, isTransformableFile, claudeLocalInstallDir } = require('./install-transform.cjs');
+const graph = require('./graph.cjs');
 
 // ─── Verify-loop primitives (Phase 4) ─────────────────────────────────────────
 
@@ -1214,6 +1215,52 @@ function cmdValidateHealth(cwd, options, raw) {
           false // settings.json parity is not auto-repairable (installer owns it)
         );
       }
+    }
+  }
+
+  // ─── Check 10: Graph integrity (structural cycles/dangling = error; advisory dangling/contradictions = info) ───
+  {
+    const graphModel = graph.buildGraph(cwd);
+    const integrity = graph.computeGraphIntegrity(graphModel);
+
+    for (const cycle of integrity.cycles) {
+      addIssue(
+        'error',
+        'E-GRAPH-CYCLE',
+        `Dependency cycle: ${cycle.nodes.join(' -> ')}`,
+        'Break the cycle in ROADMAP.md phase "Depends on" prose or PLAN frontmatter depends_on; not auto-repairable',
+        false
+      );
+    }
+
+    for (const e of integrity.danglingStructural) {
+      addIssue(
+        'error',
+        'E-GRAPH-DANGLING',
+        `Dangling ${e.type} edge (${e.source}): ${e.from} -> ${e.to}`,
+        'Fix or remove the reference; not auto-repairable (author-supplied data)',
+        false
+      );
+    }
+
+    for (const e of integrity.danglingAdvisory) {
+      addIssue(
+        'info',
+        'I-GRAPH-DANGLING',
+        `Dangling ${e.type} edge (${e.source}): ${e.from} -> ${e.to}`,
+        'Advisory only — review with `gsd-tools graph validate`',
+        false
+      );
+    }
+
+    for (const c of integrity.contradictions) {
+      addIssue(
+        'info',
+        'I-GRAPH-CONTRADICTION',
+        c.message,
+        'Advisory only — review with `gsd-tools graph validate`',
+        false
+      );
     }
   }
 
