@@ -1,5 +1,5 @@
 # Codebase Structure
-**Analysis Date:** 2026-06-12
+**Analysis Date:** 2026-07-05
 
 ## Directory Layout
 
@@ -47,7 +47,7 @@ get-shit-done/                        # Repository root
 ├── get-shit-done/                    # Runtime assets — installed to ~/.claude/get-shit-done/
 │   ├── bin/
 │   │   ├── gsd-tools.cjs             # CLI router — the tool entrypoint called by all workflows
-│   │   └── lib/                      # Domain logic modules (27 modules)
+│   │   └── lib/                      # Domain logic modules (28 modules)
 │   │       ├── core.cjs              # Shared utilities, config, git, phase lookup, markdown normalization
 │   │       ├── state.cjs             # STATE.md read/write and progression
 │   │       ├── phase.cjs             # Phase CRUD and lifecycle
@@ -66,6 +66,7 @@ get-shit-done/                        # Repository root
 │   │       ├── mailbox.cjs           # Phase 10+: Escalated question mailbox
 │   │       ├── park.cjs              # Phase 12+: Phase snapshots and stuck detection
 │   │       ├── discuss-loop.cjs      # Phase 14+: Multi-lens loop primitives (validation, delta, survivors, transcript)
+│   │       ├── graph.cjs             # Phase 16–17: Normalized planning-graph model; topoSort, cycle detection, blast-radius, integrity checking
 │   │       ├── worktree.cjs          # Phase 13+: Git worktree lifecycle (add, merge, remove, prune)
 │   │       ├── parallel-gate.cjs     # Phase 13+: Concurrency safety checks
 │   │       ├── trace.cjs             # Tracing utilities
@@ -166,6 +167,18 @@ get-shit-done/                        # Repository root
 - `get-shit-done/workflows/overnight.md` — Unattended overnight runner orchestration; health check, phase loop, conflict routing, stuck detection (Phase 13+)
 - `get-shit-done/workflows/discuss-loop.md` — Multi-lens discussion loop orchestration; round management, convergence, escalation (Phase 14+)
 
+**Planning graph (Phase 16–17):**
+
+- `get-shit-done/bin/lib/graph.cjs` — Normalized planning-graph model builder and analysis. Public functions:
+  - `buildGraph(cwd)` → `{nodes, edges}` — reads phase/plan frontmatter, ROADMAP prose, SUMMARY requires/affects, REQUIREMENTS.md, and todo depends_on to build a single directed graph model. Node IDs: `phase:N`, `plan:N-NN`, `requirement:ID`, `todo:<slug>`, `artifact:<path>`. Edge types: `depends_on | provides | affects | satisfies | wires`. Edge shape: `{from, to, type, source}` where source indicates provenance (roadmap_depends_on, plan_depends_on, files_modified, summary_requires, summary_affects, plan_key_links, requirements_traceability, todo_depends_on, todo_related_to).
+  - `topoSort(graph)` — Kahn's algorithm over `depends_on` edges (excludes files_modified source for ordering). Returns `{order, residual}` where residual includes cycle members and downstream nodes.
+  - `detectCycles(graph)` — Tarjan strongly-connected components. Returns array of cycles (each cycle is `string[]` of node IDs). Excludes files_modified from ordering constraint set to avoid false-positive cycles.
+  - `blastRadius(graph, nodeId, options)` — Forward BFS over `affects`+`provides` edges. Returns `{found, node, levels, closure}` where `levels` is array of arrays grouped by hop distance. Unknown node returns `{found: false}`.
+  - `computeGraphIntegrity(graph)` — Pure function combining cycle detection + dangling-ref tiering + affects-vs-files_modified contradiction checking. Returns `{cycles, danglingStructural, danglingAdvisory, contradictions}`. Called by both `graph validate` (Plan 16-02) and `/gsd2:health` (Phase 17, GRAPH-06).
+  - CLI commands (via `gsd-tools graph <sub>` dispatch): `analyze` (human-readable summary), `export` (JSON), `validate` (structural findings fatal, advisory reported; `--strict` promotes all to fatal; exit-nonzero if failures), `blast-radius <node> [--depth N]` (exits nonzero if node unknown).
+
+- `get-shit-done/bin/lib/verify.cjs`, `cmdValidateHealth` — `/gsd2:health` integration; Check 10 calls `graph.buildGraph` + `graph.computeGraphIntegrity`. Structural findings (cycles, dangling structural refs) → `{code: E-GRAPH-*, severity: error}`, advisory findings → `{code: I-GRAPH-*, severity: info}`. Graph checks are read-only, never `--repair`-able.
+
 **Configuration:**
 
 - `package.json` — npm package metadata, build scripts, test commands, engines (Node >=20)
@@ -201,7 +214,7 @@ get-shit-done/                        # Repository root
 
 **Files:**
 
-- Library modules: `kebab-case.cjs` — e.g., `model-profiles.cjs`, `profile-pipeline.cjs`, `discuss-loop.cjs`, `worktree.cjs`
+- Library modules: `kebab-case.cjs` — e.g., `model-profiles.cjs`, `profile-pipeline.cjs`, `discuss-loop.cjs`, `graph.cjs`, `worktree.cjs`
 - Agent definitions: `gsd-<role>.md` — e.g., `gsd-executor.md`, `gsd-plan-checker.md`, `gsd-lens-skeptic.md`
 - Command stubs: `kebab-case.md` matching the workflow name — e.g., `execute-phase.md`, `discuss-loop.md`
 - Workflow files: `kebab-case.md` matching the command — e.g., `execute-phase.md`, `overnight.md`
@@ -210,7 +223,7 @@ get-shit-done/                        # Repository root
 
 **Functions (in lib/*.cjs):**
 
-- Command handlers (exported, called from gsd-tools router): `cmd` prefix + PascalCase — e.g., `cmdPhasesList`, `cmdStateLoad`, `cmdLedgerAppend`, `cmdDiscussLoopValidate`
+- Command handlers (exported, called from gsd-tools router): `cmd` prefix + PascalCase — e.g., `cmdPhasesList`, `cmdStateLoad`, `cmdLedgerAppend`, `cmdGraphValidate`, `cmdGraphBlastRadius`
 - Internal helpers not exported: plain `camelCase` — e.g., `loadConfig`, `findPhaseInternal`, `normalizeMd`, `validatePositionBlock`
 - Exported via `module.exports = { ... }` at bottom of each file
 
@@ -257,6 +270,9 @@ If adding ledger/mailbox/park operations: add commands to appropriate lib module
 
 **New discuss-loop operation (Phase 14+):**
 Add to `lib/discuss-loop.cjs` as pure functions (no I/O), cmd* handlers for process I/O. All validation is deterministic membership checking (CONSTRAINT_ID_RE, VALID_LENSES, etc.) — no heuristics. Every constraint must include a verbatim `anchor` field (string from artifact content). Position blocks validated with `validatePositionBlock(block, {round, priorIds, artifactContent})` before acceptance. Survivor selection via `selectSurvivors(rounds)` orders lenses by divergence weight (unshared blocking constraint count). Transcript writes via `appendTranscript(cwd, loopId, record)` are append-only, never rewrite.
+
+**New graph-based feature (Phase 16–17+):**
+Extend `lib/graph.cjs` with pure functions only (no I/O or process.exit). Node ID patterns: `phase:N`, `plan:N-NN`, `requirement:ID`, `todo:<slug>`, `artifact:<path>`. Edge types: one of `depends_on | provides | affects | satisfies | wires`. All edge-type decisions driven by source provenance (roadmap_depends_on, plan_depends_on, files_modified, etc.). For ordering constraints, exclude `files_modified`-source `depends_on` edges (stored in `NON_ORDERING_DEPENDS_ON_SOURCES` constant) to prevent false-positive cycles. CLI dispatch: add function to graph.cjs, register in `case 'graph'` switch block in gsd-tools.cjs. Read-only operations only (buildGraph, topoSort, detectCycles, blastRadius, validate); no mutations. Reuse `computeGraphIntegrity` for health checks rather than duplicating integrity logic.
 
 **New worktree or overnight-runner feature (Phase 13+):**
 Add worktree operations to `lib/worktree.cjs` (add, merge, remove, prune) or run operations to `lib/ledger.cjs` (record-phase, run status, run snapshot, run report). Conflict detection must read `clean: boolean` from `worktree merge --raw` JSON, never trust exit code (TC-2 invariant). Run.log writes must use locked TYPE vocabulary and ISO8601 timestamps. Stuck detection via `run snapshot` compares file hashes; stuck completed phases must be downgraded to failed (TC-6).
