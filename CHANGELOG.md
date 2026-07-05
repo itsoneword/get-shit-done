@@ -2,6 +2,10 @@
 
 Experimental fork of [get-shit-done](https://github.com/gsd-build/get-shit-done). Forked from v1.26.0.
 
+## [1.6.4] - 2026-07-05
+
+fix: parallel-phase executor now usable unattended — worktrees provisioned with GSD (worktree add --provision-gsd), shared-state STATE.md/ROADMAP.md merge auto-resolution (worktree merge --shared-state), and a single blocking launch+wait+merge sequence in autonomous 4d (previously worktrees dangled and phases N>1 conflicted on shared state). E2E-verified on a 2-phase parallel smoke run.
+
 ## [1.6.2] - 2026-07-03
 
 Token-cut cleanup: dedupe executor prompt blocks, shared project-context reference for 7 agents, ui-brand trimmed to cheat sheet, removed dead template.cjs CLI verb and orphaned phase-prompt.md template
