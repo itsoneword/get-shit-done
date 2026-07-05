@@ -85,6 +85,18 @@ FIX options: (a) after `worktree add`, symlink/copy the main tree's `.claude` in
 
 Smoke-test workaround: committed `.claude` in the throwaway so worktrees inherit it, to exercise the rest of the mechanism (frontier → launch → execute → merge).
 
+## E2E smoke run (2026-07-05) — mechanism works, 2 orchestration bugs
+
+Ran full `/gsd2:autonomous` headless on the 2-phase smoke project. Results:
+
+WORKED: frontier co-scheduled both phases → 2 worktrees + 2 parallel headless `claude -p` processes → each phase ran discuss→plan→execute→(verify) *in its own worktree*, created its file, committed atomically. Isolation held at full scale (main tree untouched). Manual `worktree merge` of both branches afterward landed alpha.txt + beta.txt.
+
+BUG #3 — orchestrator can't wait across the async boundary. The top-level `claude -p` session backgrounded the two phase processes (`&`), printed "launched a monitor... waiting", then EXITED (exit 0) before the phases finished → merge/cleanup never ran; worktrees left dangling. A single-shot print session (and, really, any model turn) cannot block-wait for detached `&` processes. FIX: launch + `wait` + merge + remove must be ONE self-contained blocking shell sequence (a single bash invocation that backgrounds all N, waits on their PIDs, then merges each), not model-driven steps after backgrounding. autonomous.md:643 currently backgrounds then relies on prose "wait for them".
+
+BUG #4 (most important) — parallel phases always conflict on shared GSD state. phase-01 merged clean; phase-02 conflicted on `.planning/STATE.md` and `.planning/ROADMAP.md`. Every phase updates these bookkeeping files, but they are NOT in `files_modified` (which lists only code deliverables), so the axis-A guard co-schedules the phases as non-overlapping. The GSD state model assumes serial phase execution writing STATE.md sequentially. FIX options: (a) exclude STATE.md/ROADMAP.md from phase-branch commits and have the orchestrator update them centrally, post-merge, from truth; (b) treat them as always-regenerate-not-merge; (c) add them to a known-shared list that forces per-file serialization of the state update. Until resolved, parallel phases N>1 conflict on merge.
+
+Net: scheduling + isolation + per-worktree execution + code-file merge are PROVEN. Parallel autonomous is NOT usable until #3 (blocking wait/merge) and #4 (shared-state merge) are fixed. #2 (worktree GSD provisioning) also still open.
+
 ## int_prep application (after P1)
 - v0.1.3 migration wave 01–11 is a genuine chain (each island builds on the prior proven bridge pattern); real parallelism is limited.
 - True parallel opportunities: **Phase 14** (roadmap says independent of 01–13), **Phase 12** (hard-depends only on 04; "after 11" is soft), **02∥03** (03's dep on 02 is soft).
