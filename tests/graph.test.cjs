@@ -8,7 +8,11 @@ const fs = require('fs');
 const path = require('path');
 const { createTempProject, cleanup, runGsdTools } = require('./helpers.cjs');
 
-const { buildGraph, refToNodeId, resolvePlanDepRef, parseKeyLinkItem } = require('../get-shit-done/bin/lib/graph.cjs');
+const {
+  buildGraph, refToNodeId, resolvePlanDepRef, parseKeyLinkItem,
+  topoSort, detectCycles, findDanglingEdges, findAffectsContradictions,
+  computeGraphIntegrity, blastRadius,
+} = require('../get-shit-done/bin/lib/graph.cjs');
 
 describe('graph.cjs refToNodeId', () => {
   test('resolves "Phase 16" to phase:16', () => {
@@ -410,6 +414,546 @@ autonomous: true
 
   test('graph bogus subcommand exits non-zero', () => {
     const result = runGsdTools(['graph', 'bogus'], tmpDir);
+    assert.strictEqual(result.success, false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Plan 17-01: graph algorithms + integrity checks
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('graph.cjs topoSort', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  function writePlan(phaseDir, planNum, dependsOn) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDir);
+    fs.mkdirSync(dir, { recursive: true });
+    const depsYaml = dependsOn.length > 0
+      ? 'depends_on:\n' + dependsOn.map(d => `  - ${d}`).join('\n')
+      : 'depends_on: []';
+    fs.writeFileSync(path.join(dir, `${phaseDir}-${planNum}-PLAN.md`), `---
+phase: ${phaseDir}
+plan: "${planNum}"
+type: auto
+wave: 1
+${depsYaml}
+files_modified: []
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+  }
+
+  test('order places dependencies before dependents (Kahn), residual empty for acyclic graph', () => {
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 1: Foo
+**Goal:** Foo goal
+
+### Phase 2: Bar
+**Goal:** Bar goal
+**Depends on:** Phase 1
+`);
+    writePlan('01-foo', '01', []);
+    writePlan('02-bar', '01', ['01-01']);
+    writePlan('02-bar', '02', [1]);
+
+    const graph = buildGraph(tmpDir);
+    const { order, residual } = topoSort(graph);
+
+    assert.ok(order.indexOf('phase:1') < order.indexOf('phase:2'), 'phase:1 before phase:2');
+    assert.ok(order.indexOf('plan:01-01') < order.indexOf('plan:02-01'), 'plan:01-01 before plan:02-01');
+    assert.ok(order.indexOf('plan:02-01') < order.indexOf('plan:02-02'), 'plan:02-01 before plan:02-02');
+    assert.deepStrictEqual(residual, []);
+  });
+});
+
+describe('graph.cjs detectCycles', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  test('precise cycle participants only - node merely downstream of a cycle never appears in any cycle', () => {
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 3: Foo
+**Goal:** g
+**Depends on:** Phase 4
+
+### Phase 4: Bar
+**Goal:** g
+**Depends on:** Phase 3
+
+### Phase 5: Baz
+**Goal:** g
+**Depends on:** Phase 4
+`);
+    const graph = buildGraph(tmpDir);
+    const cycles = detectCycles(graph);
+
+    assert.strictEqual(cycles.length, 1, 'exactly one cycle detected');
+    assert.deepStrictEqual(cycles[0], ['phase:3', 'phase:4']);
+    assert.ok(!cycles.some(c => c.includes('phase:5')), 'phase:5 (downstream of cycle, not a member) must never appear in a reported cycle');
+  });
+});
+
+describe('graph.cjs findDanglingEdges', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  function writePlan(phaseDir, planNum, dependsOn) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDir);
+    fs.mkdirSync(dir, { recursive: true });
+    const depsYaml = dependsOn.length > 0
+      ? 'depends_on:\n' + dependsOn.map(d => `  - "${d}"`).join('\n')
+      : 'depends_on: []';
+    fs.writeFileSync(path.join(dir, `${phaseDir}-${planNum}-PLAN.md`), `---
+phase: ${phaseDir}
+plan: "${planNum}"
+type: auto
+wave: 1
+${depsYaml}
+files_modified: []
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+  }
+
+  test('dangling plan depends_on ref is structural, not advisory', () => {
+    writePlan('01-foo', '01', ['99-01']);
+    const graph = buildGraph(tmpDir);
+    const { structural, advisory } = findDanglingEdges(graph);
+    assert.ok(structural.some(e => e.from === 'plan:01-01' && e.to === 'plan:99-01' && e.type === 'depends_on'));
+    assert.ok(!advisory.some(e => e.to === 'plan:99-01'));
+  });
+
+  test('dangling SUMMARY affects ref (no matching ROADMAP phase) is advisory, not structural', () => {
+    const dir = path.join(tmpDir, '.planning', 'phases', '01-foo');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '01-01-SUMMARY.md'), `---
+phase: 01-foo
+plan: "01"
+subsystem: infra
+tags: []
+affects:
+  - "Phase 42"
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+    const graph = buildGraph(tmpDir);
+    const { structural, advisory } = findDanglingEdges(graph);
+    assert.ok(advisory.some(e => e.to === 'phase:42' && e.type === 'affects'));
+    assert.ok(!structural.some(e => e.to === 'phase:42'));
+  });
+
+  test('dangling nested requires ref produces a dangling provides edge, tiered advisory (never gates but must be surfaced)', () => {
+    const dir = path.join(tmpDir, '.planning', 'phases', '01-foo');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, '01-01-SUMMARY.md'), `---
+phase: 01-foo
+plan: "01"
+subsystem: infra
+tags: []
+dependency_graph:
+  requires:
+    - phase: Phase 42
+      provides: something
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+    const graph = buildGraph(tmpDir);
+    const { structural, advisory } = findDanglingEdges(graph);
+    assert.ok(advisory.some(e => e.from === 'phase:42' && e.to === 'plan:01-01' && e.type === 'provides'));
+    assert.ok(!structural.some(e => e.from === 'phase:42'));
+  });
+});
+
+describe('graph.cjs findAffectsContradictions', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  function writePlan(phaseDir, planNum, filesModified) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDir);
+    fs.mkdirSync(dir, { recursive: true });
+    const filesYaml = filesModified.length > 0
+      ? 'files_modified:\n' + filesModified.map(f => `  - ${f}`).join('\n')
+      : 'files_modified: []';
+    fs.writeFileSync(path.join(dir, `${phaseDir}-${planNum}-PLAN.md`), `---
+phase: ${phaseDir}
+plan: "${planNum}"
+type: auto
+wave: 1
+depends_on: []
+${filesYaml}
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+  }
+
+  function writeSummaryAffects(phaseDir, planNum, affectsList) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${phaseDir}-${planNum}-SUMMARY.md`), `---
+phase: ${phaseDir}
+plan: "${planNum}"
+subsystem: infra
+tags: []
+affects:
+${affectsList.map(a => `  - "${a}"`).join('\n')}
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+  }
+
+  test('file-overlap-undeclared: shared files_modified with no affects edge between the pair', () => {
+    writePlan('10-foo', '01', ['shared.cjs']);
+    writePlan('10-foo', '02', ['shared.cjs']);
+    const graph = buildGraph(tmpDir);
+    const contradictions = findAffectsContradictions(graph);
+    assert.ok(contradictions.some(c =>
+      c.kind === 'file-overlap-undeclared' && [c.from, c.to].sort().join('|') === 'plan:10-01|plan:10-02'
+    ));
+  });
+
+  test('declared-unsupported: affects declared with no files_modified overlap', () => {
+    writePlan('11-foo', '01', []);
+    writePlan('11-foo', '02', []);
+    writeSummaryAffects('11-foo', '01', ['11-02']);
+    const graph = buildGraph(tmpDir);
+    const contradictions = findAffectsContradictions(graph);
+    assert.ok(contradictions.some(c =>
+      c.kind === 'declared-unsupported' && c.from === 'plan:11-01' && c.to === 'plan:11-02'
+    ));
+  });
+
+  test('no contradiction when both files_modified overlap AND affects edge exist for the same pair (regression guard)', () => {
+    writePlan('12-foo', '01', ['shared12.cjs']);
+    writePlan('12-foo', '02', ['shared12.cjs']);
+    writeSummaryAffects('12-foo', '01', ['12-02']);
+    const graph = buildGraph(tmpDir);
+    const contradictions = findAffectsContradictions(graph);
+    assert.ok(!contradictions.some(c => [c.from, c.to].sort().join('|') === 'plan:12-01|plan:12-02'));
+  });
+});
+
+describe('graph.cjs computeGraphIntegrity', () => {
+  let tmpDir;
+
+  beforeEach(() => { tmpDir = createTempProject(); });
+  afterEach(() => { cleanup(tmpDir); });
+
+  test('combines cycles + tiered dangling refs + contradictions into one object', () => {
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 6: Foo
+**Goal:** g
+**Depends on:** Phase 7
+
+### Phase 7: Bar
+**Goal:** g
+**Depends on:** Phase 6
+`);
+
+    const dir08 = path.join(tmpDir, '.planning', 'phases', '08-baz');
+    fs.mkdirSync(dir08, { recursive: true });
+    fs.writeFileSync(path.join(dir08, '08-01-PLAN.md'), `---
+phase: 08-baz
+plan: "01"
+type: auto
+wave: 1
+depends_on:
+  - "99-01"
+files_modified: []
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+    fs.writeFileSync(path.join(dir08, '08-01-SUMMARY.md'), `---
+phase: 08-baz
+plan: "01"
+subsystem: infra
+tags: []
+affects:
+  - "Phase 42"
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+
+    const dir09 = path.join(tmpDir, '.planning', 'phases', '09-qux');
+    fs.mkdirSync(dir09, { recursive: true });
+    for (const n of ['01', '02']) {
+      fs.writeFileSync(path.join(dir09, `09-${n}-PLAN.md`), `---
+phase: 09-qux
+plan: "${n}"
+type: auto
+wave: 1
+depends_on: []
+files_modified:
+  - shared09.cjs
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+    }
+
+    const graph = buildGraph(tmpDir);
+    const integrity = computeGraphIntegrity(graph);
+
+    assert.ok('cycles' in integrity && 'danglingStructural' in integrity && 'danglingAdvisory' in integrity && 'contradictions' in integrity);
+    assert.ok(integrity.cycles.some(c => JSON.stringify(c.nodes) === JSON.stringify(['phase:6', 'phase:7'])));
+    assert.ok(integrity.danglingStructural.some(e => e.from === 'plan:08-01' && e.to === 'plan:99-01'));
+    assert.ok(integrity.danglingAdvisory.some(e => e.to === 'phase:42'));
+    assert.ok(integrity.contradictions.some(c =>
+      c.kind === 'file-overlap-undeclared' && [c.from, c.to].sort().join('|') === 'plan:09-01|plan:09-02'
+    ));
+  });
+});
+
+describe('graph.cjs blastRadius', () => {
+  function makeChainGraph() {
+    return {
+      nodes: [
+        { id: 'plan:A', type: 'plan' },
+        { id: 'plan:B', type: 'plan' },
+        { id: 'plan:C', type: 'plan' },
+        { id: 'plan:D', type: 'plan' },
+      ],
+      edges: [
+        { from: 'plan:A', to: 'plan:B', type: 'affects', source: 'summary_affects' },
+        { from: 'plan:B', to: 'plan:C', type: 'affects', source: 'summary_affects' },
+        { from: 'plan:C', to: 'plan:D', type: 'affects', source: 'summary_affects' },
+      ],
+    };
+  }
+
+  test('unbounded (no depth) returns the full closure grouped by hop level', () => {
+    const graph = makeChainGraph();
+    const result = blastRadius(graph, 'plan:A');
+    assert.deepStrictEqual(result.levels, [['plan:B'], ['plan:C'], ['plan:D']]);
+    assert.deepStrictEqual(result.closure, ['plan:B', 'plan:C', 'plan:D']);
+  });
+
+  test('depth: 1 bounds output to level 1 only', () => {
+    const graph = makeChainGraph();
+    const result = blastRadius(graph, 'plan:A', { depth: 1 });
+    assert.strictEqual(result.levels.length, 1);
+    assert.deepStrictEqual(result.levels[0], ['plan:B']);
+  });
+
+  test('depth: 2 bounds output to levels 1-2, excludes level 3', () => {
+    const graph = makeChainGraph();
+    const result = blastRadius(graph, 'plan:A', { depth: 2 });
+    assert.strictEqual(result.levels.length, 2);
+    assert.deepStrictEqual(result.levels[1], ['plan:C']);
+  });
+
+  test('unrecognized node argument returns found:false, never crashes', () => {
+    const graph = makeChainGraph();
+    const result = blastRadius(graph, 'plan:does-not-exist');
+    assert.deepStrictEqual(result, { found: false, node: 'plan:does-not-exist' });
+  });
+});
+
+describe('gsd-tools graph validate/blast-radius CLI', () => {
+  let tmpDir;
+
+  afterEach(() => { cleanup(tmpDir); });
+
+  function writePlan(phaseDir, planNum, dependsOn = [], filesModified = []) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDir);
+    fs.mkdirSync(dir, { recursive: true });
+    const depsYaml = dependsOn.length > 0
+      ? 'depends_on:\n' + dependsOn.map(d => `  - "${d}"`).join('\n')
+      : 'depends_on: []';
+    const filesYaml = filesModified.length > 0
+      ? 'files_modified:\n' + filesModified.map(f => `  - ${f}`).join('\n')
+      : 'files_modified: []';
+    fs.writeFileSync(path.join(dir, `${phaseDir}-${planNum}-PLAN.md`), `---
+phase: ${phaseDir}
+plan: "${planNum}"
+type: auto
+wave: 1
+${depsYaml}
+${filesYaml}
+autonomous: true
+---
+
+<objective>Test plan</objective>
+
+<tasks>
+<task type="auto">
+  <name>Task 1</name>
+  <action>Do something</action>
+</task>
+</tasks>
+`);
+  }
+
+  function writeSummaryAffects(phaseDir, planNum, affectsList) {
+    const dir = path.join(tmpDir, '.planning', 'phases', phaseDir);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${phaseDir}-${planNum}-SUMMARY.md`), `---
+phase: ${phaseDir}
+plan: "${planNum}"
+subsystem: infra
+tags: []
+affects:
+${affectsList.map(a => `  - "${a}"`).join('\n')}
+duration: 5min
+completed: 2026-07-04
+---
+
+# Summary
+`);
+  }
+
+  test('validate on acyclic graph exits 0 and prints Result: PASS', () => {
+    tmpDir = createTempProject();
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 1: Foo
+**Goal:** g
+
+### Phase 2: Bar
+**Goal:** g
+**Depends on:** Phase 1
+`);
+    writePlan('01-foo', '01');
+    writePlan('02-bar', '01', ['01-01']);
+    const result = runGsdTools(['graph', 'validate'], tmpDir);
+    assert.strictEqual(result.success, true, result.error);
+    assert.ok(result.output.includes('Result: PASS'));
+  });
+
+  test('validate --raw on acyclic graph reports status clean and structural_count 0', () => {
+    tmpDir = createTempProject();
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 1: Foo
+**Goal:** g
+`);
+    writePlan('01-foo', '01');
+    const result = runGsdTools(['graph', 'validate', '--raw'], tmpDir);
+    assert.strictEqual(result.success, true, result.error);
+    const parsed = JSON.parse(result.output);
+    assert.strictEqual(parsed.status, 'clean');
+    assert.strictEqual(parsed.structural_count, 0);
+  });
+
+  test('validate on cyclic graph exits non-zero and names the actual cycle members', () => {
+    tmpDir = createTempProject();
+    fs.writeFileSync(path.join(tmpDir, '.planning', 'ROADMAP.md'), `# Roadmap
+
+### Phase 3: Foo
+**Goal:** g
+**Depends on:** Phase 4
+
+### Phase 4: Bar
+**Goal:** g
+**Depends on:** Phase 3
+`);
+    const result = runGsdTools(['graph', 'validate'], tmpDir);
+    assert.strictEqual(result.success, false);
+    assert.ok(result.output.includes('phase:3'));
+    assert.ok(result.output.includes('phase:4'));
+  });
+
+  test('--strict promotes an advisory-only finding to fatal (plain validate stays exit-zero)', () => {
+    tmpDir = createTempProject();
+    writePlan('10-foo', '01', [], ['shared.cjs']);
+    writePlan('10-foo', '02', [], ['shared.cjs']);
+    const plain = runGsdTools(['graph', 'validate'], tmpDir);
+    assert.strictEqual(plain.success, true, plain.error);
+    const strict = runGsdTools(['graph', 'validate', '--strict'], tmpDir);
+    assert.strictEqual(strict.success, false);
+  });
+
+  test('blast-radius prints leveled output for a known node', () => {
+    tmpDir = createTempProject();
+    writePlan('13-foo', '01');
+    writePlan('13-foo', '02');
+    writeSummaryAffects('13-foo', '01', ['13-02']);
+    const result = runGsdTools(['graph', 'blast-radius', 'plan:13-01'], tmpDir);
+    assert.strictEqual(result.success, true, result.error);
+    assert.ok(result.output.includes('Level 1'));
+  });
+
+  test('blast-radius --raw returns JSON with a levels array', () => {
+    tmpDir = createTempProject();
+    writePlan('14-foo', '01');
+    writePlan('14-foo', '02');
+    writeSummaryAffects('14-foo', '01', ['14-02']);
+    const result = runGsdTools(['graph', 'blast-radius', 'plan:14-01', '--raw'], tmpDir);
+    assert.strictEqual(result.success, true, result.error);
+    const parsed = JSON.parse(result.output);
+    assert.ok(Array.isArray(parsed.levels));
+  });
+
+  test('blast-radius on an unrecognized node exits non-zero, never a crash', () => {
+    tmpDir = createTempProject();
+    const result = runGsdTools(['graph', 'blast-radius', 'plan:does-not-exist'], tmpDir);
     assert.strictEqual(result.success, false);
   });
 });
