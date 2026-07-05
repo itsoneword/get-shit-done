@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Planning-Graph Layer
 status: unknown
-stopped_at: Completed 17-01-PLAN.md
-last_updated: "2026-07-05T20:33:14.175Z"
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-07-05T20:52:11.030Z"
 progress:
   total_phases: 22
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 ## Current Position
@@ -92,6 +92,8 @@ Recent decisions affecting current work:
 - [Phase 16]: [16-02] Todo depends_on/related_to resolved directly ('todo:' + item), never via refToNodeId, to avoid misparsing date-prefixed todo slugs into fabricated plan: nodes
 - [Phase 16-03-gap-closure]: Fixed extractFrontmatter's shared block-selection bug at the root (not a graph.cjs workaround) — anchors to file-start, preserves CRLF-stacking recovery intent
 - [Phase 17-01]: Excluded files_modified-sourced depends_on edges from topoSort/detectCycles traversal - they are documented-undirected file-overlap markers, not ordering constraints; fixes a real false-positive cycle (plan:16-01/16-02) found on the live repo
+- [Phase 17]: [Phase 17-02]: Check 10 reuses computeGraphIntegrity directly (never cmdGraphValidate, which process.exit()s) — no repair case branch, structural not-repairable enforcement
+- [Phase 17]: [Phase 17-02]: Graph-integrity docs kept as a separate <graph_integrity_check> section, not folded into Check 9's symmetry_check, for independent greppability
 
 ### Pending Todos
 
@@ -123,9 +125,10 @@ Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check 
 | Phase 16 P02 | 12min | 2 tasks | 3 files |
 | Phase 16 P03 | 15min | 2 tasks | 3 files |
 | Phase 17-graph-algorithms-integrity-check P01 | 15min | 2 tasks | 3 files |
+| Phase 17 P02 | 15min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-05T20:33:14.171Z
-Stopped at: Completed 17-01-PLAN.md
+Last session: 2026-07-05T20:52:11.024Z
+Stopped at: Completed 17-02-PLAN.md
 Resume file: None
