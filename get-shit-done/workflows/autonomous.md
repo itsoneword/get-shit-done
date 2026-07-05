@@ -641,7 +641,7 @@ declare -A PID
 # --- launch: worktree (with GSD provisioned) + background headless runner ---
 for N in $COSCHED; do
   node "$GT" worktree add ".worktrees/phase-$N" "gsd/parallel-phase-$N" --provision-gsd
-  node "$GT" ledger append --data '{"decision":"launched parallel phase '"$N"'","evidence":"headless claude -p cwd=.worktrees/phase-'"$N"' log='"$LOG_DIR"'/phase-'"$N"'.log","confidence":"HIGH","phase":"'"$N"'"}'
+  node "$GT" ledger append --data '{"decision":"launched parallel phase '"$N"'","alternatives":"run this phase serially inline","evidence":"headless claude -p cwd=.worktrees/phase-'"$N"' log='"$LOG_DIR"'/phase-'"$N"'.log","confidence":"HIGH","escalated":false,"phase":"'"$N"'"}'
   ( cd ".worktrees/phase-$N" && claude -p "/gsd2:autonomous --phase $N" --dangerously-skip-permissions ) > "$LOG_DIR/phase-$N.log" 2>&1 &
   PID[$N]=$!
 done
@@ -654,16 +654,21 @@ for N in $COSCHED; do
   RESULT=$(grep -oE 'PHASE RESULT: [a-z_]+' "$LOG_DIR/phase-$N.log" | tail -1)
   if echo "$RESULT" | grep -q completed; then
     MERGE=$(node "$GT" worktree merge "gsd/parallel-phase-$N" --shared-state)
-    if echo "$MERGE" | grep -q '"clean":true'; then
+    # gsd-tools JSON is pretty-printed ("clean": true, with a space) — the regex must tolerate whitespace.
+    if echo "$MERGE" | grep -qE '"clean":[[:space:]]*true'; then
       node "$GT" roadmap update-plan-progress "$N"   # BUG #4: refresh ROADMAP centrally from merged SUMMARYs
       node "$GT" worktree remove ".worktrees/phase-$N" --branch "gsd/parallel-phase-$N"
-      node "$GT" ledger append --data '{"decision":"merged parallel phase '"$N"'","evidence":"'"$MERGE"'","confidence":"HIGH","phase":"'"$N"'"}'
+      node "$GT" ledger append --data '{"decision":"merged parallel phase '"$N"'","alternatives":"leave worktree unmerged for manual review","evidence":"worktree merge --shared-state returned clean for gsd/parallel-phase-'"$N"'","confidence":"HIGH","escalated":false,"phase":"'"$N"'"}'
+      echo "MERGED phase $N"
     else
-      node "$GT" ledger append --data '{"decision":"parallel phase '"$N"' left unmerged (conflict)","evidence":"'"$MERGE"'","confidence":"HIGH","phase":"'"$N"'"}'
-      echo "CONFLICT phase $N: $MERGE"
+      # Extract conflict file names as a plain space-joined string — never embed the raw
+      # multi-line JSON in a ledger field (literal newlines = invalid JSON control chars).
+      CONFLICTS=$(echo "$MERGE" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('close',()=>{try{process.stdout.write((JSON.parse(s).conflict_files||[]).join(' ')||'unknown')}catch{process.stdout.write('parse-error')}})")
+      node "$GT" ledger append --data '{"decision":"parallel phase '"$N"' left unmerged (conflict beyond shared-state)","alternatives":"auto-resolve as ours","evidence":"conflict_files: '"$CONFLICTS"'","confidence":"HIGH","escalated":true,"phase":"'"$N"'"}'
+      echo "CONFLICT phase $N: $CONFLICTS"
     fi
   else
-    node "$GT" ledger append --data '{"decision":"parallel phase '"$N"' not merged (result='"$RESULT"')","evidence":"log='"$LOG_DIR"'/phase-'"$N"'.log","confidence":"HIGH","phase":"'"$N"'"}'
+    node "$GT" ledger append --data '{"decision":"parallel phase '"$N"' not merged","alternatives":"merge the branch","evidence":"PHASE RESULT was '"$RESULT"' (not completed); worktree left for review","confidence":"HIGH","escalated":true,"phase":"'"$N"'"}'
     echo "NOT-COMPLETED phase $N: $RESULT — worktree left for review"
   fi
 done

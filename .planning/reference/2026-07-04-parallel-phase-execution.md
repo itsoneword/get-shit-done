@@ -107,6 +107,21 @@ All three bugs addressed. Hard, bug-prone logic lives in tested tooling; orchest
 
 Runtime synced via `node bin/install.js --local` (hooks build skipped — unchanged). **Green-light e2e still PENDING** — re-run `~/gsd-smoke-test` per the todo to confirm both files merge clean with zero conflicts and worktrees auto-remove.
 
+## E2E green-light run #2 (2026-07-05, run smoke-e2e2) — PASSED, +2 follow-up bugs fixed
+
+Re-ran full `/gsd2:autonomous` headless on the reset 2-phase smoke project (`.claude` untracked to genuinely exercise #2). Core result: **all three fixes work end-to-end.**
+
+- **#2 confirmed live** — both worktrees got `.claude -> <main>/.claude` symlinks; headless children had `/gsd2` + `gsd-tools`.
+- **#3 confirmed live** — orchestrator assembled 4d prose into ONE blocking bash (backgrounded both phases, sat in the `wait` loop, did NOT exit early). Both phases ran discuss→plan→execute in parallel in their worktrees, both emitted `PHASE RESULT: completed`.
+- **#4 confirmed live** — phase-02's merge hit real `.planning/STATE.md`+`ROADMAP.md` conflicts and `--shared-state` auto-resolved them (`autoresolved:[".planning/STATE.md"]`, merge commit landed with beta.txt). Final tree: alpha.txt+beta.txt on master, zero conflict markers, both worktrees + branches removed, milestone audited/archived.
+
+Two NEW bugs the run shook out — both in the 4d bash block (my edit), both now FIXED + locally verified:
+
+- **4d-BUG-A: clean merges misclassified as conflicts.** `output()` always pretty-prints (`JSON.stringify(x,null,2)` → `"clean": true` with a space); the block grepped `'"clean":true'` (no space) → never matched → `update-plan-progress` + `worktree remove` were SKIPPED (the nested orchestrator finished cleanup by hand; unattended this dangles worktrees + stale ROADMAP). Fix: `grep -qE '"clean":[[:space:]]*true'`. Verified: old grep NO-MATCH, new grep MATCH on real output.
+- **4d-BUG-B: ledger appends rejected.** `REQUIRED_FIELDS=[decision,alternatives,evidence,confidence,escalated]`; the block omitted `alternatives`+`escalated`, and embedded multi-line pretty JSON `$MERGE` into an evidence string (invalid control chars). So launches/merges weren't audit-logged — violates the v1.6 auditable-from-ledger constraint. Fix: supply all required fields; extract `conflict_files` to a plain space-joined string via node; never embed raw JSON. Verified: old payload rejected, new launch+merge payloads accepted and written.
+
+Runtime re-synced. **Fully-unattended re-run of the fixed block not yet repeated** (both fixes verified in isolation; the integrated auto-cleanup path should now need no hand-holding).
+
 ## int_prep application (after P1)
 - v0.1.3 migration wave 01–11 is a genuine chain (each island builds on the prior proven bridge pattern); real parallelism is limited.
 - True parallel opportunities: **Phase 14** (roadmap says independent of 01–13), **Phase 12** (hard-depends only on 04; "after 11" is soft), **02∥03** (03's dep on 02 is soft).
