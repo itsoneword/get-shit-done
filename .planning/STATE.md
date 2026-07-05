@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Planning-Graph Layer
 status: unknown
-stopped_at: Phase 17 context gathered
-last_updated: "2026-07-05T19:25:51.471Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-07-05T20:33:14.175Z"
 progress:
   total_phases: 22
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 ## Current Position
 
-Phase: 16 (planning-graph-model-cli) — EXECUTING
+Phase: 17 (graph-algorithms-integrity-check) — EXECUTING
 Plan: 2 of 2
 
 ## Project Reference
@@ -22,7 +22,7 @@ Plan: 2 of 2
 See: .planning/PROJECT.md (updated 2026-07-04)
 
 **Core value:** Every line of code written by an AI agent should trace back to a requirement that was discussed, planned, and verified — not improvised.
-**Current focus:** Phase 16 — planning-graph-model-cli
+**Current focus:** Phase 17 — graph-algorithms-integrity-check
 
 ## Performance Metrics
 
@@ -91,6 +91,7 @@ Recent decisions affecting current work:
 - [Phase 16]: [16-02] Normalized extractFrontmatter's dash-list continuation-line flattening for SUMMARY requires items inline in graph.cjs rather than patching the shared YAML parser
 - [Phase 16]: [16-02] Todo depends_on/related_to resolved directly ('todo:' + item), never via refToNodeId, to avoid misparsing date-prefixed todo slugs into fabricated plan: nodes
 - [Phase 16-03-gap-closure]: Fixed extractFrontmatter's shared block-selection bug at the root (not a graph.cjs workaround) — anchors to file-start, preserves CRLF-stacking recovery intent
+- [Phase 17-01]: Excluded files_modified-sourced depends_on edges from topoSort/detectCycles traversal - they are documented-undirected file-overlap markers, not ordering constraints; fixes a real false-positive cycle (plan:16-01/16-02) found on the live repo
 
 ### Pending Todos
 
@@ -121,9 +122,10 @@ Phase 19 (Authoritative Promotion) is gated on Phase 17's graph-integrity check 
 | Phase 16 P01 | 15 | 2 tasks | 4 files |
 | Phase 16 P02 | 12min | 2 tasks | 3 files |
 | Phase 16 P03 | 15min | 2 tasks | 3 files |
+| Phase 17-graph-algorithms-integrity-check P01 | 15min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-07-05T19:25:51.465Z
-Stopped at: Phase 17 context gathered
-Resume file: .planning/v1.7/phases/17-graph-algorithms-integrity-check/17-CONTEXT.md
+Last session: 2026-07-05T20:33:14.171Z
+Stopped at: Completed 17-01-PLAN.md
+Resume file: None

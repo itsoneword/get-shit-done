@@ -16,8 +16,8 @@ Advisory foundation (read-only, zero behavior change):
 - [x] **GRAPH-01**: Phase `depends_on` is parsed from ROADMAP prose into a structured list (array of phase refs) exposed by the roadmap parser — consumers stop re-parsing the raw string
 - [x] **GRAPH-02**: A single `graph.cjs` module builds one normalized `{nodes, edges}` model from all existing edge sources (phase `depends_on`, plan `depends_on`/`wave`, `files_modified` overlap, SUMMARY `requires`/`provides`/`affects`, PLAN `key_links`, requirement→phase traceability, todo `depends_on`/`related_to`)
 - [x] **GRAPH-03**: `gsd-tools graph analyze` prints the normalized node/edge model and `gsd-tools graph export` emits it as machine-readable JSON
-- [ ] **GRAPH-04**: `graph.cjs` computes a topological order and detects cycles in code; `gsd-tools graph validate` reports cycles, dangling edge references, and wave/dependency contradictions, exiting non-zero on failure
-- [ ] **GRAPH-05**: `gsd-tools graph blast-radius <node>` returns the transitive `affects`/`provides` closure at a requested depth — level 1 (direct), level 2 (one-hop), level 3 (full closure)
+- [x] **GRAPH-04**: `graph.cjs` computes a topological order and detects cycles in code; `gsd-tools graph validate` reports cycles, dangling edge references, and wave/dependency contradictions, exiting non-zero on failure
+- [x] **GRAPH-05**: `gsd-tools graph blast-radius <node>` returns the transitive `affects`/`provides` closure at a requested depth — level 1 (direct), level 2 (one-hop), level 3 (full closure)
 - [ ] **GRAPH-06**: `/gsd2:health` runs a graph-integrity check that flags dangling edge references, cycles, and `affects`-vs-`files_modified` contradictions — without altering any execution behavior
 
 Consumer repoint (delete duplicated traversal, still non-authoritative):
@@ -54,8 +54,8 @@ Deferred beyond this milestone.
 | GRAPH-01 | Phase 16 | Complete |
 | GRAPH-02 | Phase 16 | Complete |
 | GRAPH-03 | Phase 16 | Complete |
-| GRAPH-04 | Phase 17 | Pending |
-| GRAPH-05 | Phase 17 | Pending |
+| GRAPH-04 | Phase 17 | Complete |
+| GRAPH-05 | Phase 17 | Complete |
 | GRAPH-06 | Phase 17 | Pending |
 | GRAPH-07 | Phase 18 | Pending |
 | GRAPH-08 | Phase 18 | Pending |
