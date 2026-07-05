@@ -22,7 +22,7 @@ All three bugs FIXED (see reference doc section "FIXES for #2/#3/#4 — IMPLEMEN
 
 The run also shook out **two follow-up bugs in the 4d bash block** (both FIXED + locally verified, commit a01cba0): (A) clean merges misgrepped because `output()` pretty-prints `"clean": true` with a space → cleanup skipped; (B) ledger appends rejected (missing `alternatives`/`escalated`, embedded multiline JSON). See reference doc "E2E green-light run #2".
 
-**Only remaining (optional):** one fully-unattended re-run of the *fixed* 4d block to confirm auto-cleanup needs no hand-holding. Both fixes verified in isolation, so this is confirmation not discovery. Close this todo after it (or now, at the owner's call).
+**CONFIRMATION RE-RUN 2026-07-05 (smoke-e2e3) — PASSED, DONE.** Fully-unattended re-run of the *fixed* 4d block: both phases parallel → both merged clean → `update-plan-progress` ran (ROADMAP `[x]` 1/1) → worktrees+branches auto-removed → 4 valid ledger entries (2 launched + 2 merged, escalated=false) → milestone archived. **Zero hand-holding, no regressions.** Both 4d follow-up bugs (grep whitespace, ledger fields) confirmed fixed. Todo complete.
 
 ## Problem (original)
 
