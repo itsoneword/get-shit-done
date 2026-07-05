@@ -292,7 +292,7 @@
   4. Running `gsd-tools graph blast-radius <node>` returns the transitive affects/provides closure at a requested depth — depth 1 returns only direct edges, depth 2 adds one hop, depth 3 returns the full closure
   5. Running `/gsd2:health` includes a graph-integrity check that flags dangling references, cycles, and cases where a phase's declared `affects` contradicts its actual `files_modified` overlap — with zero change to any execution behavior elsewhere
 
-**Plans**: TBD
+**Plans**: 2 plans — 17-01 (topoSort/detectCycles/blastRadius + graph validate/blast-radius CLI, wave 1); 17-02 (verify.cjs /gsd2:health graph-integrity check reusing 17-01's computeGraphIntegrity, wave 2)
 
 **Risk**: `requires`/`provides`/`affects` are author-supplied by the executor agent and are frequently sloppy or empty. A graph built on bad edges gives confident wrong answers, which is worse than no graph. This phase's integrity check is the explicit mitigation — Phase 19 (authoritative promotion) must not proceed until this check reports clean numbers on the live repo.
 
@@ -358,7 +358,7 @@ v1.7 verification loop: Phases 20 and 21 are independent of the graph chain and 
 | 14. Multi-Lens Discussion Loop | v1.6 | 3/3 | Complete    | 2026-06-12 |
 | 15. Resume Logic + Backlog Triage Worker | v1.6 | 3/3 | Complete    | 2026-06-18 |
 | 16. Planning Graph Model + CLI | v1.7 | 3/3 | Complete    | 2026-07-04 |
-| 17. Graph Algorithms + Integrity Check | v1.7 | 0/? | Not started | - |
+| 17. Graph Algorithms + Integrity Check | v1.7 | 0/2 | Not started | - |
 | 18. Consumer Repoint | v1.7 | 0/? | Not started | - |
 | 19. Authoritative Promotion | v1.7 | 0/? | Not started | - |
 | 20. Execution-Grounded Verification | v1.7 | 0/? | Not started | - |
