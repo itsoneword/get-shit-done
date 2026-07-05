@@ -67,6 +67,24 @@ Quick task 260704-m9p built the frontier scheduler + parallel runner:
 - `autonomous.md` `<step name="iterate">` rewritten as prose: each round launches co-schedulable frontier phases as per-worktree headless `claude -p --dangerously-skip-permissions` processes from the orchestrator shell (not Task subagents), capped at `max_parallel_phases`; unconditional per-phase stdout capture to a run-scoped log drives the merge-vs-leave decision; clean merges remove the worktree, conflicts surface without aborting; falls back to the serial inline path when parallelization is off or the frontier is singular.
 - Every launch, merge, and removal is written to the ledger (auditable-from-ledger, no transcript replay needed).
 
+## BUG found by smoke test (2026-07-05) — frontier false-dependency from prose
+
+Smoke project (~/gsd-smoke-test, 2 independent phases) revealed: `cmdRoadmapFrontier` (and likely parallel-gate coupling) matches phase numbers by naive substring/number scan of the raw `**Depends on**` text. Phase 02's line `Nothing (independent of Phase 01)` was read as a hard dep on Phase 01 → 02 dropped from frontier (only `["01"]` returned). Removing the "of Phase 01" wording → frontier correctly returns `["01","02"]` co-schedulable.
+
+Impact: real roadmaps whose depends lines mention other phases in prose get false serial edges → silent under-parallelization. FIX: parse the depends field to structured phase-number tokens (word-boundary / list-item aware), not a raw `.includes()`. Check parallel-gate.cjs for the same pattern.
+
+Second flag (unconfirmed): `init milestone-op` returned `phase_count: 0` for the 2-phase roadmap (no phase *dirs* yet, only ROADMAP entries) — may confuse autonomous's milestone-empty detection; needs a look before the full e2e run.
+
+Status: frontier brain proven to co-schedule independents once depends text is clean; full autonomous e2e NOT yet run (blocked on the above + fresh context to monitor headless executors).
+
+## BUG #2 found by smoke test (2026-07-05) — worktrees lack GSD (.claude not provisioned)
+
+`autonomous.md` launches each parallel phase as `(cd .worktrees/phase-N && claude -p "...")`. But `.claude/` (the GSD install) is typically untracked/gitignored, so a worktree created off HEAD does NOT contain it, and global `~/.claude` has no GSD either → the child session has no `/gsd2` commands or `gsd-tools`. P4 never provisions GSD into the worktree.
+
+FIX options: (a) after `worktree add`, symlink/copy the main tree's `.claude` into the worktree; or (b) have the child reference GSD via an absolute path to the main tree rather than relying on cwd; or (c) require a global GSD install for parallel mode. Needs a decision + implementation before parallel autonomous works on a real project.
+
+Smoke-test workaround: committed `.claude` in the throwaway so worktrees inherit it, to exercise the rest of the mechanism (frontier → launch → execute → merge).
+
 ## int_prep application (after P1)
 - v0.1.3 migration wave 01–11 is a genuine chain (each island builds on the prior proven bridge pattern); real parallelism is limited.
 - True parallel opportunities: **Phase 14** (roadmap says independent of 01–13), **Phase 12** (hard-depends only on 04; "after 11" is soft), **02∥03** (03's dep on 02 is soft).
